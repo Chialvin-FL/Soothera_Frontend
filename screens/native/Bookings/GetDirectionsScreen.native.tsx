@@ -1,20 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { View, Alert, TouchableOpacity, Linking, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Alert, TouchableOpacity, Linking, Platform, Animated, PanResponder, Dimensions } from 'react-native';
 import { Text } from '@/components/Text';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { MAPBOX_TOKEN } from '../../../env';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-interface Destination {
-  latitude: number;
-  longitude: number;
-}
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface Props {
-  destination: Destination;
+  destination: { latitude: number; longitude: number };
   destinationName?: string;
   onBack?: () => void;
 }
@@ -23,207 +20,243 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [drawerVisible, setDrawerVisible] = useState(true);
-  const [routeInfo, setRouteInfo] = useState<{
-    distance: number;
-    duration: number;
-    destinationName?: string;
-  } | null>(null);
+  // Use refs to track heading and map readiness to avoid re-rendering the WebView on every compass change
+  const headingRef = useRef<number>(0);
+  const mapReadyRef = useRef(false);
+  const webviewRef = useRef<any>(null);
+  const pendingHeadingRef = useRef<number | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
+  
+  // Drawer Animation State
+  const translateY = useRef(new Animated.Value(0)).current;
+  const lastOffset = useRef(0);
+
+  // Pullable Drawer Logic
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gesture) => {
+        const newValue = lastOffset.current + gesture.dy;
+        if (newValue >= 0 && newValue <= 200) translateY.setValue(newValue);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dy > 50) {
+          Animated.spring(translateY, { toValue: 200, useNativeDriver: true }).start();
+          lastOffset.current = 200;
+        } else {
+          Animated.spring(translateY, { toValue: 0, useNativeDriver: true }).start();
+          lastOffset.current = 0;
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission denied', 'Location permission is required to show directions from your current location.');
-        setLoading(false);
-        return;
-      }
+      if (status !== 'granted') return;
+
+      // Watch device heading (compass) — send heading updates directly to the WebView to avoid re-rendering the screen
+      Location.watchHeadingAsync((data) => {
+        const angle = data.trueHeading ?? 0;
+        headingRef.current = angle;
+        if (mapReadyRef.current && webviewRef.current) {
+          try {
+            webviewRef.current.injectJavaScript(`(function(){ if(window.updateHeading) { window.updateHeading(${angle}); } else { var cone = document.querySelector('.heading-cone'); if(cone) cone.style.transform = 'translateX(-50%) rotate('+(${angle})+'deg)'; } })(); true;`);
+          } catch (e) { /* ignore injection errors until webview is ready */ }
+        } else {
+          pendingHeadingRef.current = angle;
+        }
+      });
 
       let location = await Location.getCurrentPositionAsync({});
       setCurrentLocation(location);
-
-      await fetchDirections(location.coords, destination);
-      setLoading(false);
+      fetchDirections(location.coords);
     })();
-  }, [destination]);
+  }, []);
 
-  const fetchDirections = async (origin: Location.LocationObjectCoords, dest: Destination) => {
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${origin.longitude},${origin.latitude};${dest.longitude},${dest.latitude}?geometries=geojson&access_token=${MAPBOX_TOKEN}`;
-
+  const fetchDirections = async (origin: any) => {
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}?geometries=geojson&access_token=${MAPBOX_TOKEN}`;
     try {
       const response = await fetch(url);
       const data = await response.json();
-      if (data.routes && data.routes.length > 0) {
-        const route = data.routes[0];
-        setRouteInfo({
-          distance: route.distance,
-          duration: route.duration,
-          destinationName: destinationName || 'Destination',
-        });
+      if (data.routes?.[0]) {
+        setRouteInfo({ distance: data.routes[0].distance, duration: data.routes[0].duration });
       }
-    } catch (error) {
-      console.error('Error fetching directions:', error);
-      Alert.alert('Error', 'Failed to fetch directions.');
-    }
+    } catch (e) { console.error(e); }
   };
 
-  const handleStartNavigation = async () => {
-    if (!currentLocation) return;
-
-    const { latitude, longitude } = destination;
-    let url = '';
-
-    if (Platform.OS === 'ios') {
-      // Open in Apple Maps using native URL scheme
-      url = `maps://maps.apple.com/?daddr=${latitude},${longitude}&directionsmode=driving`;
-    } else if (Platform.OS === 'android') {
-      // Use geo: URI which is platform-neutral and does not reference external web APIs
-      url = `geo:${latitude},${longitude}?q=${latitude},${longitude}(${encodeURIComponent(destinationName || 'Destination')})`;
-    } else {
-      // Fall back to Mapbox directions web (no Google references)
-      url = `https://www.mapbox.com/directions/?destination=${latitude},${longitude}`;
-    }
-
-    try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (canOpen) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Error', 'Unable to open navigation app');
-      }
-    } catch (error) {
-      console.error('Error opening navigation:', error);
-      Alert.alert('Error', 'Unable to start navigation');
-    }
-  };
-
-  const toggleDrawer = () => {
-    setDrawerVisible(!drawerVisible);
-  };
-
-  if (loading || !currentLocation) {
-    return (
-      <View className="flex-1">
-        <View className="flex-1 justify-center items-center" />
-      </View>
-    );
-  }
-
-  const htmlContent = `<!doctype html>
-<html>
-<head>
-  <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    html, body, #map { height: 100%; margin: 0; padding: 0; }
-    .leaflet-container { height: 100%; width: 100%; }
-    .custom-marker {
-      background-color: ${primaryColor};
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 2px solid white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-  </style>
-</head>
-<body>
-  <div id="map"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    var mapboxToken = '${MAPBOX_TOKEN}';
-    const map = L.map('map', { zoomControl: false }).setView([${currentLocation.coords.latitude}, ${currentLocation.coords.longitude}], 13);
-    
-    L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
-      maxZoom: 18,
-      attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-      id: 'mapbox/streets-v11',
-      tileSize: 512,
-      zoomOffset: -1,
-    }).addTo(map);
-
-    var originIcon = L.divIcon({
-      className: 'custom-marker-container',
-      html: '<div class="custom-marker"></div>',
-      iconSize: [24, 24],
-      iconAnchor: [12, 12]
-    });
-
-    var origin = L.marker([${currentLocation.coords.latitude}, ${currentLocation.coords.longitude}], { icon: originIcon }).addTo(map);
-    var destinationMarker = L.marker([${destination.latitude}, ${destination.longitude}]).addTo(map);
-
-    fetch('https://api.mapbox.com/directions/v5/mapbox/driving/${currentLocation.coords.longitude},${currentLocation.coords.latitude};${destination.longitude},${destination.latitude}?geometries=geojson&steps=true&access_token=' + mapboxToken)
-      .then(response => response.json())
-      .then(data => {
-        if (data.routes && data.routes.length > 0) {
-          var route = data.routes[0];
-          var coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-          L.polyline(coordinates, {color: '${primaryColor}', weight: 5, opacity: 0.8}).addTo(map);
-          map.fitBounds(L.polyline(coordinates).getBounds(), { padding: [50, 50] });
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      <style>
+        html, body, #map { height: 100%; margin: 0; background: #e5e7eb; }
+        .user-wrapper { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+        .user-dot { width: 14px; height: 14px; background: #4285F4; border: 2px solid white; border-radius: 50%; position: relative; box-shadow: 0 0 5px rgba(0,0,0,0.2); pointer-events: none; }
+        .heading-cone {
+          position: absolute; left: 50%; bottom: 4px; /* closer to the dot */
+          width: 100px; height: 60px; /* fixed visual size */
+          transform-origin: 50% 100%;
+          transform: translateX(-50%) rotate(0deg);
+          transition: transform 160ms linear;
+          pointer-events: none;
+          display: flex; align-items: flex-end; justify-content: center; overflow: visible;
         }
-      })
-      .catch(error => {
-        console.error('Error fetching directions:', error);
-      });
-  </script>
-</body>
-</html>`;
+      </style>
+    </head>
+    <body>
+      <div id="map"></div>
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <script>
+        const map = L.map('map', { zoomControl: false });
+        L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}', {
+            tileSize: 512, zoomOffset: -1
+        }).addTo(map);
+        
+        const userIcon = L.divIcon({ className: '', html: '<div class="user-wrapper"><div class="user-dot"><div class="heading-cone">' +
+              '<svg width="100" height="60" viewBox="0 0 100 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+              '<defs>' +
+              '<linearGradient id="coneGrad" x1="0.5" y1="1" x2="0.5" y2="0">' +
+              '<stop offset="0%" stop-color="rgba(66,133,244,0.3)"/>' +
+              '<stop offset="70%" stop-color="rgba(66,133,244,0.08)"/>' +
+              '<stop offset="100%" stop-color="rgba(66,133,244,0)"/>' +
+              '</linearGradient>' +
+              '</defs>' +
+              '<polygon points="50,60 0,0 100,0" fill="url(#coneGrad)"/>' +
+              '</svg>' +
+              '</div></div></div>', iconSize: [40, 40], iconAnchor: [20, 20] });
+        L.marker([${currentLocation?.coords.latitude || 0}, ${currentLocation?.coords.longitude || 0}], {icon: userIcon}).addTo(map);
+        L.marker([${destination.latitude}, ${destination.longitude}]).addTo(map);
+
+        // Variables to keep heading value; cone will remain fixed size on screen (no scale applied)
+        let currentAngle = 0;
+
+        fetch('https://api.mapbox.com/directions/v5/mapbox/driving/${currentLocation?.coords.longitude},${currentLocation?.coords.latitude};${destination.longitude},${destination.latitude}?geometries=geojson&access_token=${MAPBOX_TOKEN}')
+          .then(res => res.json())
+          .then(data => {
+            const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+            // White Polyline Border (The "Casing")
+            L.polyline(coords, {color: 'white', weight: 10, opacity: 0.6}).addTo(map);
+            // Main Polyline
+            const mainLine = L.polyline(coords, {color: '${primaryColor}', weight: 6, opacity: 1}).addTo(map);
+
+            // Fit bounds to exactly include both origin and destination markers with dynamic padding
+            const origin = L.latLng(${currentLocation?.coords.latitude || 0}, ${currentLocation?.coords.longitude || 0});
+            const dest = L.latLng(${destination.latitude}, ${destination.longitude});
+            const bounds = L.latLngBounds([origin, dest]);
+            const paddingX = Math.round(window.innerWidth * 0.07);
+            const paddingY = Math.round(window.innerHeight * 0.07);
+            map.fitBounds(bounds, { padding: [paddingX, paddingY] });
+          });
+
+        // Expose a function to update the heading without reloading the page
+        // Use device heading directly so the cone points toward the direction the device is facing
+        window.updateHeading = function(angle) {
+          try {
+            currentAngle = angle;
+            var cone = document.querySelector('.heading-cone');
+            if (cone) cone.style.transform = 'translateX(-50%) rotate(' + angle + 'deg)';
+          } catch (e) { }
+        };
+
+        // Let React Native know the map is ready to receive heading updates
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+          window.ReactNativeWebView.postMessage('map-ready');
+        }
+      </script>
+    </body>
+    </html>
+  `;
 
   return (
-    <View className="flex-1">
+    <View className="flex-1 bg-gray-100">
       <WebView
-        originWhitelist={["*"]}
+        ref={webviewRef}
+        originWhitelist={['*']}
         source={{ html: htmlContent }}
         style={{ flex: 1 }}
         scrollEnabled={false}
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={false}
+        onMessage={(event) => {
+          if (event.nativeEvent?.data === 'map-ready') {
+            mapReadyRef.current = true;
+            if (pendingHeadingRef.current != null && webviewRef.current) {
+              const angle = pendingHeadingRef.current;
+              pendingHeadingRef.current = null;
+              try { webviewRef.current.injectJavaScript(`(function(){ if(window.updateHeading) window.updateHeading(${angle}); })(); true;`); } catch(e) { }
+            }
+          }
+        }}
       />
 
-<View className="absolute top-12 left-4 right-4 rounded-xl flex-row items-center p-3" style={{ backgroundColor: colors.background, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 5, elevation: 5 }}>
-        <TouchableOpacity onPress={onBack} className="p-1.5">
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+      {/* FLOATING HEADER */}
+      <View className="absolute top-12 left-3 right-3 bg-white rounded-2xl shadow-lg p-5 flex-row items-center border border-gray-100">
+        <TouchableOpacity onPress={onBack} className="pr-2">
+          <Ionicons name="arrow-back" size={24} color="#5F6368" />
         </TouchableOpacity>
-        <View className="flex-1 ml-2.5">
-          <View className="py-0.5">
-            <Text className="text-xs font-medium" style={{ color: colors.icon }}>From</Text>
-            <Text className="text-base font-semibold" style={{ color: colors.text }}>Your Location</Text>
-          </View>
-          <View className="h-px my-1.5" style={{ backgroundColor: colors.tint }} />
-          <View className="py-0.5">
-            <Text className="text-xs font-medium" style={{ color: colors.icon }}>To</Text>
-            <Text className="text-base font-semibold" style={{ color: colors.text }}>{routeInfo?.destinationName || 'Destination'}</Text>
-          </View>
+        
+        {/* Connection visuals: Dot, Dotted Line, Pin */}
+        <View className="items-center mr-3">
+            <Ionicons name="radio-button-on" size={14} color="#4285F4" />
+            <View className="w-0.5 h-6 border-l border-dotted border-gray-400 my-1" />
+            <Ionicons name="location" size={20} color="#EA4335" />
         </View>
+
+        <View className="flex-1">
+          <Text className="text-base text-gray-500 mb-4">Your location</Text>
+          <View className="h-[1px] bg-gray-200 w-full mb-2" />
+          <Text className="text-base font-bold text-gray-800 mt-2" numberOfLines={1}>{destinationName || 'Destination'}</Text>
+        </View>
+
+        <TouchableOpacity className="pl-2">
+          <MaterialCommunityIcons name="swap-vertical" size={24} color="#5F6368" />
+        </TouchableOpacity>
       </View>
 
-      {drawerVisible && routeInfo && (
-        <View className="absolute bottom-0 left-0 right-0 rounded-t-2xl p-5 pt-4" style={{ backgroundColor: colors.background, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.1, shadowRadius: 5, elevation: 15 }}>
-          <TouchableOpacity onPress={toggleDrawer} className="absolute right-4 top-4">
-            <Ionicons name="close-circle" size={24} color={colors.icon} />
-          </TouchableOpacity>
-          <View className="flex-row items-baseline self-start mb-2">
-            <Text className="text-2xl font-bold" style={{ color: primaryColor }}>
-              {Math.round(routeInfo.duration / 60)} min
-            </Text>
-            <Text className="text-base ml-2.5" style={{ color: colors.icon }}>
-              ({(routeInfo.distance / 1000).toFixed(1)} km)
-            </Text>
-          </View>
-          <Text className="text-sm self-start mb-4" style={{ color: colors.text }}>
-            Fastest route, despite the usual traffic.
-          </Text>
-          <TouchableOpacity className="flex-row rounded-full py-3 px-6 items-center justify-center self-start" style={{ backgroundColor: primaryColor }} onPress={handleStartNavigation}>
-            <Ionicons name="navigate-outline" size={22} color="white" style={{ marginRight: 8 }} />
-            <Text className="text-white text-lg font-bold">Start</Text>
-          </TouchableOpacity>
+      {/* PULLABLE BOTTOM DRAWER */}
+      <Animated.View 
+        {...panResponder.panHandlers}
+        style={{ transform: [{ translateY }] }}
+        className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[28px] shadow-2xl pb-10"
+      >
+        <View className="items-center pt-3 pb-1">
+          <View className="w-10 h-1.5 bg-gray-200 rounded-full" />
         </View>
-      )}
+
+        <View className="px-6">
+          <View className="flex-row justify-between items-center mb-1">
+            <View className="flex-row items-baseline">
+              <Text className="text-2xl font-bold text-green-700">{Math.round((routeInfo?.duration || 0) / 60)} min </Text>
+              <Text className="text-lg text-gray-500 font-medium">({((routeInfo?.distance || 0) / 1000).toFixed(1)} km)</Text>
+            </View>
+            <TouchableOpacity onPress={() => Animated.spring(translateY, {toValue: 200, useNativeDriver: true}).start()}>
+               <MaterialIcons name="close" size={24} color="#5F6368" />
+            </TouchableOpacity>
+          </View>
+          
+          <Text className="text-sm text-gray-600 mb-6">Fastest route now due to traffic conditions</Text>
+
+          <View className="flex-row items-center">
+            <TouchableOpacity 
+              onPress={() => {
+                const lat = destination.latitude; const lng = destination.longitude;
+                const url = Platform.OS === 'ios'
+                  ? `maps://maps.apple.com/?daddr=${lat},${lng}&directionsmode=driving`
+                  : `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(destinationName || 'Destination')})`;
+                Linking.openURL(url).catch(() => Alert.alert('Error', 'Unable to open navigation app'));
+              }}
+              className="bg-[#007064] flex-row items-center px-6 py-3.5 rounded-full mr-3 shadow-sm"
+            >
+              <Ionicons name="navigate-outline" size={22} color="white" style={{ marginRight: 8 }} />
+            <Text className="text-white text-lg font-bold">Start</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Animated.View>
     </View>
   );
 };
-
-
 
 export default GetDirectionsScreen;
