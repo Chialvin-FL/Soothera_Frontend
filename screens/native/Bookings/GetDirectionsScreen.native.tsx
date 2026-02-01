@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, TouchableOpacity, Linking, Platform } from 'react-native';
+import { View, Alert, TouchableOpacity, Linking, Platform } from 'react-native';
 import { Text } from '@/components/Text';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
@@ -24,6 +24,7 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
   const colors = Colors[colorScheme ?? 'light'];
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
   const [loading, setLoading] = useState(true);
+  const [drawerVisible, setDrawerVisible] = useState(true);
   const [routeInfo, setRouteInfo] = useState<{
     distance: number;
     duration: number;
@@ -42,7 +43,6 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
       let location = await Location.getCurrentPositionAsync({});
       setCurrentLocation(location);
 
-      // Fetch directions
       await fetchDirections(location.coords, destination);
       setLoading(false);
     })();
@@ -72,24 +72,17 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
     if (!currentLocation) return;
 
     const { latitude, longitude } = destination;
-    const validLat = latitude;
-    const validLng = longitude;
-
     let url = '';
+
     if (Platform.OS === 'ios') {
-      // Open Apple Maps
-      url = `maps://maps.apple.com/?daddr=${validLat},${validLng}&directionsmode=driving`;
+      // Open in Apple Maps using native URL scheme
+      url = `maps://maps.apple.com/?daddr=${latitude},${longitude}&directionsmode=driving`;
     } else if (Platform.OS === 'android') {
-      // Try Google Maps first
-      url = `google.navigation:q=${validLat},${validLng}`;
-      const canOpenGoogle = await Linking.canOpenURL(url);
-      if (!canOpenGoogle) {
-        // Fallback to Google Maps web
-        url = `https://www.google.com/maps/dir/?api=1&destination=${validLat},${validLng}`;
-      }
+      // Use geo: URI which is platform-neutral and does not reference external web APIs
+      url = `geo:${latitude},${longitude}?q=${latitude},${longitude}(${encodeURIComponent(destinationName || 'Destination')})`;
     } else {
-      // Web fallback
-      url = `https://www.google.com/maps/dir/?api=1&destination=${validLat},${validLng}`;
+      // Fall back to Mapbox directions web (no Google references)
+      url = `https://www.mapbox.com/directions/?destination=${latitude},${longitude}`;
     }
 
     try {
@@ -105,10 +98,14 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
     }
   };
 
+  const toggleDrawer = () => {
+    setDrawerVisible(!drawerVisible);
+  };
+
   if (loading || !currentLocation) {
     return (
-      <View style={styles.container}>
-        <View style={styles.loading} />
+      <View className="flex-1">
+        <View className="flex-1 justify-center items-center" />
       </View>
     );
   }
@@ -122,24 +119,12 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
     html, body, #map { height: 100%; margin: 0; padding: 0; }
     .leaflet-container { height: 100%; width: 100%; }
     .custom-marker {
-      background-color: ${colors.primary || '#0d9488'};
-      width: 30px;
-      height: 30px;
-      border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      position: relative;
-    }
-    .custom-marker::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) rotate(45deg);
-      width: 8px;
-      height: 8px;
-      background-color: white;
+      background-color: ${primaryColor};
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
   </style>
 </head>
@@ -147,45 +132,35 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Mapbox access token
     var mapboxToken = '${MAPBOX_TOKEN}';
-    
     const map = L.map('map', { zoomControl: false }).setView([${currentLocation.coords.latitude}, ${currentLocation.coords.longitude}], 13);
     
-    // Use Mapbox tiles
     L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
       maxZoom: 18,
-      attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
-        'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+      attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
       id: 'mapbox/streets-v11',
       tileSize: 512,
       zoomOffset: -1,
     }).addTo(map);
 
-    // Custom icon for markers
-    var customIcon = L.divIcon({
+    var originIcon = L.divIcon({
       className: 'custom-marker-container',
       html: '<div class="custom-marker"></div>',
-      iconSize: [30, 30],
-      iconAnchor: [15, 30],
-      popupAnchor: [0, -30]
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
     });
 
-    var origin = L.marker([${currentLocation.coords.latitude}, ${currentLocation.coords.longitude}], { icon: customIcon }).addTo(map)
-      .bindPopup('Your Location');
+    var origin = L.marker([${currentLocation.coords.latitude}, ${currentLocation.coords.longitude}], { icon: originIcon }).addTo(map);
+    var destinationMarker = L.marker([${destination.latitude}, ${destination.longitude}]).addTo(map);
 
-    var destination = L.marker([${destination.latitude}, ${destination.longitude}], { icon: customIcon }).addTo(map)
-      .bindPopup('Destination');
-
-    // Fetch directions
     fetch('https://api.mapbox.com/directions/v5/mapbox/driving/${currentLocation.coords.longitude},${currentLocation.coords.latitude};${destination.longitude},${destination.latitude}?geometries=geojson&steps=true&access_token=' + mapboxToken)
       .then(response => response.json())
       .then(data => {
         if (data.routes && data.routes.length > 0) {
           var route = data.routes[0];
           var coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-          L.polyline(coordinates, {color: '${colors.primary || '#0d9488'}', weight: 4}).addTo(map);
-          map.fitBounds(coordinates);
+          L.polyline(coordinates, {color: '${primaryColor}', weight: 5, opacity: 0.8}).addTo(map);
+          map.fitBounds(L.polyline(coordinates).getBounds(), { padding: [50, 50] });
         }
       })
       .catch(error => {
@@ -196,148 +171,59 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
 </html>`;
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={[styles.backButton, { backgroundColor: colors.background }]}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <View style={[styles.headerContent, { backgroundColor: colors.background }]}>
-          <Text style={[styles.headerText, { color: colors.text }]}>
-            Your Location → {routeInfo?.destinationName || 'Destination'}
-          </Text>
-          {routeInfo && (
-            <Text style={[styles.headerSubtext, { color: colors.icon }]}>
-              {Math.round(routeInfo.distance / 1000)} km • {Math.round(routeInfo.duration / 60)} min
-            </Text>
-          )}
-        </View>
-      </View>
-
-      {/* Map */}
+    <View className="flex-1">
       <WebView
         originWhitelist={["*"]}
         source={{ html: htmlContent }}
-        style={styles.webview}
+        style={{ flex: 1 }}
         scrollEnabled={false}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Bottom Drawer */}
-      {routeInfo && (
-        <View style={[styles.bottomDrawer, { backgroundColor: colors.background }]}>
-          <View style={styles.drawerContent}>
-            <View style={styles.etaContainer}>
-              <Text style={[styles.etaLabel, { color: colors.icon }]}>Estimated arrival</Text>
-              <Text style={[styles.etaTime, { color: colors.text }]}>
-                {new Date(Date.now() + routeInfo.duration * 1000).toLocaleTimeString([], { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </Text>
-              <Text style={[styles.etaDistance, { color: colors.icon }]}>
-                {Math.round(routeInfo.distance / 1000)} km • {Math.round(routeInfo.duration / 60)} min
-              </Text>
-            </View>
-            <TouchableOpacity style={[styles.startButton, { backgroundColor: colors.primary }]} onPress={handleStartNavigation}>
-              <Text style={[styles.startButtonText, { color: colors.background }]}>Start</Text>
-            </TouchableOpacity>
+<View className="absolute top-12 left-4 right-4 rounded-xl flex-row items-center p-3" style={{ backgroundColor: colors.background, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 5, elevation: 5 }}>
+        <TouchableOpacity onPress={onBack} className="p-1.5">
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <View className="flex-1 ml-2.5">
+          <View className="py-0.5">
+            <Text className="text-xs font-medium" style={{ color: colors.icon }}>From</Text>
+            <Text className="text-base font-semibold" style={{ color: colors.text }}>Your Location</Text>
           </View>
+          <View className="h-px my-1.5" style={{ backgroundColor: colors.tint }} />
+          <View className="py-0.5">
+            <Text className="text-xs font-medium" style={{ color: colors.icon }}>To</Text>
+            <Text className="text-base font-semibold" style={{ color: colors.text }}>{routeInfo?.destinationName || 'Destination'}</Text>
+          </View>
+        </View>
+      </View>
+
+      {drawerVisible && routeInfo && (
+        <View className="absolute bottom-0 left-0 right-0 rounded-t-2xl p-5 pt-4" style={{ backgroundColor: colors.background, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.1, shadowRadius: 5, elevation: 15 }}>
+          <TouchableOpacity onPress={toggleDrawer} className="absolute right-4 top-4">
+            <Ionicons name="close-circle" size={24} color={colors.icon} />
+          </TouchableOpacity>
+          <View className="flex-row items-baseline self-start mb-2">
+            <Text className="text-2xl font-bold" style={{ color: primaryColor }}>
+              {Math.round(routeInfo.duration / 60)} min
+            </Text>
+            <Text className="text-base ml-2.5" style={{ color: colors.icon }}>
+              ({(routeInfo.distance / 1000).toFixed(1)} km)
+            </Text>
+          </View>
+          <Text className="text-sm self-start mb-4" style={{ color: colors.text }}>
+            Fastest route, despite the usual traffic.
+          </Text>
+          <TouchableOpacity className="flex-row rounded-full py-3 px-6 items-center justify-center self-start" style={{ backgroundColor: primaryColor }} onPress={handleStartNavigation}>
+            <Ionicons name="navigate-outline" size={22} color="white" style={{ marginRight: 8 }} />
+            <Text className="text-white text-lg font-bold">Start</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
-    zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    borderRadius: 20,
-    padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-    marginRight: 12,
-  },
-  headerContent: {
-    flex: 1,
-    borderRadius: 8,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  headerText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  headerSubtext: {
-    fontSize: 14,
-  },
-  webview: {
-    flex: 1,
-  },
-  bottomDrawer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 10,
-  },
-  drawerContent: {
-    padding: 20,
-  },
-  etaContainer: {
-    marginBottom: 20,
-  },
-  etaLabel: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  etaTime: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  etaDistance: {
-    fontSize: 16,
-  },
-  startButton: {
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  startButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  loading: {
-    flex: 1,
-    backgroundColor: '#f0f0f0',
-  },
-});
+
 
 export default GetDirectionsScreen;

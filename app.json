@@ -14,7 +14,7 @@
       "expo-font"
     ],
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/soothera.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/soothera.png",
