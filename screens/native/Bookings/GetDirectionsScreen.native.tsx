@@ -28,8 +28,12 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
   const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
   
   // Drawer Animation State
+  // Drawer will 'peek' at this offset (px) when closed so it's always draggable
+  const DRAWER_PEEK = 140;
+  // Start opened by default (translateY = 0)
   const translateY = useRef(new Animated.Value(0)).current;
   const lastOffset = useRef(0);
+
 
   // Pullable Drawer Logic
   const panResponder = useRef(
@@ -37,12 +41,12 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
       onMoveShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         const newValue = lastOffset.current + gesture.dy;
-        if (newValue >= 0 && newValue <= 200) translateY.setValue(newValue);
+        if (newValue >= 0 && newValue <= DRAWER_PEEK) translateY.setValue(newValue);
       },
       onPanResponderRelease: (_, gesture) => {
         if (gesture.dy > 50) {
-          Animated.spring(translateY, { toValue: 200, useNativeDriver: true }).start();
-          lastOffset.current = 200;
+          Animated.spring(translateY, { toValue: DRAWER_PEEK, useNativeDriver: true }).start();
+          lastOffset.current = DRAWER_PEEK;
         } else {
           Animated.spring(translateY, { toValue: 0, useNativeDriver: true }).start();
           lastOffset.current = 0;
@@ -235,7 +239,7 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
         </View>
 
         <TouchableOpacity className="pl-2">
-          <MaterialCommunityIcons name="swap-vertical" size={24} color="#5F6368" />
+          <MaterialCommunityIcons name="swap-vertical" size={30} color="#5F6368" />
         </TouchableOpacity>
       </View>
 
@@ -255,7 +259,7 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
               <Text className="text-2xl font-bold text-green-700">{Math.round((routeInfo?.duration || 0) / 60)} min </Text>
               <Text className="text-lg text-gray-500 font-medium">({((routeInfo?.distance || 0) / 1000).toFixed(1)} km)</Text>
             </View>
-            <TouchableOpacity onPress={() => Animated.spring(translateY, {toValue: 200, useNativeDriver: true}).start()}>
+            <TouchableOpacity onPress={() => Animated.spring(translateY, {toValue: DRAWER_PEEK, useNativeDriver: true}).start()}>
                <MaterialIcons name="close" size={24} color="#5F6368" />
             </TouchableOpacity>
           </View>
