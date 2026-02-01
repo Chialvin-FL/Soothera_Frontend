@@ -105,6 +105,29 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
           pointer-events: none;
           display: flex; align-items: flex-end; justify-content: center; overflow: visible;
         }
+        /* Destination marker styling (match BookingDetailsScreen) */
+        .custom-marker {
+          background-color: ${primaryColor};
+          width: 30px;
+          height: 30px;
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          position: relative;
+          border: 2px solid white; /* white border for better contrast */
+          box-sizing: border-box;
+        }
+        .custom-marker::after {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(45deg);
+          width: 8px;
+          height: 8px;
+          background-color: white;
+          border-radius: 50%;
+        }
       </style>
     </head>
     <body>
@@ -129,7 +152,8 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
               '</svg>' +
               '</div></div></div>', iconSize: [40, 40], iconAnchor: [20, 20] });
         L.marker([${currentLocation?.coords.latitude || 0}, ${currentLocation?.coords.longitude || 0}], {icon: userIcon}).addTo(map);
-        L.marker([${destination.latitude}, ${destination.longitude}]).addTo(map);
+        const destIcon = L.divIcon({ className: '', html: '<div class="custom-marker"></div>', iconSize: [34, 46], iconAnchor: [17, 46] });
+        L.marker([${destination.latitude}, ${destination.longitude}], {icon: destIcon}).addTo(map);
 
         // Variables to keep heading value; cone will remain fixed size on screen (no scale applied)
         let currentAngle = 0;
@@ -138,10 +162,10 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
           .then(res => res.json())
           .then(data => {
             const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-            // White Polyline Border (The "Casing")
-            L.polyline(coords, {color: 'white', weight: 10, opacity: 0.6}).addTo(map);
-            // Main Polyline
-            const mainLine = L.polyline(coords, {color: '${primaryColor}', weight: 6, opacity: 1}).addTo(map);
+            // Polyline casing (thicker border)
+            L.polyline(coords, {color: '#2F5E52', weight: 8, opacity: 0.95, lineCap: 'round'}).addTo(map);
+            // Main Polyline (thinner)
+            const mainLine = L.polyline(coords, {color: '${primaryColor}', weight: 3, opacity: 1, lineCap: 'round'}).addTo(map);
 
             // Fit bounds to exactly include both origin and destination markers with dynamic padding
             const origin = L.latLng(${currentLocation?.coords.latitude || 0}, ${currentLocation?.coords.longitude || 0});
@@ -201,7 +225,7 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
         <View className="items-center mr-3">
             <Ionicons name="radio-button-on" size={14} color="#4285F4" />
             <View className="w-0.5 h-6 border-l border-dotted border-gray-400 my-1" />
-            <Ionicons name="location" size={20} color="#EA4335" />
+            <Ionicons name="location-outline" size={24} color={colors.primary}/>
         </View>
 
         <View className="flex-1">
