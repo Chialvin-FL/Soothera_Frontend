@@ -224,14 +224,14 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
         {/* Connection visuals: Dot, Dotted Line, Pin */}
         <View className="items-center mr-3">
             <Ionicons name="radio-button-on" size={14} color="#4285F4" />
-            <View className="w-0.5 h-6 border-l border-dotted border-gray-400 my-1" />
+            <View className="w-0.5 h-6 border-l border-dotted border-gray-400 my-2" />
             <Ionicons name="location-outline" size={24} color={colors.primary}/>
         </View>
 
         <View className="flex-1">
-          <Text className="text-base text-gray-500 mb-4">Your location</Text>
+          <Text className="text-lg mb-4" style={{ color: '#4285F4' }}>Your location</Text>
           <View className="h-[1px] bg-gray-200 w-full mb-2" />
-          <Text className="text-base font-bold text-gray-800 mt-2" numberOfLines={1}>{destinationName || 'Destination'}</Text>
+          <Text className="text-lg font-bold text-gray-800 mt-2" numberOfLines={1}>{destinationName || 'Destination'}</Text>
         </View>
 
         <TouchableOpacity className="pl-2">
