@@ -36,7 +36,6 @@
       "package": "com.scyn4pse.soothera"
     },
     "extra": {
-      "mapboxToken": "pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g",
       "eas": {
         "projectId": "d277f72c-d86e-4223-ac40-e7435fcf97c5"
       }

@@ -64,7 +64,7 @@ export default function ProfileScreen({
   // User data
   const userName = 'User Profile';
   const userEmail = 'profile@soothera.com';
-  const profileImage = require('../../../assets/pfp.jpg');
+  const profileImage = require('../../../assets/user.jpg');
 
   // Source of truth: mockData. Favorites = first 3, You May Also Like = next 4.
   const favoriteSalons = topRatedSalons.slice(0, 3);
