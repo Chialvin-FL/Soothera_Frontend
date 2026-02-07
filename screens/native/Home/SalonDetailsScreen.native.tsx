@@ -40,21 +40,21 @@ type TabId = 'services' | 'therapists' | 'location' | 'ratings' | 'about';
 const MapView = ({ latitude, longitude }: { latitude: number; longitude: number }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  
+
   // Default coordinates fallback
   const DEFAULT_LAT = 10.643284;
   const DEFAULT_LNG = 124.477158;
-  
+
   const validLat = isNaN(latitude) ? DEFAULT_LAT : latitude;
   const validLng = isNaN(longitude) ? DEFAULT_LNG : longitude;
-  
+
   // Mobile map rendering: prefer native maps, fall back to WebView (Leaflet) or placeholder
   if (Platform.OS !== 'web' && (RNMaps || RNWebView)) {
     const MapViewComp = RNMaps && (RNMaps.default || RNMaps.MapView);
     const MarkerComp = RNMaps && (RNMaps.Marker || (RNMaps.default && RNMaps.default.Marker));
     const UrlTileComp = RNMaps && (RNMaps.UrlTile || (RNMaps.default && RNMaps.default.UrlTile));
     const WebViewComp = RNWebView && (RNWebView.default || RNWebView.WebView);
-    
+
     // If react-native-maps is available, use native MapView with Mapbox tiles (display-only)
     if (MapViewComp) {
       const region = {
@@ -63,15 +63,15 @@ const MapView = ({ latitude, longitude }: { latitude: number; longitude: number 
         latitudeDelta: 0.007,
         longitudeDelta: 0.007,
       };
-      
+
       // Mapbox tile URL template
       const mapboxTileUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`;
-      
+
       return (
-        <View 
+        <View
           className="w-full rounded-xl overflow-hidden"
-          style={{ 
-            height: 200, 
+          style={{
+            height: 200,
             borderWidth: 1,
             borderColor: '#E5E7EB',
           }}
@@ -106,12 +106,12 @@ const MapView = ({ latitude, longitude }: { latitude: number; longitude: number 
         </View>
       );
     }
-    
+
     // If native maps not available but WebView is, render a Leaflet HTML inside WebView with Mapbox tiles (display-only)
     if (WebViewComp) {
       // Convert primary color to hex format for use in HTML/CSS
       const primaryColorHex = colors.primary || '#0d9488';
-      
+
       const html = `<!doctype html>
 <html>
 <head>
@@ -172,12 +172,12 @@ const MapView = ({ latitude, longitude }: { latitude: number; longitude: number 
   </script>
 </body>
 </html>`;
-      
+
       return (
-        <View 
+        <View
           className="w-full rounded-xl overflow-hidden"
-          style={{ 
-            height: 200, 
+          style={{
+            height: 200,
             borderWidth: 1,
             borderColor: '#E5E7EB',
           }}
@@ -194,13 +194,13 @@ const MapView = ({ latitude, longitude }: { latitude: number; longitude: number 
       );
     }
   }
-  
+
   // Fallback: placeholder if maps are not available
   return (
-    <View 
+    <View
       className="w-full rounded-xl overflow-hidden"
-      style={{ 
-        height: 200, 
+      style={{
+        height: 200,
         backgroundColor: colors.background,
         borderWidth: 1,
         borderColor: '#E5E7EB',
@@ -243,12 +243,12 @@ const StarRating = ({ rating }: { rating: number }) => {
 // Format date as "X months ago" or similar relative time
 const formatRelativeDate = (date: Date | string | undefined): string => {
   if (!date) return '';
-  
+
   const reviewDate = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
   const diffTime = Math.abs(now.getTime() - reviewDate.getTime());
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays < 1) {
     return 'today';
   } else if (diffDays === 1) {
@@ -264,8 +264,8 @@ const formatRelativeDate = (date: Date | string | undefined): string => {
   }
 };
 
-export default function SalonDetailsScreen({ 
-  salonDetails, 
+export default function SalonDetailsScreen({
+  salonDetails,
   onBack,
   onBookAppointment,
 }: SalonDetailsScreenProps) {
@@ -301,7 +301,7 @@ export default function SalonDetailsScreen({
   const handleTabChange = (tabId: TabId) => {
     setActiveTab(tabId);
     const tabIndex = getTabIndex(tabId);
-    
+
     // Scroll content to the selected tab
     if (contentScrollViewRef.current) {
       contentScrollViewRef.current.scrollTo({
@@ -323,7 +323,7 @@ export default function SalonDetailsScreen({
       const tabX = layout.x;
       const scrollViewWidth = screenWidth;
       const scrollPosition = tabX - (scrollViewWidth / 2) + (tabWidth / 2);
-      
+
       tabScrollViewRef.current.scrollTo({
         x: Math.max(0, scrollPosition),
         animated: true,
@@ -335,7 +335,7 @@ export default function SalonDetailsScreen({
   const handleContentScroll = (event: any) => {
     const offsetX = event.nativeEvent.contentOffset.x;
     const tabIndex = Math.round(offsetX / screenWidth);
-    
+
     if (tabIndex >= 0 && tabIndex < tabs.length) {
       const newTab = tabs[tabIndex];
       if (newTab.id !== activeTab) {
@@ -345,42 +345,7 @@ export default function SalonDetailsScreen({
     }
   };
 
-  // Handle Get Directions
-  const handleGetDirections = async () => {
-    const { latitude, longitude } = salonDetails;
-    const validLat = isNaN(latitude) ? 10.643284 : latitude;
-    const validLng = isNaN(longitude) ? 124.477158 : longitude;
-    
-    let url = '';
-    if (Platform.OS === 'ios') {
-      // Open Apple Maps
-      url = `maps://maps.apple.com/?daddr=${validLat},${validLng}&directionsmode=driving`;
-    } else if (Platform.OS === 'android') {
-      // Open Google Maps
-      url = `google.navigation:q=${validLat},${validLng}`;
-      // Fallback to Google Maps web if app is not installed
-      const canOpen = await Linking.canOpenURL(url);
-      if (!canOpen) {
-        url = `https://www.google.com/maps/dir/?api=1&destination=${validLat},${validLng}`;
-      }
-    } else {
-      // Web fallback
-      url = `https://www.google.com/maps/dir/?api=1&destination=${validLat},${validLng}`;
-    }
-    
-    try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (canOpen) {
-        await Linking.openURL(url);
-      } else {
-        // Fallback to Google Maps web
-        const fallbackUrl = `https://www.google.com/maps/dir/?api=1&destination=${validLat},${validLng}`;
-        await Linking.openURL(fallbackUrl);
-      }
-    } catch (error) {
-      console.error('Error opening maps:', error);
-    }
-  };
+
 
   // Handle Facebook
   const handleFacebook = () => {
@@ -428,11 +393,11 @@ export default function SalonDetailsScreen({
   // Animate heart button opacity - fade immediately upon scroll
   useEffect(() => {
     const isScrolled = scrollY > 0;
-    
+
     // Only animate when transitioning between scrolled and not-scrolled states
     if (isScrolled !== isScrolledRef.current) {
       isScrolledRef.current = isScrolled;
-      
+
       if (isScrolled) {
         // Fade out immediately when scrolling starts
         Animated.timing(heartOpacity, {
@@ -485,9 +450,9 @@ export default function SalonDetailsScreen({
                     className="mb-4"
                     activeOpacity={0.7}
                   >
-                    <View 
+                    <View
                       className="rounded-xl overflow-hidden bg-white"
-                      style={{ 
+                      style={{
                         elevation: 3,
                         shadowColor: '#000',
                         shadowOffset: { width: 0, height: 2 },
@@ -507,8 +472,8 @@ export default function SalonDetailsScreen({
                       {/* Service Details */}
                       <View className="p-3">
                         {/* Service Name */}
-                        <Text 
-                          className="text-base font-semibold mb-1" 
+                        <Text
+                          className="text-base font-semibold mb-1"
                           style={{ color: colors.text }}
                           numberOfLines={2}
                         >
@@ -516,16 +481,16 @@ export default function SalonDetailsScreen({
                         </Text>
 
                         {/* Price */}
-                        <Text 
-                          className="text-lg font-bold mb-1" 
+                        <Text
+                          className="text-lg font-bold mb-1"
                           style={{ color: primaryColor }}
                         >
                           {formatPrice(service.price)}
                         </Text>
 
                         {/* Description */}
-                        <Text 
-                          className="text-xs mb-2" 
+                        <Text
+                          className="text-xs mb-2"
                           style={{ color: colors.icon }}
                           numberOfLines={2}
                         >
@@ -538,13 +503,13 @@ export default function SalonDetailsScreen({
                             <View
                               key={index}
                               className="px-2 py-1 rounded-full mb-1"
-                              style={{ 
+                              style={{
                                 backgroundColor: colors.primary + '20',
                                 flexShrink: 1,
                               }}
                             >
-                              <Text 
-                                className="text-xs font-medium" 
+                              <Text
+                                className="text-xs font-medium"
                                 style={{ color: colors.primary }}
                                 numberOfLines={1}
                               >
@@ -567,9 +532,9 @@ export default function SalonDetailsScreen({
                     className="mb-4"
                     activeOpacity={0.7}
                   >
-                    <View 
+                    <View
                       className="rounded-xl overflow-hidden bg-white"
-                      style={{ 
+                      style={{
                         elevation: 3,
                         shadowColor: '#000',
                         shadowOffset: { width: 0, height: 2 },
@@ -589,8 +554,8 @@ export default function SalonDetailsScreen({
                       {/* Service Details */}
                       <View className="p-3">
                         {/* Service Name */}
-                        <Text 
-                          className="text-base font-semibold mb-1" 
+                        <Text
+                          className="text-base font-semibold mb-1"
                           style={{ color: colors.text }}
                           numberOfLines={2}
                         >
@@ -598,16 +563,16 @@ export default function SalonDetailsScreen({
                         </Text>
 
                         {/* Price */}
-                        <Text 
-                          className="text-lg font-bold mb-1" 
+                        <Text
+                          className="text-lg font-bold mb-1"
                           style={{ color: primaryColor }}
                         >
                           {formatPrice(service.price)}
                         </Text>
 
                         {/* Description */}
-                        <Text 
-                          className="text-xs mb-2" 
+                        <Text
+                          className="text-xs mb-2"
                           style={{ color: colors.icon }}
                           numberOfLines={2}
                         >
@@ -620,13 +585,13 @@ export default function SalonDetailsScreen({
                             <View
                               key={index}
                               className="px-2 py-1 rounded-full mb-1"
-                              style={{ 
+                              style={{
                                 backgroundColor: colors.primary + '20',
                                 flexShrink: 1,
                               }}
                             >
-                              <Text 
-                                className="text-xs font-medium" 
+                              <Text
+                                className="text-xs font-medium"
                                 style={{ color: colors.primary }}
                                 numberOfLines={1}
                               >
@@ -643,7 +608,7 @@ export default function SalonDetailsScreen({
             </View>
           </View>
         );
-      
+
       case 'therapists':
         return (
           <View className="px-5 py-4">
@@ -659,7 +624,7 @@ export default function SalonDetailsScreen({
                       className="w-full h-40 rounded-xl"
                       resizeMode="cover"
                     />
-                    <View 
+                    <View
                       className="absolute bottom-2 right-2 flex-row items-center px-2 py-1 rounded-full"
                       style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
                     >
@@ -680,7 +645,7 @@ export default function SalonDetailsScreen({
             </View>
           </View>
         );
-      
+
       case 'location':
         return (
           <View className="px-5 py-4">
@@ -701,13 +666,13 @@ export default function SalonDetailsScreen({
                 </Text>
               </View>
             </View>
-            <MapView 
-              latitude={salonDetails.latitude} 
-              longitude={salonDetails.longitude} 
+            <MapView
+              latitude={salonDetails.latitude}
+              longitude={salonDetails.longitude}
             />
           </View>
         );
-      
+
       case 'ratings':
         return (
           <View className="px-5 py-4">
@@ -729,7 +694,7 @@ export default function SalonDetailsScreen({
                 <View
                   key={index}
                   className="mb-4 rounded-xl overflow-hidden bg-white"
-                  style={{ 
+                  style={{
                     elevation: 3,
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 2 },
@@ -767,7 +732,7 @@ export default function SalonDetailsScreen({
             </View>
           </View>
         );
-      
+
       case 'about':
         return (
           <View className="px-5 py-4">
@@ -779,7 +744,7 @@ export default function SalonDetailsScreen({
             </Text>
           </View>
         );
-      
+
       default:
         return null;
     }
@@ -794,21 +759,21 @@ export default function SalonDetailsScreen({
           className="w-full h-full"
           resizeMode="cover"
         />
-        
+
         {/* Transparent Header Overlay */}
         <TransparentHeader onBack={onBack} />
-        
+
         {/* Floating Heart Button - Fade out when scrolled down */}
         <Animated.View
           className="absolute bottom-0 right-5"
-          style={{ 
+          style={{
             opacity: heartOpacity,
             pointerEvents: scrollY === 0 ? 'auto' : 'none',
           }}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             className="items-center justify-center rounded-full"
-            style={{ 
+            style={{
               backgroundColor: 'white',
               width: 50,
               height: 50,
@@ -825,19 +790,19 @@ export default function SalonDetailsScreen({
               console.log('Toggle favorite:', salonDetails.id, !isFavorited);
             }}
           >
-            <Ionicons 
-              name={isFavorited ? "heart" : "heart-outline"} 
-              size={24} 
-              color={primaryColor} 
+            <Ionicons
+              name={isFavorited ? "heart" : "heart-outline"}
+              size={24}
+              color={primaryColor}
             />
           </TouchableOpacity>
         </Animated.View>
       </View>
 
       {/* Scrollable Content Area */}
-      <ScrollView 
+      <ScrollView
         ref={mainScrollViewRef}
-        className="flex-1" 
+        className="flex-1"
         showsVerticalScrollIndicator={false}
         onScroll={(event) => {
           const offsetY = event.nativeEvent.contentOffset.y;
@@ -851,8 +816,8 @@ export default function SalonDetailsScreen({
             {salonDetails.name}
           </Text>
 
-           {/* Salon Rating */}
-           <View className="mb-4">
+          {/* Salon Rating */}
+          <View className="mb-4">
             <StarRating rating={salonDetails.rating} />
           </View>
 
@@ -872,13 +837,13 @@ export default function SalonDetailsScreen({
             </Text>
           </View>
 
-          {/* Action Buttons: Facebook, Message, Directions */}
+          {/* Action Buttons: Facebook, Message */}
           <View className="flex-row justify-around mb-6" style={{ gap: 12 }}>
             <TouchableOpacity
               className="items-center"
               onPress={handleFacebook}
             >
-              <View 
+              <View
                 className="w-14 h-14 rounded-full items-center justify-center mb-2"
                 style={{ backgroundColor: colors.primary + '20' }}
               >
@@ -892,7 +857,7 @@ export default function SalonDetailsScreen({
               className="items-center"
               onPress={handleMessage}
             >
-              <View 
+              <View
                 className="w-14 h-14 rounded-full items-center justify-center mb-2"
                 style={{ backgroundColor: colors.primary + '20' }}
               >
@@ -902,26 +867,12 @@ export default function SalonDetailsScreen({
                 Message
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              className="items-center"
-              onPress={handleGetDirections}
-            >
-              <View 
-                className="w-14 h-14 rounded-full items-center justify-center mb-2"
-                style={{ backgroundColor: colors.primary + '20' }}
-              >
-                <Ionicons name="navigate-outline" size={24} color={primaryColor} />
-              </View>
-              <Text className="text-xs" style={{ color: colors.icon }}>
-                Directions
-              </Text>
-            </TouchableOpacity>
           </View>
 
           {/* Navigation Tabs */}
-          <ScrollView 
+          <ScrollView
             ref={tabScrollViewRef}
-            horizontal 
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingRight: 0 }}
           >
@@ -945,12 +896,12 @@ export default function SalonDetailsScreen({
                     {tab.label}
                   </Text>
                   {activeTab === tab.id && (
-                    <View 
+                    <View
                       className="absolute bottom-0 left-0 right-0"
-                      style={{ 
-                        height: 2, 
+                      style={{
+                        height: 2,
                         backgroundColor: primaryColor,
-                      }} 
+                      }}
                     />
                   )}
                 </View>
@@ -959,14 +910,14 @@ export default function SalonDetailsScreen({
           </ScrollView>
 
           {/* Horizontal Divider */}
-          <View 
+          <View
             className="w-full"
-            style={{ 
-              height: 1, 
+            style={{
+              height: 1,
               backgroundColor: '#E5E7EB',
               marginTop: 4,
               marginBottom: 0,
-            }} 
+            }}
           />
         </View>
 
@@ -1025,9 +976,9 @@ export default function SalonDetailsScreen({
       </ScrollView>
 
       {/* Book Appointment Button */}
-      <View 
+      <View
         className="px-5 py-4 border-t"
-        style={{ 
+        style={{
           borderTopColor: '#E5E7EB',
           paddingBottom: insets.bottom || 16,
         }}
