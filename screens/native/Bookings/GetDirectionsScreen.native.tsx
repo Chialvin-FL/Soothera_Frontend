@@ -6,6 +6,7 @@ import * as Location from 'expo-location';
 import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { MAPBOX_TOKEN } from 'env';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -15,7 +16,6 @@ interface Props {
   onBack?: () => void;
 }
 
-const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
 
 const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, onBack }) => {
   const colorScheme = useColorScheme();

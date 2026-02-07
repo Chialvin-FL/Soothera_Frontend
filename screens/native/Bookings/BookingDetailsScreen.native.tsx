@@ -13,6 +13,7 @@ import { useConfirmation } from '@/components/native/ConfirmationModalContext';
 import InvoiceScreen from './components/InvoiceScreen.native';
 import { generateInvoiceFromBooking } from './utils/invoiceDataGenerator';
 import type { InvoiceData } from './types/Invoice';
+import { MAPBOX_TOKEN } from 'env';
 
 // Try to load react-native-maps at runtime for mobile. Do not import statically
 // so the web build / TS server won't fail if the native lib isn't installed.
@@ -42,8 +43,6 @@ interface BookingDetailsScreenProps {
   onReschedule?: () => void;
   onCancel?: () => void;
 }
-
-const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
 
 // Map component for mobile (display-only with pin marker)
 const MapView = ({ latitude, longitude }: { latitude: number; longitude: number }) => {

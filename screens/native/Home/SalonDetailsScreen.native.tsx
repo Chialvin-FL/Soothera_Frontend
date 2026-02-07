@@ -8,7 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { TransparentHeader } from '@/components/native/TransparentHeader';
 import { SalonDetails } from './types/SalonDetails';
 import { services } from './configs/mockData';
-
+import { MAPBOX_TOKEN } from 'env';
 
 // Try to load react-native-maps at runtime for mobile. Do not import statically
 // so the web build / TS server won't fail if the native lib isn't installed.
@@ -34,8 +34,6 @@ interface SalonDetailsScreenProps {
 }
 
 type TabId = 'services' | 'therapists' | 'location' | 'ratings' | 'about';
-
-const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
 
 // Map component for mobile (display-only with pin marker)
 const MapView = ({ latitude, longitude }: { latitude: number; longitude: number }) => {
