@@ -16,16 +16,7 @@ import type { InvoiceData } from './types/Invoice';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
-// Try to load react-native-maps at runtime for mobile. Do not import statically
-// so the web build / TS server won't fail if the native lib isn't installed.
-let RNMaps: any = null;
-try {
-  RNMaps = require('react-native-maps');
-} catch (e) {
-  RNMaps = null;
-}
-
-// Try to load WebView at runtime for a mobile fallback (Leaflet in WebView)
+// Try to load WebView at runtime for mobile (Leaflet in WebView with Mapbox tiles)
 let RNWebView: any = null;
 try {
   RNWebView = require('react-native-webview');
@@ -45,82 +36,27 @@ interface BookingDetailsScreenProps {
   onCancel?: () => void;
 }
 
-// Map component for mobile (display-only with pin marker)
+// Map component for mobile (display-only with pin marker using Leaflet in WebView)
 const MapView = ({ latitude, longitude }: { latitude: number; longitude: number }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  
+
   // Default coordinates fallback
   const DEFAULT_LAT = 10.643284;
   const DEFAULT_LNG = 124.477158;
-  
+
   const validLat = isNaN(latitude) ? DEFAULT_LAT : latitude;
   const validLng = isNaN(longitude) ? DEFAULT_LNG : longitude;
-  
-  // Mobile map rendering: prefer native maps, fall back to WebView (Leaflet) or placeholder
-  if (Platform.OS !== 'web' && (RNMaps || RNWebView)) {
-    const MapViewComp = RNMaps && (RNMaps.default || RNMaps.MapView);
-    const MarkerComp = RNMaps && (RNMaps.Marker || (RNMaps.default && RNMaps.default.Marker));
-    const UrlTileComp = RNMaps && (RNMaps.UrlTile || (RNMaps.default && RNMaps.default.UrlTile));
-    const WebViewComp = RNWebView && (RNWebView.default || RNWebView.WebView);
-    
-    // If react-native-maps is available, use native MapView with Mapbox tiles (display-only)
-    if (MapViewComp) {
-      const region = {
-        latitude: validLat,
-        longitude: validLng,
-        latitudeDelta: 0.007,
-        longitudeDelta: 0.007,
-      };
-      
-      // Mapbox tile URL template
-      const mapboxTileUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`;
-      
-      return (
-        <View 
-          className="w-full rounded-xl overflow-hidden"
-          style={{ 
-            height: 200, 
-            borderWidth: 1,
-            borderColor: '#E5E7EB',
-          }}
-        >
-          <MapViewComp
-            style={{ flex: 1 }}
-            initialRegion={region}
-            region={region}
-            scrollEnabled={false}
-            zoomEnabled={false}
-            pitchEnabled={false}
-            rotateEnabled={false}
-            showsUserLocation={false}
-            showsMyLocationButton={false}
-          >
-            {/* Use custom Mapbox tiles if UrlTile is available, otherwise use default map provider */}
-            {UrlTileComp && (
-              <UrlTileComp
-                urlTemplate={mapboxTileUrl}
-                maximumZ={19}
-                flipY={false}
-              />
-            )}
-            {MarkerComp && (
-              <MarkerComp
-                coordinate={{ latitude: validLat, longitude: validLng }}
-                draggable={false}
-                pinColor={colors.primary}
-              />
-            )}
-          </MapViewComp>
-        </View>
-      );
-    }
-    
-    // If native maps not available but WebView is, render a Leaflet HTML inside WebView with Mapbox tiles (display-only)
+
+  // Mobile map rendering: use WebView with Leaflet and Mapbox tiles (display-only)
+  if (Platform.OS !== 'web' && RNWebView) {
+    const WebViewComp = RNWebView.default || RNWebView.WebView;
+
+    // Render a Leaflet HTML inside WebView with Mapbox tiles (display-only)
     if (WebViewComp) {
       // Convert primary color to hex format for use in HTML/CSS
       const primaryColorHex = colors.primary || '#0d9488';
-      
+
       const html = `<!doctype html>
 <html>
 <head>
@@ -181,12 +117,12 @@ const MapView = ({ latitude, longitude }: { latitude: number; longitude: number 
   </script>
 </body>
 </html>`;
-      
+
       return (
-        <View 
+        <View
           className="w-full rounded-xl overflow-hidden"
-          style={{ 
-            height: 200, 
+          style={{
+            height: 200,
             borderWidth: 1,
             borderColor: '#E5E7EB',
           }}
@@ -203,13 +139,13 @@ const MapView = ({ latitude, longitude }: { latitude: number; longitude: number 
       );
     }
   }
-  
+
   // Fallback: placeholder if maps are not available
   return (
-    <View 
+    <View
       className="w-full rounded-xl overflow-hidden"
-      style={{ 
-        height: 200, 
+      style={{
+        height: 200,
         backgroundColor: colors.background,
         borderWidth: 1,
         borderColor: '#E5E7EB',
@@ -249,8 +185,8 @@ const StarRating = ({ rating }: { rating: number }) => {
   );
 };
 
-export default function BookingDetailsScreen({ 
-  bookingDetails, 
+export default function BookingDetailsScreen({
+  bookingDetails,
   onBack,
   onRateSpa,
   onRateTherapist,
@@ -277,7 +213,7 @@ export default function BookingDetailsScreen({
     const { latitude, longitude } = bookingDetails;
     const validLat = isNaN(latitude) ? 10.643284 : latitude;
     const validLng = isNaN(longitude) ? 124.477158 : longitude;
-    
+
     onGetDirections?.({ latitude: validLat, longitude: validLng }, bookingDetails.spaName);
   };
 
@@ -292,14 +228,14 @@ export default function BookingDetailsScreen({
     // Parse time from "10:00 AM - 11:00 AM" format (take the start time)
     const timeMatch = bookingDetails.time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     if (!timeMatch) return undefined;
-    
+
     let hours = parseInt(timeMatch[1], 10);
     const minutes = parseInt(timeMatch[2], 10);
     const ampm = timeMatch[3].toUpperCase();
-    
+
     if (ampm === 'PM' && hours !== 12) hours += 12;
     if (ampm === 'AM' && hours === 12) hours = 0;
-    
+
     const date = getInitialDate() || new Date();
     const time = new Date(date);
     time.setHours(hours, minutes, 0, 0);
@@ -345,14 +281,14 @@ export default function BookingDetailsScreen({
             className="w-full h-full"
             resizeMode="cover"
           />
-          
+
           {/* Transparent Header Overlay */}
           <TransparentHeader onBack={onBack} title="Booking Details" />
-          
+
           {/* Floating Heart Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             className="absolute bottom-0 right-5 items-center justify-center rounded-full"
-            style={{ 
+            style={{
               backgroundColor: 'white',
               width: 50,
               height: 50,
@@ -369,10 +305,10 @@ export default function BookingDetailsScreen({
               console.log('Toggle favorite:', bookingDetails.id, !isFavorited);
             }}
           >
-            <Ionicons 
-              name={isFavorited ? "heart" : "heart-outline"} 
-              size={24} 
-              color={primaryColor} 
+            <Ionicons
+              name={isFavorited ? "heart" : "heart-outline"}
+              size={24}
+              color={primaryColor}
             />
           </TouchableOpacity>
         </View>
@@ -398,9 +334,9 @@ export default function BookingDetailsScreen({
 
           {/* Map */}
           <View className="mb-4">
-            <MapView 
-              latitude={bookingDetails.latitude} 
-              longitude={bookingDetails.longitude} 
+            <MapView
+              latitude={bookingDetails.latitude}
+              longitude={bookingDetails.longitude}
             />
           </View>
 
@@ -435,7 +371,7 @@ export default function BookingDetailsScreen({
             <Text className="text-lg font-semibold mb-3" style={{ color: colors.text }}>
               Service Information
             </Text>
-            
+
             {/* Service Name */}
             <View className="mb-3 flex-row items-center">
               <Ionicons name="sparkles-outline" size={18} color={colors.primary} />
@@ -514,7 +450,7 @@ export default function BookingDetailsScreen({
             <Text className="text-lg font-semibold mb-3" style={{ color: colors.text }}>
               Booking Information
             </Text>
-            
+
             {/* Booking ID */}
             <View className="mb-3 flex-row items-center">
               <Ionicons name="receipt-outline" size={18} color={colors.text} />
@@ -541,7 +477,7 @@ export default function BookingDetailsScreen({
                   </Text>
                 </View>
                 <View className="mb-4 flex-row items-center">
-                  <View 
+                  <View
                     className="px-3 py-1 rounded-full"
                     style={{ backgroundColor: colors.primary }}
                   >
@@ -559,7 +495,7 @@ export default function BookingDetailsScreen({
             {/* Non-refundable Badge (only for cancelled bookings) */}
             {isCancelled && (
               <View className="mb-4 flex-row items-center">
-                <View 
+                <View
                   className="px-3 py-1 rounded-full"
                   style={{ backgroundColor: '#EF4444' }}
                 >
