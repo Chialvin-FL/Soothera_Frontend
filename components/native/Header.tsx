@@ -81,7 +81,7 @@ export const Header = ({ userName = 'John Doe', onNotificationPress, onProfilePr
         activeOpacity={0.7}
       >
         <Image
-          source={require('../../assets/pfp.png')}
+          source={require('../../assets/pfp.jpg')}
           className="w-10 h-10 rounded-full mr-3"
         />
         <Text className="text-base font-semibold" style={{ color: colors.text }}>

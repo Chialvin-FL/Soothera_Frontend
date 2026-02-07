@@ -4,7 +4,6 @@ import { Text } from '@/components/Text';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
-import { MAPBOX_TOKEN } from '../../../env';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -15,6 +14,8 @@ interface Props {
   destinationName?: string;
   onBack?: () => void;
 }
+
+const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
 
 const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, onBack }) => {
   const colorScheme = useColorScheme();

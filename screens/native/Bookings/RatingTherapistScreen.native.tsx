@@ -173,7 +173,7 @@ export default function RatingTherapistScreen({
               }}
             >
               <Image
-                source={require('../../../assets/pfp.png')}
+                source={require('../../../assets/pfp.jpg')}
                 className="rounded-full"
                 style={{ 
                   width: 160,

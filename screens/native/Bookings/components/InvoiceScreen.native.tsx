@@ -17,7 +17,7 @@ import * as FileSystem from 'expo-file-system';
 import * as IntentLauncher from 'expo-intent-launcher';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SuccessModal } from '@/components/native/SuccessModal';
-import { STORAGE_KEYS } from '@/env';
+import { STORAGE_KEYS } from '@/constants/storage';
 
 // Invoice Registry Types
 interface InvoiceMetadata {
