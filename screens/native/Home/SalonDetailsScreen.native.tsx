@@ -8,7 +8,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { TransparentHeader } from '@/components/native/TransparentHeader';
 import { SalonDetails } from './types/SalonDetails';
 import { services } from './configs/mockData';
-import { MAPBOX_TOKEN } from 'env';
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
 // Try to load react-native-maps at runtime for mobile. Do not import statically
 // so the web build / TS server won't fail if the native lib isn't installed.

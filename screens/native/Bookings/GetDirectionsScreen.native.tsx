@@ -6,7 +6,8 @@ import * as Location from 'expo-location';
 import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { MAPBOX_TOKEN } from 'env';
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 

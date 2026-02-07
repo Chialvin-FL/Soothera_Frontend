@@ -13,7 +13,8 @@ import { useConfirmation } from '@/components/native/ConfirmationModalContext';
 import InvoiceScreen from './components/InvoiceScreen.native';
 import { generateInvoiceFromBooking } from './utils/invoiceDataGenerator';
 import type { InvoiceData } from './types/Invoice';
-import { MAPBOX_TOKEN } from 'env';
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
 // Try to load react-native-maps at runtime for mobile. Do not import statically
 // so the web build / TS server won't fail if the native lib isn't installed.
