@@ -22,21 +22,19 @@ const NavItem = ({ icon, label, isActive, onPress }: NavItemProps) => {
   return (
     <Pressable
       onPress={onPress}
-      className={`flex-row items-center px-6 py-4 mb-2 mx-3 rounded-lg transition-colors ${
-        isActive 
-          ? 'bg-blue-500' 
+      className={`flex-row items-center px-6 py-4 mb-2 mx-3 rounded-lg transition-colors ${isActive
+          ? 'bg-primary'
           : 'hover:bg-gray-100'
-      }`}
-    >
-      <Ionicons 
-        name={icon} 
-        size={24} 
-        color={isActive ? '#ffffff' : '#6b7280'} 
-      />
-      <Text 
-        className={`ml-4 text-base font-medium ${
-          isActive ? 'text-white' : 'text-gray-700'
         }`}
+    >
+      <Ionicons
+        name={icon}
+        size={24}
+        color={isActive ? '#ffffff' : '#6b7280'}
+      />
+      <Text
+        className={`ml-4 text-base font-medium ${isActive ? 'text-white' : 'text-gray-700'
+          }`}
       >
         {label}
       </Text>

@@ -55,7 +55,7 @@ export default function HomeScreenWeb() {
           <View className="space-y-4">
             {[1, 2, 3, 4].map((item) => (
               <View key={item} className="flex-row items-center py-3 border-b border-gray-100">
-                <View className="w-2 h-2 rounded-full bg-blue-500 mr-4" />
+                <View className="w-2 h-2 rounded-full bg-primary mr-4" />
                 <View className="flex-1">
                   <Text className="text-gray-900 font-medium">Activity Update {item}</Text>
                   <Text className="text-gray-500 text-sm mt-1">Just now</Text>
@@ -66,7 +66,7 @@ export default function HomeScreenWeb() {
         </View>
 
         {/* Quick Actions */}
-        <View className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 shadow-sm">
+        <View className="bg-gradient-to-r from-primary to-primary-700 rounded-lg p-6 shadow-sm">
           <Text className="text-white text-2xl font-bold mb-2">Quick Actions</Text>
           <Text className="text-white/90 mb-4">Access frequently used features</Text>
           <View className="flex-row gap-4">
