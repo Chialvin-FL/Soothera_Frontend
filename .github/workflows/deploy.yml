@@ -1,40 +1,26 @@
-name: Deploy React Native Web to Vercel
+name: Deploy Expo Web to Vercel
 
 on:
   push:
-    branches:
-      - main  # change if your default branch is different
+    branches: [main]
 
 jobs:
-  vercel-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout your repo
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      # 2. Set up Node.js
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: '20'  # match your local Node version
+          node-version: '20'
 
-      # 3. Install dependencies
       - name: Install dependencies
         run: npm ci
 
-      # 4. Build the project (React Native Web)
-      - name: Build project
-        run: npm run build  # ensure your package.json has "build": "react-scripts build" or Expo web build command
+      - name: Build Expo Web
+        run: npm run build
 
-      # 5. Deploy to Vercel
       - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v20
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
