@@ -23,4 +23,4 @@ jobs:
         run: npm run build
 
       - name: Deploy to Vercel
-        run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
