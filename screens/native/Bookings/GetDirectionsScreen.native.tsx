@@ -28,7 +28,7 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
   const webviewRef = useRef<any>(null);
   const pendingHeadingRef = useRef<number | null>(null);
   const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
-  
+
   // Drawer Animation State
   // Drawer will 'peek' at this offset (px) when closed so it's always draggable
   const DRAWER_PEEK = 140;
@@ -215,7 +215,7 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
             if (pendingHeadingRef.current != null && webviewRef.current) {
               const angle = pendingHeadingRef.current;
               pendingHeadingRef.current = null;
-              try { webviewRef.current.injectJavaScript(`(function(){ if(window.updateHeading) window.updateHeading(${angle}); })(); true;`); } catch(e) { }
+              try { webviewRef.current.injectJavaScript(`(function(){ if(window.updateHeading) window.updateHeading(${angle}); })(); true;`); } catch (e) { }
             }
           }
         }}
@@ -226,12 +226,12 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
         <TouchableOpacity onPress={onBack} className="pr-2">
           <Ionicons name="arrow-back" size={24} color="#5F6368" />
         </TouchableOpacity>
-        
+
         {/* Connection visuals: Dot, Dotted Line, Pin */}
         <View className="items-center mr-3">
-            <Ionicons name="radio-button-on" size={14} color="#4285F4" />
-            <View className="w-0.5 h-6 border-l border-dotted border-gray-400 my-2" />
-            <Ionicons name="location-outline" size={24} color={colors.primary}/>
+          <Ionicons name="radio-button-on" size={14} color="#4285F4" />
+          <View className="w-0.5 h-6 border-l border-dotted border-gray-400 my-2" />
+          <Ionicons name="location-outline" size={24} color={colors.primary} />
         </View>
 
         <View className="flex-1">
@@ -246,7 +246,7 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
       </View>
 
       {/* PULLABLE BOTTOM DRAWER */}
-      <Animated.View 
+      <Animated.View
         {...panResponder.panHandlers}
         style={{ transform: [{ translateY }] }}
         className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[28px] shadow-2xl pb-10"
@@ -261,15 +261,15 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
               <Text className="text-2xl font-bold text-green-700">{Math.round((routeInfo?.duration || 0) / 60)} min </Text>
               <Text className="text-lg text-gray-500 font-medium">({((routeInfo?.distance || 0) / 1000).toFixed(1)} km)</Text>
             </View>
-            <TouchableOpacity onPress={() => Animated.spring(translateY, {toValue: DRAWER_PEEK, useNativeDriver: true}).start()}>
-               <MaterialIcons name="close" size={24} color="#5F6368" />
+            <TouchableOpacity onPress={() => Animated.spring(translateY, { toValue: DRAWER_PEEK, useNativeDriver: true }).start()}>
+              <MaterialIcons name="close" size={24} color="#5F6368" />
             </TouchableOpacity>
           </View>
-          
+
           <Text className="text-sm text-gray-600 mb-6">Fastest route now due to traffic conditions</Text>
 
           <View className="flex-row items-center">
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 const lat = destination.latitude; const lng = destination.longitude;
                 const url = Platform.OS === 'ios'
@@ -280,7 +280,7 @@ const GetDirectionsScreen: React.FC<Props> = ({ destination, destinationName, on
               className="bg-[#007064] flex-row items-center px-6 py-3.5 rounded-full mr-3 shadow-sm"
             >
               <Ionicons name="navigate-outline" size={22} color="white" style={{ marginRight: 8 }} />
-            <Text className="text-white text-lg font-bold">Start</Text>
+              <Text className="text-white text-lg font-bold">Start</Text>
             </TouchableOpacity>
           </View>
         </View>
