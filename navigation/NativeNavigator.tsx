@@ -42,6 +42,9 @@ import type { FaqItem } from '../screens/native/Profile/configs/faqData';
 import type { Service } from '../screens/native/Home/types/Home';
 import type { SalonDetails, Therapist } from '../screens/native/Home/types/SalonDetails';
 import type { Conversation } from '../screens/native/Messaging/InboxScreen.native';
+import LoginScreen from '../screens/native/Login/LoginScreen.native';
+import RegisterScreen from '../screens/native/Register/RegisterScreen.native';
+import { UserRole } from '@/env';
 
 /** Support / AI chatbot conversation for Help screen FAB */
 const SUPPORT_CHATBOT_CONVERSATION: Conversation = {
@@ -76,6 +79,10 @@ const TRANSITION_DURATION = 500; // Entry duration (longer)
 const EXIT_TRANSITION_DURATION = 300; // Exit duration (unchanged)
 
 export default function NativeNavigator() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [userName, setUserName] = useState<string>('');
+  const [authScreen, setAuthScreen] = useState<'login' | 'register'>('login');
   const [activeTab, setActiveTab] = useState<TabId>('home');
 
   // Home overlays
@@ -636,52 +643,86 @@ export default function NativeNavigator() {
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <View style={{ flex: 1, position: 'relative' }}>
-        {/* Tab bases */}
-        <RisingPage visible={activeTab === 'home'}>
-          <HomeScreen
-            useNavigatorOverlays
-            onNavigateToProfile={() => setActiveTab('profile')}
-            onNavigateServices={openHomeServices}
-            onNavigateTopRated={(options) => openHomeTopRated(options)}
-            onNavigateSalonDetails={openHomeSalon}
-            onNavigateBookAppointment={openHomeBook}
-            onNavigateNotifications={openHomeNotifications}
-          />
-        </RisingPage>
+        {!isLoggedIn ? (
+          <>
+            {authScreen === 'login' ? (
+              <LoginScreen
+                onLogin={(role, name) => {
+                  setUserRole(role);
+                  setUserName(name);
+                  setIsLoggedIn(true);
+                }}
+                onNavigateToRegister={() => setAuthScreen('register')}
+                onForgotPassword={() => console.log('Forgot password')}
+              />
+            ) : (
+              <RegisterScreen
+                onRegister={() => {
+                  setUserRole('customer');
+                  setUserName('New User');
+                  setIsLoggedIn(true);
+                }}
+                onNavigateToLogin={() => setAuthScreen('login')}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            {/* Tab bases */}
+            <RisingPage visible={activeTab === 'home'}>
+              <HomeScreen
+                useNavigatorOverlays
+                onNavigateToProfile={() => setActiveTab('profile')}
+                onNavigateServices={openHomeServices}
+                onNavigateTopRated={(options) => openHomeTopRated(options)}
+                onNavigateSalonDetails={openHomeSalon}
+                onNavigateBookAppointment={openHomeBook}
+                onNavigateNotifications={openHomeNotifications}
+              />
+            </RisingPage>
 
-        <RisingPage visible={activeTab === 'bookings'} fadeIn={false} fadeOut={false}>
-          <BookingsScreen
-            useNavigatorOverlays
-            onNavigateToProfile={() => setActiveTab('profile')}
-            onNavigateBookingDetails={openBookingDetails}
-            onNavigateRatingSpa={openBookingRatingSpa}
-            onNavigateRatingTherapist={openBookingRatingTherapist}
-            onNavigateNotifications={openHomeNotifications}
-            onNavigateRebook={handleRebook}
-          />
-        </RisingPage>
+            <RisingPage visible={activeTab === 'bookings'} fadeIn={false} fadeOut={false}>
+              <BookingsScreen
+                useNavigatorOverlays
+                onNavigateToProfile={() => setActiveTab('profile')}
+                onNavigateBookingDetails={openBookingDetails}
+                onNavigateRatingSpa={openBookingRatingSpa}
+                onNavigateRatingTherapist={openBookingRatingTherapist}
+                onNavigateNotifications={openHomeNotifications}
+                onNavigateRebook={handleRebook}
+              />
+            </RisingPage>
 
-        <RisingPage visible={activeTab === 'messaging'}>
-          <InboxScreen
-            useNavigatorOverlays
-            onNavigateToProfile={() => setActiveTab('profile')}
-            onNavigateChatRoom={openChat}
-            onNavigateNotifications={openHomeNotifications}
-          />
-        </RisingPage>
+            <RisingPage visible={activeTab === 'messaging'}>
+              <InboxScreen
+                useNavigatorOverlays
+                onNavigateToProfile={() => setActiveTab('profile')}
+                onNavigateChatRoom={openChat}
+                onNavigateNotifications={openHomeNotifications}
+              />
+            </RisingPage>
 
-        <RisingPage visible={activeTab === 'profile'} fadeIn={false} fadeOut={false}>
-          <ProfileScreen
-            isActive={activeTab === 'profile'}
-            onNavigateToProfileEdit={() => openProfileOverlay('edit')}
-            onNavigateToPasswordChange={() => openProfileOverlay('password')}
-            onNavigateToNotifications={() => openProfileOverlay('notifications')}
-            onNavigateToHelp={() => openProfileOverlay('help')}
-            onNavigateToFavorites={() => setProfileFavoritesVisible(true)}
-            onNavigateToTopRated={() => openHomeTopRated()}
-            onNavigateSalonDetails={openHomeSalon}
-          />
-        </RisingPage>
+            <RisingPage visible={activeTab === 'profile'} fadeIn={false} fadeOut={false}>
+              <ProfileScreen
+                isActive={activeTab === 'profile'}
+                onNavigateToProfileEdit={() => openProfileOverlay('edit')}
+                onNavigateToPasswordChange={() => openProfileOverlay('password')}
+                onNavigateToNotifications={() => openProfileOverlay('notifications')}
+                onNavigateToHelp={() => openProfileOverlay('help')}
+                onNavigateToFavorites={() => setProfileFavoritesVisible(true)}
+                onNavigateToTopRated={() => openHomeTopRated()}
+                onNavigateSalonDetails={openHomeSalon}
+                onLogout={() => {
+                  setIsLoggedIn(false);
+                  setUserRole(null);
+                  setUserName('');
+                  setAuthScreen('login');
+                  setActiveTab('home');
+                }}
+              />
+            </RisingPage>
+          </>
+        )}
       </View>
 
       {/* Overlays - Home */}
@@ -886,7 +927,7 @@ export default function NativeNavigator() {
                     }
                   }
                 }}
-                onReschedule={() => {}}
+                onReschedule={() => { }}
                 onCancel={async () => {
                   // Cancel booking logic - this will be handled by the confirmation modal in BookingDetailsScreen
                   console.log('Cancel booking:', bookingSelectedId);
@@ -1118,9 +1159,11 @@ export default function NativeNavigator() {
 
       {/* Bottom Tabs */}
       <RisingPage
-        visible={!isOverlayActive}
+        visible={isLoggedIn && !isOverlayActive}
         fillContainer={false}
         style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
+        exitDuration={isLoggedIn ? 260 : 0}
+        fadeOut={isLoggedIn}
       >
         <BottomTabs activeTab={activeTab} onTabPress={setActiveTab} />
       </RisingPage>

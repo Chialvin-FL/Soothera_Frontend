@@ -43,6 +43,7 @@ interface ProfileScreenProps {
   onNavigateToFavorites?: () => void;
   onNavigateToTopRated?: () => void;
   onNavigateSalonDetails?: (salonId: string) => void;
+  onLogout?: () => void;
 }
 
 export default function ProfileScreen({
@@ -54,6 +55,7 @@ export default function ProfileScreen({
   onNavigateToFavorites,
   onNavigateToTopRated,
   onNavigateSalonDetails,
+  onLogout,
 }: ProfileScreenProps = {}) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -135,7 +137,7 @@ export default function ProfileScreen({
               </View>
               <View className="border-t border-gray-200 dark:border-[#2a2a2a]">
                 <SettingItem icon="help-circle-outline" label="Help" colors={colors} onPress={onNavigateToHelp} />
-                <SettingItem icon="log-out-outline" label="Logout" colors={colors} textColor="#EF4444" iconColor="#EF4444" />
+                <SettingItem icon="log-out-outline" label="Logout" colors={colors} textColor="#EF4444" iconColor="#EF4444" onPress={onLogout} />
               </View>
             </View>
           </RisingItem>
