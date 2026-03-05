@@ -6,3 +6,27 @@ export const STORAGE_KEYS = {
 
 // Mapbox Access Token
 export const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
+
+// Dummy Accounts for Testing
+export const DUMMY_ACCOUNTS = [
+  {
+    email: 'customer@soothera.com',
+    password: 'password123',
+    role: 'customer',
+    name: 'John Customer',
+  },
+  {
+    email: 'admin@soothera.com',
+    password: 'admin123',
+    role: 'admin',
+    name: 'Soothera Admin',
+  },
+  {
+    email: 'therapist@soothera.com',
+    password: 'therapist123',
+    role: 'therapist',
+    name: 'Jane Therapist',
+  },
+] as const;
+
+export type UserRole = (typeof DUMMY_ACCOUNTS)[number]['role'];
