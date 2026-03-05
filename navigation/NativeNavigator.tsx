@@ -691,14 +691,14 @@ export default function NativeNavigator() {
                 />
               ) : (
                 <RegisterScreen
-                  onRegister={async (name, email) => {
-                    const userData: UserData = { role: 'customer', name, email };
+                  onRegister={async (name, email, role) => {
+                    const userData: UserData = { role, name, email };
                     try {
                       await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
                     } catch (e) {
                       console.error('Save session error:', e);
                     }
-                    setUserRole('customer');
+                    setUserRole(role);
                     setUserName(name);
                     setUserEmail(email);
                     setIsLoggedIn(true);

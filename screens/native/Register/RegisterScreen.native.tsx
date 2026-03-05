@@ -6,6 +6,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    Modal,
 } from 'react-native';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,9 +14,11 @@ import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SuccessModal } from '@/components/native/SuccessModal';
+import { UserRole } from '@/env';
+import TermsOfServiceScreen from '../Profile/TermsOfServiceScreen.native';
 
 interface RegisterScreenProps {
-    onRegister: (name: string, email: string) => void;
+    onRegister: (name: string, email: string, role: UserRole) => void;
     onNavigateToLogin: () => void;
 }
 
@@ -31,8 +34,10 @@ export default function RegisterScreen({
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [selectedRole, setSelectedRole] = useState<UserRole>('customer');
     const [showPassword, setShowPassword] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
+    const [showTermsModal, setShowTermsModal] = useState(false);
     const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '' });
 
     const handleRegister = () => {
@@ -54,7 +59,7 @@ export default function RegisterScreen({
             return;
         }
 
-        onRegister(name, email);
+        onRegister(name, email, selectedRole);
     };
 
     return (
@@ -79,6 +84,32 @@ export default function RegisterScreen({
                     <Text className="text-center text-gray-500 dark:text-gray-400">
                         Fill your information below or register with your social account
                     </Text>
+                </View>
+
+                {/* Role Selector */}
+                <View className="bg-gray-100 dark:bg-gray-800 rounded-full p-1 mb-6 flex-row">
+                    <TouchableOpacity
+                        className="flex-1 py-3 rounded-full items-center"
+                        style={{ backgroundColor: selectedRole === 'customer' ? colors.primary : 'transparent' }}
+                        onPress={() => setSelectedRole('customer')}
+                    >
+                        <Text
+                            className={`font-semibold ${selectedRole === 'customer' ? 'text-white' : 'text-gray-500'}`}
+                        >
+                            Customer
+                        </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        className="flex-1 py-3 rounded-full items-center"
+                        style={{ backgroundColor: selectedRole === 'admin' ? colors.primary : 'transparent' }}
+                        onPress={() => setSelectedRole('admin')}
+                    >
+                        <Text
+                            className={`font-semibold ${selectedRole === 'admin' ? 'text-white' : 'text-gray-500'}`}
+                        >
+                            Salon Owner
+                        </Text>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Form Section */}
@@ -174,7 +205,13 @@ export default function RegisterScreen({
                         </View>
                         <Text className="text-sm" style={{ color: colors.text }}>
                             Agree with{' '}
-                            <Text style={{ color: primaryColor, textDecorationLine: 'underline' }}>
+                            <Text
+                                style={{ color: primaryColor, textDecorationLine: 'underline' }}
+                                onPress={(e) => {
+                                    e.stopPropagation();
+                                    setShowTermsModal(true);
+                                }}
+                            >
                                 Terms & Condition
                             </Text>
                         </Text>
@@ -230,6 +267,15 @@ export default function RegisterScreen({
                 variant="error"
                 onClose={() => setErrorModal({ ...errorModal, visible: false })}
             />
+
+            <Modal
+                visible={showTermsModal}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setShowTermsModal(false)}
+            >
+                <TermsOfServiceScreen onBack={() => setShowTermsModal(false)} />
+            </Modal>
         </KeyboardAvoidingView>
     );
 }
