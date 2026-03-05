@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SuccessModal } from '@/components/native/SuccessModal';
 
 interface RegisterScreenProps {
-    onRegister: () => void;
+    onRegister: (name: string, email: string) => void;
     onNavigateToLogin: () => void;
 }
 
@@ -54,7 +54,7 @@ export default function RegisterScreen({
             return;
         }
 
-        onRegister();
+        onRegister(name, email);
     };
 
     return (

@@ -44,6 +44,9 @@ interface ProfileScreenProps {
   onNavigateToTopRated?: () => void;
   onNavigateSalonDetails?: (salonId: string) => void;
   onLogout?: () => void;
+  userName?: string;
+  userEmail?: string;
+  userRole?: string | null;
 }
 
 export default function ProfileScreen({
@@ -56,6 +59,9 @@ export default function ProfileScreen({
   onNavigateToTopRated,
   onNavigateSalonDetails,
   onLogout,
+  userName: propUserName,
+  userEmail: propUserEmail,
+  userRole,
 }: ProfileScreenProps = {}) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -64,8 +70,8 @@ export default function ProfileScreen({
   const [imageError, setImageError] = useState(false);
 
   // User data
-  const userName = 'User Profile';
-  const userEmail = 'profile@soothera.com';
+  const userName = propUserName || 'User Profile';
+  const userEmail = propUserEmail || 'profile@soothera.com';
   const profileImage = require('../../../assets/user.jpg');
 
   // Source of truth: mockData. Favorites = first 3, You May Also Like = next 4.

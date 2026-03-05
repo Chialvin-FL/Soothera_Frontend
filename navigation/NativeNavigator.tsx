@@ -44,7 +44,8 @@ import type { SalonDetails, Therapist } from '../screens/native/Home/types/Salon
 import type { Conversation } from '../screens/native/Messaging/InboxScreen.native';
 import LoginScreen from '../screens/native/Login/LoginScreen.native';
 import RegisterScreen from '../screens/native/Register/RegisterScreen.native';
-import { UserRole } from '@/env';
+import { STORAGE_KEYS, UserData, UserRole } from '@/env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /** Support / AI chatbot conversation for Help screen FAB */
 const SUPPORT_CHATBOT_CONVERSATION: Conversation = {
@@ -82,8 +83,31 @@ export default function NativeNavigator() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [userName, setUserName] = useState<string>('');
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [authScreen, setAuthScreen] = useState<'login' | 'register'>('login');
   const [activeTab, setActiveTab] = useState<TabId>('home');
+
+  // Load session on mount
+  useEffect(() => {
+    const loadSession = async () => {
+      try {
+        const storedData = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+        if (storedData) {
+          const userData: UserData = JSON.parse(storedData);
+          setUserName(userData.name);
+          setUserEmail(userData.email);
+          setUserRole(userData.role);
+          setIsLoggedIn(true);
+        }
+      } catch (error) {
+        console.error('Failed to load session:', error);
+      } finally {
+        setIsLoadingSession(false);
+      }
+    };
+    loadSession();
+  }, []);
 
   // Home overlays
   const [homeServicesVisible, setHomeServicesVisible] = useState(false);
@@ -642,531 +666,558 @@ export default function NativeNavigator() {
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-      <View style={{ flex: 1, position: 'relative' }}>
-        {!isLoggedIn ? (
-          <>
-            {authScreen === 'login' ? (
-              <LoginScreen
-                onLogin={(role, name) => {
-                  setUserRole(role);
-                  setUserName(name);
-                  setIsLoggedIn(true);
-                }}
-                onNavigateToRegister={() => setAuthScreen('register')}
-                onForgotPassword={() => console.log('Forgot password')}
-              />
-            ) : (
-              <RegisterScreen
-                onRegister={() => {
-                  setUserRole('customer');
-                  setUserName('New User');
-                  setIsLoggedIn(true);
-                }}
-                onNavigateToLogin={() => setAuthScreen('login')}
-              />
-            )}
-          </>
-        ) : (
-          <>
-            {/* Tab bases */}
-            <RisingPage visible={activeTab === 'home'}>
-              <HomeScreen
-                useNavigatorOverlays
-                onNavigateToProfile={() => setActiveTab('profile')}
-                onNavigateServices={openHomeServices}
-                onNavigateTopRated={(options) => openHomeTopRated(options)}
-                onNavigateSalonDetails={openHomeSalon}
-                onNavigateBookAppointment={openHomeBook}
-                onNavigateNotifications={openHomeNotifications}
-              />
-            </RisingPage>
-
-            <RisingPage visible={activeTab === 'bookings'} fadeIn={false} fadeOut={false}>
-              <BookingsScreen
-                useNavigatorOverlays
-                onNavigateToProfile={() => setActiveTab('profile')}
-                onNavigateBookingDetails={openBookingDetails}
-                onNavigateRatingSpa={openBookingRatingSpa}
-                onNavigateRatingTherapist={openBookingRatingTherapist}
-                onNavigateNotifications={openHomeNotifications}
-                onNavigateRebook={handleRebook}
-              />
-            </RisingPage>
-
-            <RisingPage visible={activeTab === 'messaging'}>
-              <InboxScreen
-                useNavigatorOverlays
-                onNavigateToProfile={() => setActiveTab('profile')}
-                onNavigateChatRoom={openChat}
-                onNavigateNotifications={openHomeNotifications}
-              />
-            </RisingPage>
-
-            <RisingPage visible={activeTab === 'profile'} fadeIn={false} fadeOut={false}>
-              <ProfileScreen
-                isActive={activeTab === 'profile'}
-                onNavigateToProfileEdit={() => openProfileOverlay('edit')}
-                onNavigateToPasswordChange={() => openProfileOverlay('password')}
-                onNavigateToNotifications={() => openProfileOverlay('notifications')}
-                onNavigateToHelp={() => openProfileOverlay('help')}
-                onNavigateToFavorites={() => setProfileFavoritesVisible(true)}
-                onNavigateToTopRated={() => openHomeTopRated()}
-                onNavigateSalonDetails={openHomeSalon}
-                onLogout={() => {
-                  setIsLoggedIn(false);
-                  setUserRole(null);
-                  setUserName('');
-                  setAuthScreen('login');
-                  setActiveTab('home');
-                }}
-              />
-            </RisingPage>
-          </>
-        )}
-      </View>
-
-      {/* Overlays - Home */}
-      {homeServicesVisible && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 5,
-            },
-            homeServicesStyle,
-          ]}
-        >
-          <ServicesScreen
-            onBack={closeHomeServices}
-            onServicePress={() => {
-              setHomeTopRatedVisible(true);
-              setHomeTopRatedAutoFilter(false);
-              setHomeTopRatedAutoFocus(false);
-            }}
-          />
-        </Animated.View>
-      )}
-
-      {homeTopRatedVisible && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 6,
-            },
-            homeTopRatedStyle,
-          ]}
-        >
-          <TopRatedSalonsScreen
-            onBack={closeHomeTopRated}
-            onSalonPress={openHomeSalon}
-            autoOpenFilter={homeTopRatedAutoFilter}
-            autoFocusSearch={homeTopRatedAutoFocus}
-          />
-        </Animated.View>
-      )}
-
-      {homeSelectedSalonId && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 7,
-            },
-            homeSalonStyle,
-          ]}
-        >
-          {(() => {
-            const salonDetails = getSalonDetails(homeSelectedSalonId);
-            if (!salonDetails) return null;
-            return (
-              <SalonDetailsScreen
-                salonDetails={salonDetails}
-                onBack={closeHomeSalon}
-                onBookAppointment={() => setHomeBookVisible(true)}
-              />
-            );
-          })()}
-        </Animated.View>
-      )}
-
-      {homeBookVisible && homeSelectedSalonId && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 8,
-            },
-            homeBookStyle,
-          ]}
-        >
-          {(() => {
-            const salonDetails = getSalonDetails(homeSelectedSalonId);
-            if (!salonDetails) return null;
-            return (
-              <BookAppointmentScreen
-                salonDetails={salonDetails}
-                onBack={closeHomeBook}
-                onComplete={closeHomeBook}
-                onPaymentSuccess={handleHomePaymentSuccess}
-              />
-            );
-          })()}
-        </Animated.View>
-      )}
-
-      {homeNotificationsVisible && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 9,
-            },
-            homeNotificationsStyle,
-          ]}
-        >
-          <NotificationsScreen onBack={closeHomeNotifications} />
-        </Animated.View>
-      )}
-
-      {homePaymentSuccess && (
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 10,
-          }}
-        >
-          <PaymentSuccessfulScreen
-            bookingData={homePaymentSuccess}
-            onBack={handleHomePaymentSuccessBack}
-            onHome={handleHomePaymentSuccessHome}
-          />
-        </View>
-      )}
-
-      {homePaymentFailed && (
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 11,
-          }}
-        >
-          <PaymentFailedScreen
-            bookingData={homePaymentFailed}
-            onBack={handleHomePaymentFailedBack}
-            onTryAgain={handleHomePaymentFailedTryAgain}
-          />
-        </View>
-      )}
-
-      {/* Overlays - Bookings */}
-      {bookingSelectedId && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 12,
-            },
-            bookingsDetailsStyle,
-          ]}
-        >
-          {(() => {
-            const details = getBookingDetails(bookingSelectedId);
-            if (!details) return null;
-            return (
-              <BookingDetailsScreen
-                bookingDetails={details}
-                onBack={closeBookingDetails}
-                onRateSpa={() => openBookingRatingSpa(bookingSelectedId)}
-                onRateTherapist={() => openBookingRatingTherapist(bookingSelectedId)}
-                onNavigateToInvoice={openBookingInvoice}
-                onGetDirections={(destination) => openGetDirections(destination, details.spaName)}
-                onRebook={() => {
-                  const bookingDetails = getBookingDetails(bookingSelectedId);
-                  if (bookingDetails) {
-                    // Find matching salon by name
-                    const matchingSalon = topRatedSalons.find((salon) => salon.name === bookingDetails.spaName);
-                    if (matchingSalon) {
-                      const salonDetails = getSalonDetails(matchingSalon.id);
-                      if (salonDetails) {
-                        setHomeSelectedSalonId(matchingSalon.id);
-                        setHomeBookVisible(true);
-                      }
+      {isLoadingSession ? (
+        <View style={{ flex: 1, backgroundColor: 'white' }} />
+      ) : (
+        <View style={{ flex: 1, position: 'relative' }}>
+          {!isLoggedIn ? (
+            <>
+              {authScreen === 'login' ? (
+                <LoginScreen
+                  onLogin={async (role, name, email) => {
+                    const userData: UserData = { role, name, email };
+                    try {
+                      await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+                    } catch (e) {
+                      console.error('Save session error:', e);
                     }
-                  }
+                    setUserRole(role);
+                    setUserName(name);
+                    setUserEmail(email);
+                    setIsLoggedIn(true);
+                  }}
+                  onNavigateToRegister={() => setAuthScreen('register')}
+                  onForgotPassword={() => console.log('Forgot password')}
+                />
+              ) : (
+                <RegisterScreen
+                  onRegister={async (name, email) => {
+                    const userData: UserData = { role: 'customer', name, email };
+                    try {
+                      await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+                    } catch (e) {
+                      console.error('Save session error:', e);
+                    }
+                    setUserRole('customer');
+                    setUserName(name);
+                    setUserEmail(email);
+                    setIsLoggedIn(true);
+                  }}
+                  onNavigateToLogin={() => setAuthScreen('login')}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              {/* Tab bases */}
+              <RisingPage visible={activeTab === 'home'}>
+                <HomeScreen
+                  useNavigatorOverlays
+                  onNavigateToProfile={() => setActiveTab('profile')}
+                  onNavigateServices={openHomeServices}
+                  onNavigateTopRated={(options) => openHomeTopRated(options)}
+                  onNavigateSalonDetails={openHomeSalon}
+                  onNavigateBookAppointment={openHomeBook}
+                  onNavigateNotifications={openHomeNotifications}
+                />
+              </RisingPage>
+
+              <RisingPage visible={activeTab === 'bookings'} fadeIn={false} fadeOut={false}>
+                <BookingsScreen
+                  useNavigatorOverlays
+                  onNavigateToProfile={() => setActiveTab('profile')}
+                  onNavigateBookingDetails={openBookingDetails}
+                  onNavigateRatingSpa={openBookingRatingSpa}
+                  onNavigateRatingTherapist={openBookingRatingTherapist}
+                  onNavigateNotifications={openHomeNotifications}
+                  onNavigateRebook={handleRebook}
+                />
+              </RisingPage>
+
+              <RisingPage visible={activeTab === 'messaging'}>
+                <InboxScreen
+                  useNavigatorOverlays
+                  onNavigateToProfile={() => setActiveTab('profile')}
+                  onNavigateChatRoom={openChat}
+                  onNavigateNotifications={openHomeNotifications}
+                />
+              </RisingPage>
+
+              <RisingPage visible={activeTab === 'profile'} fadeIn={false} fadeOut={false}>
+                <ProfileScreen
+                  isActive={activeTab === 'profile'}
+                  onNavigateToProfileEdit={() => openProfileOverlay('edit')}
+                  onNavigateToPasswordChange={() => openProfileOverlay('password')}
+                  onNavigateToNotifications={() => openProfileOverlay('notifications')}
+                  onNavigateToHelp={() => openProfileOverlay('help')}
+                  onNavigateToFavorites={() => setProfileFavoritesVisible(true)}
+                  onNavigateToTopRated={() => openHomeTopRated()}
+                  onNavigateSalonDetails={openHomeSalon}
+                  userName={userName}
+                  userEmail={userEmail}
+                  userRole={userRole}
+                  onLogout={async () => {
+                    try {
+                      await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
+                    } catch (e) {
+                      console.error('Clear session error:', e);
+                    }
+                    setIsLoggedIn(false);
+                    setUserRole(null);
+                    setUserName('');
+                    setUserEmail('');
+                    setAuthScreen('login');
+                    setActiveTab('home');
+                  }}
+                />
+              </RisingPage>
+            </>
+          )}
+
+          {/* Overlays - Home */}
+          {homeServicesVisible && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 5,
+                },
+                homeServicesStyle,
+              ]}
+            >
+              <ServicesScreen
+                onBack={closeHomeServices}
+                onServicePress={() => {
+                  setHomeTopRatedVisible(true);
+                  setHomeTopRatedAutoFilter(false);
+                  setHomeTopRatedAutoFocus(false);
                 }}
-                onReschedule={() => { }}
-                onCancel={async () => {
-                  // Cancel booking logic - this will be handled by the confirmation modal in BookingDetailsScreen
-                  console.log('Cancel booking:', bookingSelectedId);
-                }}
               />
-            );
-          })()}
-        </Animated.View>
-      )}
+            </Animated.View>
+          )}
 
-      {bookingRatingSpaId && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 13,
-            },
-            bookingsRatingSpaStyle,
-          ]}
-        >
-          {(() => {
-            const details = getBookingDetails(bookingRatingSpaId);
-            if (!details) return null;
-            return (
-              <RatingSpaScreen
-                bookingDetails={details}
-                onBack={closeBookingRatingSpa}
-                onSubmit={async () => { /* API submission handled by screen; navigation on modal OK via onBack */ }}
+          {homeTopRatedVisible && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 6,
+                },
+                homeTopRatedStyle,
+              ]}
+            >
+              <TopRatedSalonsScreen
+                onBack={closeHomeTopRated}
+                onSalonPress={openHomeSalon}
+                autoOpenFilter={homeTopRatedAutoFilter}
+                autoFocusSearch={homeTopRatedAutoFocus}
               />
-            );
-          })()}
-        </Animated.View>
-      )}
+            </Animated.View>
+          )}
 
-      {bookingRatingTherapistId && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 14,
-            },
-            bookingsRatingTherapistStyle,
-          ]}
-        >
-          {(() => {
-            const details = getBookingDetails(bookingRatingTherapistId);
-            if (!details) return null;
-            return (
-              <RatingTherapistScreen
-                bookingDetails={details}
-                onBack={closeBookingRatingTherapist}
-                onSubmit={async () => { /* API submission handled by screen; navigation on modal OK via onBack */ }}
+          {homeSelectedSalonId && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 7,
+                },
+                homeSalonStyle,
+              ]}
+            >
+              {(() => {
+                const salonDetails = getSalonDetails(homeSelectedSalonId);
+                if (!salonDetails) return null;
+                return (
+                  <SalonDetailsScreen
+                    salonDetails={salonDetails}
+                    onBack={closeHomeSalon}
+                    onBookAppointment={() => setHomeBookVisible(true)}
+                  />
+                );
+              })()}
+            </Animated.View>
+          )}
+
+          {homeBookVisible && homeSelectedSalonId && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 8,
+                },
+                homeBookStyle,
+              ]}
+            >
+              {(() => {
+                const salonDetails = getSalonDetails(homeSelectedSalonId);
+                if (!salonDetails) return null;
+                return (
+                  <BookAppointmentScreen
+                    salonDetails={salonDetails}
+                    onBack={closeHomeBook}
+                    onComplete={closeHomeBook}
+                    onPaymentSuccess={handleHomePaymentSuccess}
+                  />
+                );
+              })()}
+            </Animated.View>
+          )}
+
+          {homeNotificationsVisible && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 9,
+                },
+                homeNotificationsStyle,
+              ]}
+            >
+              <NotificationsScreen onBack={closeHomeNotifications} />
+            </Animated.View>
+          )}
+
+          {homePaymentSuccess && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 10,
+              }}
+            >
+              <PaymentSuccessfulScreen
+                bookingData={homePaymentSuccess}
+                onBack={handleHomePaymentSuccessBack}
+                onHome={handleHomePaymentSuccessHome}
               />
-            );
-          })()}
-        </Animated.View>
-      )}
-
-      {invoiceOverlay && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 15,
-            },
-            bookingsInvoiceStyle,
-          ]}
-        >
-          <InvoiceScreen
-            invoiceData={invoiceOverlay.data}
-            onBack={closeBookingInvoice}
-            isVAT={invoiceOverlay.isVAT}
-            vatRate={invoiceOverlay.vatRate}
-            discounts={invoiceOverlay.discounts}
-          />
-        </Animated.View>
-      )}
-
-      {getDirectionsDestination && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 15,
-            },
-            getDirectionsStyle,
-          ]}
-        >
-          <GetDirectionsScreen
-            destination={getDirectionsDestination}
-            destinationName={getDirectionsDestination.name}
-            onBack={closeGetDirections}
-          />
-        </Animated.View>
-      )}
-
-      {/* Overlays - Profile */}
-      {profileOverlay && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 16,
-            },
-            profileOverlayStyle,
-          ]}
-        >
-          {profileOverlay === 'edit' && (
-            <ProfileEditScreen onBack={closeProfileOverlay} />
+            </View>
           )}
-          {profileOverlay === 'password' && (
-            <PasswordChangeScreen onBack={closeProfileOverlay} />
-          )}
-          {profileOverlay === 'notifications' && (
-            <NotificationPreferencesScreen onBack={closeProfileOverlay} />
-          )}
-          {profileOverlay === 'help' && (
-            <HelpScreen
-              onBack={closeProfileOverlay}
-              onOpenChatbot={() => openChat(SUPPORT_CHATBOT_CONVERSATION)}
-              onFaqPress={openFaqDetail}
-              onTermsPress={openTermsOfService}
-              onPrivacyPress={openPrivacyPolicy}
-            />
-          )}
-        </Animated.View>
-      )}
 
-      {/* Overlays - FAQ Detail (slides in from right on top of Help) */}
-      {profileOverlay === 'help' && selectedFaq && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 16,
-            },
-            faqDetailStyle,
-          ]}
-        >
-          <FAQsScreen faq={selectedFaq} onBack={closeFaqDetail} />
-        </Animated.View>
-      )}
-
-      {/* Overlays - Profile Favorites */}
-      {profileFavoritesVisible && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 16,
-            },
-            profileFavoritesStyle,
-          ]}
-        >
-          <FavoritesScreen onBack={closeProfileFavorites} onSalonPress={openHomeSalon} />
-        </Animated.View>
-      )}
-
-      {/* Overlays - Help Legal (Terms / Privacy slides in from right on top of Help) */}
-      {profileOverlay === 'help' && helpLegalScreen && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 16,
-            },
-            helpLegalStyle,
-          ]}
-        >
-          {helpLegalScreen === 'terms' && (
-            <TermsOfServiceScreen onBack={closeHelpLegal} />
+          {homePaymentFailed && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 11,
+              }}
+            >
+              <PaymentFailedScreen
+                bookingData={homePaymentFailed}
+                onBack={handleHomePaymentFailedBack}
+                onTryAgain={handleHomePaymentFailedTryAgain}
+              />
+            </View>
           )}
-          {helpLegalScreen === 'privacy' && (
-            <PrivacyPolicyScreen onBack={closeHelpLegal} />
+
+          {/* Overlays - Bookings */}
+          {bookingSelectedId && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 12,
+                },
+                bookingsDetailsStyle,
+              ]}
+            >
+              {(() => {
+                const details = getBookingDetails(bookingSelectedId);
+                if (!details) return null;
+                return (
+                  <BookingDetailsScreen
+                    bookingDetails={details}
+                    onBack={closeBookingDetails}
+                    onRateSpa={() => openBookingRatingSpa(bookingSelectedId)}
+                    onRateTherapist={() => openBookingRatingTherapist(bookingSelectedId)}
+                    onNavigateToInvoice={openBookingInvoice}
+                    onGetDirections={(destination) => openGetDirections(destination, details.spaName)}
+                    onRebook={() => {
+                      const bookingDetails = getBookingDetails(bookingSelectedId);
+                      if (bookingDetails) {
+                        // Find matching salon by name
+                        const matchingSalon = topRatedSalons.find((salon) => salon.name === bookingDetails.spaName);
+                        if (matchingSalon) {
+                          const salonDetails = getSalonDetails(matchingSalon.id);
+                          if (salonDetails) {
+                            setHomeSelectedSalonId(matchingSalon.id);
+                            setHomeBookVisible(true);
+                          }
+                        }
+                      }
+                    }}
+                    onReschedule={() => { }}
+                    onCancel={async () => {
+                      // Cancel booking logic - this will be handled by the confirmation modal in BookingDetailsScreen
+                      console.log('Cancel booking:', bookingSelectedId);
+                    }}
+                  />
+                );
+              })()}
+            </Animated.View>
           )}
-        </Animated.View>
-      )}
 
-      {/* Overlays - Messaging (above profile so chat opens on top of Help, etc.) */}
-      {chatConversation && (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 17,
-            },
-            chatStyle,
-          ]}
-        >
-          <ChatRoomScreen conversation={chatConversation as any} onBack={closeChat} />
-        </Animated.View>
-      )}
+          {bookingRatingSpaId && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 13,
+                },
+                bookingsRatingSpaStyle,
+              ]}
+            >
+              {(() => {
+                const details = getBookingDetails(bookingRatingSpaId);
+                if (!details) return null;
+                return (
+                  <RatingSpaScreen
+                    bookingDetails={details}
+                    onBack={closeBookingRatingSpa}
+                    onSubmit={async () => { /* API submission handled by screen; navigation on modal OK via onBack */ }}
+                  />
+                );
+              })()}
+            </Animated.View>
+          )}
 
-      {/* Bottom Tabs */}
-      <RisingPage
-        visible={isLoggedIn && !isOverlayActive}
-        fillContainer={false}
-        style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
-        exitDuration={isLoggedIn ? 260 : 0}
-        fadeOut={isLoggedIn}
-      >
-        <BottomTabs activeTab={activeTab} onTabPress={setActiveTab} />
-      </RisingPage>
+          {bookingRatingTherapistId && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 14,
+                },
+                bookingsRatingTherapistStyle,
+              ]}
+            >
+              {(() => {
+                const details = getBookingDetails(bookingRatingTherapistId);
+                if (!details) return null;
+                return (
+                  <RatingTherapistScreen
+                    bookingDetails={details}
+                    onBack={closeBookingRatingTherapist}
+                    onSubmit={async () => { /* API submission handled by screen; navigation on modal OK via onBack */ }}
+                  />
+                );
+              })()}
+            </Animated.View>
+          )}
+
+          {invoiceOverlay && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 15,
+                },
+                bookingsInvoiceStyle,
+              ]}
+            >
+              <InvoiceScreen
+                invoiceData={invoiceOverlay.data}
+                onBack={closeBookingInvoice}
+                isVAT={invoiceOverlay.isVAT}
+                vatRate={invoiceOverlay.vatRate}
+                discounts={invoiceOverlay.discounts}
+              />
+            </Animated.View>
+          )}
+
+          {getDirectionsDestination && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 15,
+                },
+                getDirectionsStyle,
+              ]}
+            >
+              <GetDirectionsScreen
+                destination={getDirectionsDestination}
+                destinationName={getDirectionsDestination.name}
+                onBack={closeGetDirections}
+              />
+            </Animated.View>
+          )}
+
+          {/* Overlays - Profile */}
+          {profileOverlay && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 16,
+                },
+                profileOverlayStyle,
+              ]}
+            >
+              {profileOverlay === 'edit' && (
+                <ProfileEditScreen onBack={closeProfileOverlay} />
+              )}
+              {profileOverlay === 'password' && (
+                <PasswordChangeScreen onBack={closeProfileOverlay} />
+              )}
+              {profileOverlay === 'notifications' && (
+                <NotificationPreferencesScreen onBack={closeProfileOverlay} />
+              )}
+              {profileOverlay === 'help' && (
+                <HelpScreen
+                  onBack={closeProfileOverlay}
+                  onOpenChatbot={() => openChat(SUPPORT_CHATBOT_CONVERSATION)}
+                  onFaqPress={openFaqDetail}
+                  onTermsPress={openTermsOfService}
+                  onPrivacyPress={openPrivacyPolicy}
+                />
+              )}
+            </Animated.View>
+          )}
+
+          {/* Overlays - FAQ Detail (slides in from right on top of Help) */}
+          {profileOverlay === 'help' && selectedFaq && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 16,
+                },
+                faqDetailStyle,
+              ]}
+            >
+              <FAQsScreen faq={selectedFaq} onBack={closeFaqDetail} />
+            </Animated.View>
+          )}
+
+          {/* Overlays - Profile Favorites */}
+          {profileFavoritesVisible && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 16,
+                },
+                profileFavoritesStyle,
+              ]}
+            >
+              <FavoritesScreen onBack={closeProfileFavorites} onSalonPress={openHomeSalon} />
+            </Animated.View>
+          )}
+
+          {/* Overlays - Help Legal (Terms / Privacy slides in from right on top of Help) */}
+          {profileOverlay === 'help' && helpLegalScreen && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 16,
+                },
+                helpLegalStyle,
+              ]}
+            >
+              {helpLegalScreen === 'terms' && (
+                <TermsOfServiceScreen onBack={closeHelpLegal} />
+              )}
+              {helpLegalScreen === 'privacy' && (
+                <PrivacyPolicyScreen onBack={closeHelpLegal} />
+              )}
+            </Animated.View>
+          )}
+
+          {/* Overlays - Messaging (above profile so chat opens on top of Help, etc.) */}
+          {chatConversation && (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 17,
+                },
+                chatStyle,
+              ]}
+            >
+              <ChatRoomScreen conversation={chatConversation as any} onBack={closeChat} />
+            </Animated.View>
+          )}
+
+          {/* Bottom Tabs */}
+          <RisingPage
+            visible={isLoggedIn && !isOverlayActive}
+            fillContainer={false}
+            style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
+            exitDuration={isLoggedIn ? 260 : 0}
+            fadeOut={isLoggedIn}
+          >
+            <BottomTabs activeTab={activeTab} onTabPress={setActiveTab} />
+          </RisingPage>
+        </View>
+      )}
     </SafeAreaView>
   );
 }

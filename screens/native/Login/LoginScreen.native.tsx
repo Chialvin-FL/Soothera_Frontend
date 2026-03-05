@@ -18,7 +18,7 @@ import { DUMMY_ACCOUNTS, UserRole } from '@/env';
 import { SuccessModal } from '@/components/native/SuccessModal';
 
 interface LoginScreenProps {
-    onLogin: (role: UserRole, name: string) => void;
+    onLogin: (role: UserRole, name: string, email: string) => void;
     onNavigateToRegister: () => void;
     onForgotPassword?: () => void;
 }
@@ -53,7 +53,7 @@ export default function LoginScreen({
         );
 
         if (user) {
-            onLogin(user.role, user.name);
+            onLogin(user.role, user.name, user.email);
         } else {
             setErrorModal({
                 visible: true,
