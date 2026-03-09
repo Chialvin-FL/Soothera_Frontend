@@ -46,16 +46,8 @@ export default function HomeTherapistScreen({
                     />
                 </RisingItem>
 
-                {/* Performance Title */}
-                <RisingItem delay={100}>
-                    <View className="px-5 mt-2 mb-6">
-                        <Text className="text-3xl font-extrabold text-[#1c1c1e] dark:text-white">Performance Reports</Text>
-                        <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track your progress and reviews</Text>
-                    </View>
-                </RisingItem>
-
                 {/* KPI Cards Grid */}
-                <View className="px-5 mb-4 flex-row flex-wrap justify-between">
+                <View className="px-5 mt-4 mb-4 flex-row flex-wrap justify-between">
                     <DashboardKPICard
                         title="Total Sessions"
                         value={data.totalSessions}

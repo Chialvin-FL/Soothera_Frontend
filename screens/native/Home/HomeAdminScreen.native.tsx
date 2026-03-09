@@ -63,15 +63,8 @@ export default function HomeScreenAdmin({
                     />
                 </RisingItem>
 
-                {/* Home Title */}
-                <RisingItem delay={100}>
-                    <View className="px-5 mt-2 mb-6">
-                        <Text className="text-3xl font-extrabold text-[#1c1c1e] dark:text-white">Home</Text>
-                    </View>
-                </RisingItem>
-
                 {/* KPI Cards Grid */}
-                <View className="px-5 mb-4 flex-row flex-wrap justify-between">
+                <View className="px-5 mt-4 mb-4 flex-row flex-wrap justify-between">
                     <DashboardKPICard
                         title="Total Bookings"
                         value={totalBookings}
