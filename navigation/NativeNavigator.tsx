@@ -10,6 +10,7 @@ import HomeScreenAdmin from '../screens/native/Home/HomeAdminScreen.native';
 import HomeTherapistScreen from '../screens/native/Home/HomeTherapistScreen.native';
 import BookingsScreen from '../screens/native/Bookings/BookingsScreen.native';
 import BookingsAdminScreen from '../screens/native/Bookings/BookingsAdminScreen.native';
+import BookingsTherapistScreen from '../screens/native/Bookings/BookingsTherapistScreen.native';
 import InboxScreen from '../screens/native/Messaging/InboxScreen.native';
 import ProfileScreen from '../screens/native/Profile/ProfileScreen.native';
 
@@ -101,6 +102,12 @@ export default function NativeNavigator() {
                 {userRole === 'admin' ? (
                   <BookingsAdminScreen
                     useNavigatorOverlays
+                    onNavigateToProfile={() => setActiveTab('profile')}
+                    onNavigateBookingDetails={bookings.openBookingDetails}
+                    onNavigateNotifications={home.openHomeNotifications}
+                  />
+                ) : userRole === 'therapist' ? (
+                  <BookingsTherapistScreen
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateBookingDetails={bookings.openBookingDetails}
                     onNavigateNotifications={home.openHomeNotifications}

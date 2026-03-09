@@ -4,14 +4,15 @@ import { Text } from '@/components/Text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-type TabType = 'all' | 'upcoming' | 'completed' | 'cancelled';
+export type TabType = 'all' | 'upcoming' | 'completed' | 'cancelled';
 
 interface TabNavigationProps {
   activeTab: TabType;
   onTabPress: (tab: TabType) => void;
+  tabs?: TabType[];
 }
 
-const tabs: TabType[] = ['all', 'upcoming', 'completed', 'cancelled'];
+const defaultTabs: TabType[] = ['all', 'upcoming', 'completed', 'cancelled'];
 
 const getTabLabel = (tab: TabType): string => {
   switch (tab) {
@@ -28,7 +29,7 @@ const getTabLabel = (tab: TabType): string => {
   }
 };
 
-export default function TabNavigation({ activeTab, onTabPress }: TabNavigationProps) {
+export default function TabNavigation({ activeTab, onTabPress, tabs = defaultTabs }: TabNavigationProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const scrollViewRef = useRef<ScrollView>(null);
@@ -40,19 +41,19 @@ export default function TabNavigation({ activeTab, onTabPress }: TabNavigationPr
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
-    } else if (activeTab === 'all') {
-      // Scroll to the left (start) when all is selected
+    } else if (activeTab === 'all' || activeTab === tabs[0]) {
+      // Scroll to the left (start) when all or the first tab is selected
       setTimeout(() => {
         scrollViewRef.current?.scrollTo({ x: 0, animated: true });
       }, 100);
     }
-  }, [activeTab]);
+  }, [activeTab, tabs]);
 
   return (
     <View className="mx-5 mt-2 mb-4 bg-gray-100 rounded-full p-1">
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef}
-        horizontal 
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 4 }}
       >
