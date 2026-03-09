@@ -10,7 +10,7 @@ import Animated, {
 import { BottomTabs } from '../components/native/BottomTabs';
 import { RisingPage } from '../components/native/RisingPage';
 import HomeScreen from '../screens/native/Home/HomeScreen.native';
-import HomeScreenAdmin from '../screens/native/Home/HomeScreenAdmin.native';
+import HomeScreenAdmin from '../screens/native/Home/HomeAdminScreen.native';
 import ServicesScreen from '../screens/native/Home/ServicesScreen.native';
 import TopRatedSalonsScreen from '../screens/native/Home/TopRatedSalonsScreen.native';
 import SalonDetailsScreen from '../screens/native/Home/SalonDetailsScreen.native';
@@ -21,6 +21,7 @@ import NotificationsScreen from '../screens/native/Notifications/NotificationsSc
 import { getSalonDetails, topRatedSalons } from '../screens/native/Home/configs/mockData';
 import type { Booking } from '../screens/native/Bookings/types/Booking';
 import BookingsScreen from '../screens/native/Bookings/BookingsScreen.native';
+import BookingsAdminScreen from '../screens/native/Bookings/BookingsAdminScreen.native';
 import BookingDetailsScreen from '../screens/native/Bookings/BookingDetailsScreen.native';
 import RatingSpaScreen from '../screens/native/Bookings/RatingSpaScreen.native';
 import RatingTherapistScreen from '../screens/native/Bookings/RatingTherapistScreen.native';
@@ -750,15 +751,24 @@ export default function NativeNavigator() {
               </RisingPage>
 
               <RisingPage visible={activeTab === 'bookings'} fadeIn={false} fadeOut={false}>
-                <BookingsScreen
-                  useNavigatorOverlays
-                  onNavigateToProfile={() => setActiveTab('profile')}
-                  onNavigateBookingDetails={openBookingDetails}
-                  onNavigateRatingSpa={openBookingRatingSpa}
-                  onNavigateRatingTherapist={openBookingRatingTherapist}
-                  onNavigateNotifications={openHomeNotifications}
-                  onNavigateRebook={handleRebook}
-                />
+                {userRole === 'admin' ? (
+                  <BookingsAdminScreen
+                    useNavigatorOverlays
+                    onNavigateToProfile={() => setActiveTab('profile')}
+                    onNavigateBookingDetails={openBookingDetails}
+                    onNavigateNotifications={openHomeNotifications}
+                  />
+                ) : (
+                  <BookingsScreen
+                    useNavigatorOverlays
+                    onNavigateToProfile={() => setActiveTab('profile')}
+                    onNavigateBookingDetails={openBookingDetails}
+                    onNavigateRatingSpa={openBookingRatingSpa}
+                    onNavigateRatingTherapist={openBookingRatingTherapist}
+                    onNavigateNotifications={openHomeNotifications}
+                    onNavigateRebook={handleRebook}
+                  />
+                )}
               </RisingPage>
 
               <RisingPage visible={activeTab === 'messaging'}>
