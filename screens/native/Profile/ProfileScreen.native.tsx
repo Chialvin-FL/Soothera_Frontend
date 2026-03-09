@@ -43,6 +43,11 @@ interface ProfileScreenProps {
   onNavigateToFavorites?: () => void;
   onNavigateToTopRated?: () => void;
   onNavigateSalonDetails?: (salonId: string) => void;
+  onNavigateToStaffManagement?: () => void;
+  onNavigateToBusinessSettings?: () => void;
+  onNavigateToSubscription?: () => void;
+  onNavigateToSalonRatings?: () => void;
+  onNavigateToAccessLogs?: () => void;
   onLogout?: () => void;
   userName?: string;
   userEmail?: string;
@@ -58,6 +63,11 @@ export default function ProfileScreen({
   onNavigateToFavorites,
   onNavigateToTopRated,
   onNavigateSalonDetails,
+  onNavigateToStaffManagement,
+  onNavigateToBusinessSettings,
+  onNavigateToSubscription,
+  onNavigateToSalonRatings,
+  onNavigateToAccessLogs,
   onLogout,
   userName: propUserName,
   userEmail: propUserEmail,
@@ -113,6 +123,28 @@ export default function ProfileScreen({
             </Text>
           </View>
         </RisingItem>
+
+        {/* Admin Card */}
+        {userRole === 'admin' && (
+          <View className="mx-5 mb-5 rounded-2xl bg-white dark:bg-[#1F1F1F] shadow-sm" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}>
+            <RisingItem delay={40} offset={10} visible={isVisible}>
+              <View>
+                <View className="px-4 pt-4 pb-2">
+                  <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                    Admin Controls
+                  </Text>
+                </View>
+                <View className="border-t border-gray-200 dark:border-[#2a2a2a]">
+                  <SettingItem icon="people-outline" label="Staff Management" colors={colors} onPress={onNavigateToStaffManagement} />
+                  <SettingItem icon="business-outline" label="Business Settings" colors={colors} onPress={onNavigateToBusinessSettings} />
+                  <SettingItem icon="card-outline" label="Subscription" colors={colors} onPress={onNavigateToSubscription} />
+                  <SettingItem icon="star-outline" label="Salon Ratings" colors={colors} onPress={onNavigateToSalonRatings} />
+                  <SettingItem icon="document-text-outline" label="Access Logs" colors={colors} onPress={onNavigateToAccessLogs} />
+                </View>
+              </View>
+            </RisingItem>
+          </View>
+        )}
 
         {/* Settings Card */}
         <View className="mx-5 mb-5 rounded-2xl bg-white dark:bg-[#1F1F1F] shadow-sm" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}>

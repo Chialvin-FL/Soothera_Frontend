@@ -41,6 +41,11 @@ import HelpScreen from '../screens/native/Profile/components/HelpScreen.native';
 import FAQsScreen from '../screens/native/Profile/components/FAQsScreen.native';
 import TermsOfServiceScreen from '../screens/native/Profile/components/TermsOfServiceScreen.native';
 import PrivacyPolicyScreen from '../screens/native/Profile/components/PrivacyPolicyScreen.native';
+import StaffManagementScreen from '../screens/native/Profile/components/StaffManagementScreen.native';
+import BusinessSettingsScreen from '../screens/native/Profile/components/BusinessSettingsScreen.native';
+import SubscriptionScreen from '../screens/native/Profile/components/SubscriptionScreen.native';
+import SalonRatingsScreen from '../screens/native/Profile/components/SalonRatingsScreen.native';
+import AccessLogsScreen from '../screens/native/Profile/components/AccessLogsScreen.native';
 import type { FaqItem } from '../screens/native/Profile/configs/faqData';
 import type { Service } from '../screens/native/Home/types/Home';
 import type { SalonDetails, Therapist } from '../screens/native/Home/types/SalonDetails';
@@ -64,7 +69,7 @@ const SUPPORT_CHATBOT_CONVERSATION: Conversation = {
 };
 
 type TabId = 'home' | 'bookings' | 'messaging' | 'profile';
-type ProfileOverlayId = 'edit' | 'password' | 'notifications' | 'help';
+type ProfileOverlayId = 'edit' | 'password' | 'notifications' | 'help' | 'staff' | 'business' | 'subscription' | 'ratings' | 'logs';
 
 interface BookingData {
   service: Service | null;
@@ -792,6 +797,11 @@ export default function NativeNavigator() {
                   onNavigateToFavorites={() => setProfileFavoritesVisible(true)}
                   onNavigateToTopRated={() => openHomeTopRated()}
                   onNavigateSalonDetails={openHomeSalon}
+                  onNavigateToStaffManagement={() => openProfileOverlay('staff')}
+                  onNavigateToBusinessSettings={() => openProfileOverlay('business')}
+                  onNavigateToSubscription={() => openProfileOverlay('subscription')}
+                  onNavigateToSalonRatings={() => openProfileOverlay('ratings')}
+                  onNavigateToAccessLogs={() => openProfileOverlay('logs')}
                   userName={userName}
                   userEmail={userEmail}
                   userRole={userRole}
@@ -1163,6 +1173,21 @@ export default function NativeNavigator() {
                   onTermsPress={openTermsOfService}
                   onPrivacyPress={openPrivacyPolicy}
                 />
+              )}
+              {profileOverlay === 'staff' && (
+                <StaffManagementScreen onBack={closeProfileOverlay} />
+              )}
+              {profileOverlay === 'business' && (
+                <BusinessSettingsScreen onBack={closeProfileOverlay} />
+              )}
+              {profileOverlay === 'subscription' && (
+                <SubscriptionScreen onBack={closeProfileOverlay} />
+              )}
+              {profileOverlay === 'ratings' && (
+                <SalonRatingsScreen onBack={closeProfileOverlay} />
+              )}
+              {profileOverlay === 'logs' && (
+                <AccessLogsScreen onBack={closeProfileOverlay} />
               )}
             </Animated.View>
           )}
