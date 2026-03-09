@@ -23,6 +23,7 @@ import type { Booking } from '../screens/native/Bookings/types/Booking';
 import BookingsScreen from '../screens/native/Bookings/BookingsScreen.native';
 import BookingsAdminScreen from '../screens/native/Bookings/BookingsAdminScreen.native';
 import BookingDetailsScreen from '../screens/native/Bookings/BookingDetailsScreen.native';
+import BookingDetailsAdminScreen from '../screens/native/Bookings/BookingDetailsAdminScreen.native';
 import RatingSpaScreen from '../screens/native/Bookings/RatingSpaScreen.native';
 import RatingTherapistScreen from '../screens/native/Bookings/RatingTherapistScreen.native';
 import InvoiceScreen from '../screens/native/Bookings/components/InvoiceScreen.native';
@@ -871,7 +872,6 @@ export default function NativeNavigator() {
                   bottom: 0,
                   zIndex: 7,
                 },
-                homeSalonStyle,
               ]}
             >
               {(() => {
@@ -991,31 +991,35 @@ export default function NativeNavigator() {
               {(() => {
                 const details = getBookingDetails(bookingSelectedId);
                 if (!details) return null;
-                return (
+                return userRole === 'admin' ? (
+                  <BookingDetailsAdminScreen
+                    bookingDetails={details}
+                    onBack={closeBookingDetails}
+                    onNavigateToInvoice={openBookingInvoice}
+                    onAccept={() => console.log('Accept booking:', bookingSelectedId)}
+                    onDecline={() => console.log('Decline booking:', bookingSelectedId)}
+                    onRefund={() => console.log('Refund booking:', bookingSelectedId)}
+                  />
+                ) : (
                   <BookingDetailsScreen
                     bookingDetails={details}
                     onBack={closeBookingDetails}
-                    onRateSpa={() => openBookingRatingSpa(bookingSelectedId)}
-                    onRateTherapist={() => openBookingRatingTherapist(bookingSelectedId)}
+                    onRateSpa={() => openBookingRatingSpa(bookingSelectedId, false)}
+                    onRateTherapist={() => openBookingRatingTherapist(bookingSelectedId, false)}
                     onNavigateToInvoice={openBookingInvoice}
                     onGetDirections={(destination) => openGetDirections(destination, details.spaName)}
                     onRebook={() => {
-                      const bookingDetails = getBookingDetails(bookingSelectedId);
-                      if (bookingDetails) {
-                        // Find matching salon by name
-                        const matchingSalon = topRatedSalons.find((salon) => salon.name === bookingDetails.spaName);
-                        if (matchingSalon) {
-                          const salonDetails = getSalonDetails(matchingSalon.id);
-                          if (salonDetails) {
-                            setHomeSelectedSalonId(matchingSalon.id);
-                            setHomeBookVisible(true);
-                          }
+                      const matchingSalon = topRatedSalons.find((salon) => salon.name === details.spaName);
+                      if (matchingSalon) {
+                        const salonDetails = getSalonDetails(matchingSalon.id);
+                        if (salonDetails) {
+                          setHomeSelectedSalonId(matchingSalon.id);
+                          setHomeBookVisible(true);
                         }
                       }
                     }}
                     onReschedule={() => { }}
                     onCancel={async () => {
-                      // Cancel booking logic - this will be handled by the confirmation modal in BookingDetailsScreen
                       console.log('Cancel booking:', bookingSelectedId);
                     }}
                   />
@@ -1254,7 +1258,8 @@ export default function NativeNavigator() {
             <BottomTabs activeTab={activeTab} onTabPress={setActiveTab} />
           </RisingPage>
         </View>
-      )}
-    </SafeAreaView>
+      )
+      }
+    </SafeAreaView >
   );
 }

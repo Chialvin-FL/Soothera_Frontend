@@ -16,7 +16,7 @@ import {
 } from './configs/mockBookingsData';
 import AdminBookingCard from './components/AdminBookingCard';
 import TabNavigation from './components/TabNavigation';
-import BookingDetailsScreen from './BookingDetailsScreen.native';
+import BookingDetailsAdminScreen from './BookingDetailsAdminScreen.native';
 import { getBookingDetails } from './configs/mockBookingDetailsData';
 import Animated, {
     useSharedValue,
@@ -107,7 +107,7 @@ export default function BookingsAdminScreen({
     };
 
     // Handle back from details screen
-    const handleBack = () => {
+    const closeBookingDetails = () => {
         if (useNavigatorOverlays) return;
         bookingDetailsTranslateX.value = withTiming(
             screenWidth,
@@ -292,34 +292,21 @@ export default function BookingsAdminScreen({
             {/* Booking Details Screen Overlay */}
             {!useNavigatorOverlays && selectedBookingId && (
                 <Animated.View
+                    className="absolute top-0 left-0 right-0 bottom-0 bg-white"
                     style={[
                         {
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
                             zIndex: 5,
                         },
                         bookingDetailsAnimatedStyle,
                     ]}
                 >
-                    {(() => {
-                        const bookingDetails = getBookingDetails(selectedBookingId);
-                        if (!bookingDetails) return null;
-                        return (
-                            <BookingDetailsScreen
-                                bookingDetails={bookingDetails}
-                                onBack={handleBack}
-                                onRateSpa={() => { }}
-                                onRateTherapist={() => { }}
-                                onGetDirections={() => { }}
-                                onRebook={() => { }}
-                                onReschedule={() => { }}
-                                onCancel={async () => { }}
-                            />
-                        );
-                    })()}
+                    <BookingDetailsAdminScreen
+                        bookingDetails={getBookingDetails(selectedBookingId)!}
+                        onBack={closeBookingDetails}
+                        onAccept={() => console.log('Accept via details')}
+                        onDecline={() => console.log('Decline via details')}
+                        onRefund={() => console.log('Refund via details')}
+                    />
                 </Animated.View>
             )}
         </View>
