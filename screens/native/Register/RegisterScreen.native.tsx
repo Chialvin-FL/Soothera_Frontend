@@ -15,7 +15,11 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SuccessModal } from '@/components/native/SuccessModal';
 import { UserRole } from '@/env';
-import TermsOfServiceScreen from '../Profile/TermsOfServiceScreen.native';
+import TermsOfServiceScreen from '../Profile/components/TermsOfServiceScreen.native';
+import { RegisterHeader } from './components/RegisterHeader';
+import { RoleSelector } from './components/RoleSelector';
+import { SocialRegister } from './components/SocialRegister';
+import { RegisterFooter } from './components/RegisterFooter';
 
 interface RegisterScreenProps {
     onRegister: (name: string, email: string, role: UserRole) => void;
@@ -77,40 +81,14 @@ export default function RegisterScreen({
                 showsVerticalScrollIndicator={false}
             >
                 {/* Header Section */}
-                <View className="items-center mb-10">
-                    <Text className="text-3xl font-bold mb-2" style={{ color: colors.text }}>
-                        Create Account
-                    </Text>
-                    <Text className="text-center text-gray-500 dark:text-gray-400">
-                        Fill your information below or register with your social account
-                    </Text>
-                </View>
+                <RegisterHeader textColor={colors.text} />
 
                 {/* Role Selector */}
-                <View className="bg-gray-100 dark:bg-gray-800 rounded-full p-1 mb-6 flex-row">
-                    <TouchableOpacity
-                        className="flex-1 py-3 rounded-full items-center"
-                        style={{ backgroundColor: selectedRole === 'customer' ? colors.primary : 'transparent' }}
-                        onPress={() => setSelectedRole('customer')}
-                    >
-                        <Text
-                            className={`font-semibold ${selectedRole === 'customer' ? 'text-white' : 'text-gray-500'}`}
-                        >
-                            Customer
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        className="flex-1 py-3 rounded-full items-center"
-                        style={{ backgroundColor: selectedRole === 'admin' ? colors.primary : 'transparent' }}
-                        onPress={() => setSelectedRole('admin')}
-                    >
-                        <Text
-                            className={`font-semibold ${selectedRole === 'admin' ? 'text-white' : 'text-gray-500'}`}
-                        >
-                            Salon Owner
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+                <RoleSelector
+                    selectedRole={selectedRole}
+                    onSelectRole={setSelectedRole}
+                    primaryColor={colors.primary}
+                />
 
                 {/* Form Section */}
                 <View className="mb-6">
@@ -229,35 +207,13 @@ export default function RegisterScreen({
                 </TouchableOpacity>
 
                 {/* Social Sign Up */}
-                <View className="items-center mb-8">
-                    <View className="flex-row items-center mb-6">
-                        <View className="flex-1 h-[1px] bg-gray-200 dark:bg-gray-800" />
-                        <Text className="mx-4 text-gray-400 text-xs">Or sign up with</Text>
-                        <View className="flex-1 h-[1px] bg-gray-200 dark:bg-gray-800" />
-                    </View>
-
-                    <TouchableOpacity
-                        className="w-14 h-14 rounded-full border items-center justify-center"
-                        style={{ borderColor: isDark ? '#3a3a3a' : '#E5E7EB' }}
-                    >
-                        <Ionicons name="logo-google" size={24} color={isDark ? '#fff' : '#444'} />
-                    </TouchableOpacity>
-                </View>
+                <SocialRegister isDark={isDark} />
 
                 {/* Redirect to Login */}
-                <View className="flex-row justify-center items-center mt-auto">
-                    <Text className="text-gray-500 dark:text-gray-400 text-sm">
-                        Already have an account?{' '}
-                    </Text>
-                    <TouchableOpacity onPress={onNavigateToLogin}>
-                        <Text
-                            className="text-sm font-bold"
-                            style={{ color: primaryColor, textDecorationLine: 'underline' }}
-                        >
-                            Sign In
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+                <RegisterFooter
+                    onNavigateToLogin={onNavigateToLogin}
+                    primaryColor={primaryColor}
+                />
             </ScrollView>
 
             <SuccessModal

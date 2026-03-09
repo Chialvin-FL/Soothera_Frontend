@@ -5,8 +5,8 @@ import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { SalonCardsList } from '../Home/components/SalonCardsList';
-import { topRatedSalons } from '../Home/configs/mockData';
+import { SalonCardsList } from '../../Home/components/SalonCardsList';
+import { topRatedSalons } from '../../Home/configs/mockData';
 
 interface FavoritesScreenProps {
   onBack?: () => void;

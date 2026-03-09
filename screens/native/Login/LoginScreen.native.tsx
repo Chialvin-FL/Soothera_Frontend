@@ -16,6 +16,9 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DUMMY_ACCOUNTS, UserRole } from '@/env';
 import { SuccessModal } from '@/components/native/SuccessModal';
+import { LoginHeader } from './components/LoginHeader';
+import { SocialLogin } from './components/SocialLogin';
+import { LoginFooter } from './components/LoginFooter';
 
 interface LoginScreenProps {
     onLogin: (role: UserRole, name: string, email: string) => void;
@@ -78,19 +81,7 @@ export default function LoginScreen({
                 showsVerticalScrollIndicator={false}
             >
                 {/* Header Section */}
-                <View className="items-center mb-10">
-                    <Image
-                        source={require('../../../assets/soothera-logo.png')}
-                        className="w-64 h-64"
-                        resizeMode="contain" style={{ marginBottom: -50 }}
-                    />
-                    <Text className="text-3xl font-bold mb-2" style={{ color: colors.text }}>
-                        Sign In
-                    </Text>
-                    <Text className="text-center text-gray-500 dark:text-gray-400">
-                        Hi! Welcome back, you've been missed
-                    </Text>
-                </View>
+                <LoginHeader textColor={colors.text} />
 
                 {/* Form Section */}
                 <View className="mb-6">
@@ -166,35 +157,13 @@ export default function LoginScreen({
                 </TouchableOpacity>
 
                 {/* Social Sign In */}
-                <View className="items-center mb-8">
-                    <View className="flex-row items-center mb-6">
-                        <View className="flex-1 h-[1px] bg-gray-200 dark:bg-gray-800" />
-                        <Text className="mx-4 text-gray-400 text-xs">Or sign in with</Text>
-                        <View className="flex-1 h-[1px] bg-gray-200 dark:bg-gray-800" />
-                    </View>
-
-                    <TouchableOpacity
-                        className="w-14 h-14 rounded-full border items-center justify-center"
-                        style={{ borderColor: isDark ? '#3a3a3a' : '#E5E7EB' }}
-                    >
-                        <Ionicons name="logo-google" size={24} color={isDark ? '#fff' : '#444'} />
-                    </TouchableOpacity>
-                </View>
+                <SocialLogin isDark={isDark} />
 
                 {/* Redirect to Register */}
-                <View className="flex-row justify-center items-center mt-auto">
-                    <Text className="text-gray-500 dark:text-gray-400 text-sm">
-                        Don't have an account?{' '}
-                    </Text>
-                    <TouchableOpacity onPress={onNavigateToRegister}>
-                        <Text
-                            className="text-sm font-bold"
-                            style={{ color: primaryColor, textDecorationLine: 'underline' }}
-                        >
-                            Sign Up
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+                <LoginFooter
+                    onNavigateToRegister={onNavigateToRegister}
+                    primaryColor={primaryColor}
+                />
             </ScrollView>
 
             <SuccessModal

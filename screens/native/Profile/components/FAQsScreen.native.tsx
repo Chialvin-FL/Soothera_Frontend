@@ -5,7 +5,7 @@ import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import type { FaqItem } from './configs/faqData';
+import type { FaqItem } from '../configs/faqData';
 
 interface FAQsScreenProps {
   faq: FaqItem;

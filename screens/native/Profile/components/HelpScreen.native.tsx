@@ -6,8 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ChatbotFAB } from '@/components/native/ChatbotFAB';
-import { FAQ_ITEMS } from './configs/faqData';
-import type { FaqItem } from './configs/faqData';
+import { FAQ_ITEMS } from '../configs/faqData';
+import type { FaqItem } from '../configs/faqData';
 
 interface HelpScreenProps {
   onBack: () => void;
