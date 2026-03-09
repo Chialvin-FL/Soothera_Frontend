@@ -254,20 +254,19 @@ export default function BookingsTherapistScreen({
                             )}
 
                             {/* Selected Day/Tab List */}
-                            <View className="px-5 mt-8">
-                                <RisingItem delay={300}>
-                                    <View className="flex-row items-center justify-between mb-4">
-                                        <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                                            {isUpcoming
-                                                ? (isSameDay(selectedDate, new Date()) ? "Today's Schedule" : "Selected Day")
-                                                : tab.charAt(0).toUpperCase() + tab.slice(1) + " Bookings"
-                                            }
-                                        </Text>
-                                        <Text className="text-sm font-medium" style={{ color: colors.icon }}>
-                                            {bookings.length} {bookings.length === 1 ? 'Booking' : 'Bookings'}
-                                        </Text>
-                                    </View>
-                                </RisingItem>
+                            <View className="px-5">
+                                {isUpcoming && (
+                                    <RisingItem delay={300}>
+                                        <View className="flex-row items-center justify-between mb-4 mt-8">
+                                            <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                                                {isSameDay(selectedDate, new Date()) ? "Today's Schedule" : "Selected Day"}
+                                            </Text>
+                                            <Text className="text-sm font-medium" style={{ color: colors.icon }}>
+                                                {bookings.length} {bookings.length === 1 ? 'Booking' : 'Bookings'}
+                                            </Text>
+                                        </View>
+                                    </RisingItem>
+                                )}
 
                                 {bookings.length > 0 ? (
                                     bookings.map((booking: Booking, index: number) => (
@@ -276,6 +275,8 @@ export default function BookingsTherapistScreen({
                                             booking={booking}
                                             onPress={() => onNavigateBookingDetails?.(booking.id)}
                                             onViewDetails={onNavigateBookingDetails}
+                                            onCancel={(id) => console.log('Cancel', id)}
+                                            onComplete={(id) => console.log('Complete', id)}
                                             animateContent={activeTab === tab}
                                             animationDelay={350 + (index * 100)}
                                         />

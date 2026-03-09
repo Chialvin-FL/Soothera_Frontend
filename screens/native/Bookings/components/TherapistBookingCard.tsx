@@ -11,6 +11,8 @@ interface TherapistBookingCardProps {
     booking: Booking;
     onPress?: () => void;
     onViewDetails?: (bookingId: string) => void;
+    onCancel?: (bookingId: string) => void;
+    onComplete?: (bookingId: string) => void;
     animateContent?: boolean;
     animationDelay?: number;
     contentVisible?: boolean;
@@ -34,6 +36,8 @@ export default function TherapistBookingCard({
     booking,
     onPress,
     onViewDetails,
+    onCancel,
+    onComplete,
     animateContent = false,
     animationDelay = 0,
     contentVisible = true
@@ -48,7 +52,7 @@ export default function TherapistBookingCard({
                 {/* Customer Image */}
                 <Image
                     source={booking.customerImage || require('../../../../assets/user.jpg')}
-                    className="w-16 h-16 rounded-xl mr-3"
+                    className="w-20 h-20 rounded-xl mr-3"
                     resizeMode="cover"
                 />
 
@@ -57,33 +61,39 @@ export default function TherapistBookingCard({
                     {/* Service Name and Status */}
                     <View className="flex-row items-start justify-between mb-1">
                         <Text
-                            className="text-base font-bold flex-1"
+                            className="text-lg font-bold flex-1"
                             style={{ color: colors.text }}
                             numberOfLines={1}
+                            ellipsizeMode="tail"
                         >
                             {booking.serviceName}
                         </Text>
                         <View
-                            className="px-2 py-0.5 rounded-full ml-2"
+                            className="px-3 py-1 rounded-full ml-2"
                             style={{ backgroundColor: getStatusColor(booking.status, colors) + '20' }}
                         >
-                            <Text className="text-[10px] font-semibold" style={{ color: getStatusColor(booking.status, colors) }}>
+                            <Text className="text-xs font-semibold" style={{ color: getStatusColor(booking.status, colors) }}>
                                 {getStatusText(booking.status)}
                             </Text>
                         </View>
                     </View>
 
-                    {/* Customer Name */}
+                    {/* Date and Customer Name */}
                     <View className="flex-row items-center mb-1">
-                        <Ionicons name="person-outline" size={12} color={colors.icon} />
+                        <Ionicons name="calendar-outline" size={14} color={colors.icon} />
+                        <Text className="text-xs ml-1 mr-2" style={{ color: colors.icon }}>
+                            {booking.date}
+                        </Text>
+                        <Text className="text-xs mr-2" style={{ color: colors.icon }}>•</Text>
+                        <Ionicons name="person-outline" size={14} color={colors.icon} />
                         <Text className="text-xs ml-1" style={{ color: colors.icon }} numberOfLines={1}>
                             {booking.customerName || 'Customer'}
                         </Text>
                     </View>
 
                     {/* Time */}
-                    <View className="flex-row items-center">
-                        <Ionicons name="time-outline" size={12} color={colors.icon} />
+                    <View className="flex-row items-center mb-1">
+                        <Ionicons name="time-outline" size={14} color={colors.icon} />
                         <Text className="text-xs ml-1" style={{ color: colors.icon }}>
                             {booking.time}
                         </Text>
@@ -91,22 +101,53 @@ export default function TherapistBookingCard({
                 </View>
             </View>
 
-            {/* Price Label and View Button */}
-            <View className="mt-3 pt-3 border-t border-gray-100 flex-row items-center justify-between">
-                <Text className="text-sm font-semibold" style={{ color: colors.primary }}>
+            {/* Price Row */}
+            <View className="mb-3 flex-row justify-end">
+                <Text className="text-l font-semibold" style={{ color: colors.primary }}>
                     ₱{booking.price.toFixed(2)}
                 </Text>
+            </View>
 
-                <TouchableOpacity
-                    className="flex-row items-center"
-                    onPress={(e) => {
-                        e.stopPropagation();
-                        onViewDetails?.(booking.id);
-                    }}
-                >
-                    <Text className="text-xs font-medium mr-1" style={{ color: colors.primary }}>View Details</Text>
-                    <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-                </TouchableOpacity>
+            {/* Action Buttons */}
+            <View className="flex-row">
+                {(booking.status === BOOKING_STATUS.PENDING || booking.status === BOOKING_STATUS.CONFIRMED) ? (
+                    <>
+                        <TouchableOpacity
+                            className="flex-1 flex-row items-center justify-center px-4 py-2 rounded-xl mr-2 border"
+                            style={{ borderColor: colors.icon, backgroundColor: 'white' }}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                onCancel?.(booking.id);
+                            }}
+                        >
+                            <Ionicons name="close-circle-outline" size={16} color={colors.text} />
+                            <Text className="text-sm font-semibold ml-2" style={{ color: colors.text }}>No-Show</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            className="flex-1 flex-row items-center justify-center px-4 py-2 rounded-xl"
+                            style={{ backgroundColor: primaryColor }}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                onComplete?.(booking.id);
+                            }}
+                        >
+                            <Ionicons name="checkmark-circle-outline" size={16} color="white" />
+                            <Text className="text-sm font-semibold ml-2" style={{ color: 'white' }}>Complete</Text>
+                        </TouchableOpacity>
+                    </>
+                ) : (
+                    <TouchableOpacity
+                        className="flex-1 flex-row items-center justify-center px-4 py-2 rounded-xl"
+                        style={{ backgroundColor: primaryColor }}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            onViewDetails?.(booking.id) || onPress?.();
+                        }}
+                    >
+                        <Ionicons name="eye-outline" size={16} color="white" />
+                        <Text className="text-sm font-semibold ml-2" style={{ color: 'white' }}>View Booking</Text>
+                    </TouchableOpacity>
+                )}
             </View>
         </>
     );
