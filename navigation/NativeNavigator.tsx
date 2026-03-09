@@ -10,6 +10,7 @@ import Animated, {
 import { BottomTabs } from '../components/native/BottomTabs';
 import { RisingPage } from '../components/native/RisingPage';
 import HomeScreen from '../screens/native/Home/HomeScreen.native';
+import HomeScreenAdmin from '../screens/native/Home/HomeScreenAdmin.native';
 import ServicesScreen from '../screens/native/Home/ServicesScreen.native';
 import TopRatedSalonsScreen from '../screens/native/Home/TopRatedSalonsScreen.native';
 import SalonDetailsScreen from '../screens/native/Home/SalonDetailsScreen.native';
@@ -729,15 +730,23 @@ export default function NativeNavigator() {
             <>
               {/* Tab bases */}
               <RisingPage visible={activeTab === 'home'}>
-                <HomeScreen
-                  useNavigatorOverlays
-                  onNavigateToProfile={() => setActiveTab('profile')}
-                  onNavigateServices={openHomeServices}
-                  onNavigateTopRated={(options) => openHomeTopRated(options)}
-                  onNavigateSalonDetails={openHomeSalon}
-                  onNavigateBookAppointment={openHomeBook}
-                  onNavigateNotifications={openHomeNotifications}
-                />
+                {userRole === 'admin' ? (
+                  <HomeScreenAdmin
+                    useNavigatorOverlays
+                    onNavigateToProfile={() => setActiveTab('profile')}
+                    onNavigateNotifications={openHomeNotifications}
+                  />
+                ) : (
+                  <HomeScreen
+                    useNavigatorOverlays
+                    onNavigateToProfile={() => setActiveTab('profile')}
+                    onNavigateServices={openHomeServices}
+                    onNavigateTopRated={(options) => openHomeTopRated(options)}
+                    onNavigateSalonDetails={openHomeSalon}
+                    onNavigateBookAppointment={openHomeBook}
+                    onNavigateNotifications={openHomeNotifications}
+                  />
+                )}
               </RisingPage>
 
               <RisingPage visible={activeTab === 'bookings'} fadeIn={false} fadeOut={false}>
