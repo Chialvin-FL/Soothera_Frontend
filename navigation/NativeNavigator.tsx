@@ -44,6 +44,7 @@ import type { SalonDetails, Therapist } from '../screens/native/Home/types/Salon
 import type { Conversation } from '../screens/native/Messaging/InboxScreen.native';
 import LoginScreen from '../screens/native/Login/LoginScreen.native';
 import RegisterScreen from '../screens/native/Register/RegisterScreen.native';
+import RoleSelectionScreen from '../screens/native/Register/RoleSelectionScreen.native';
 import { STORAGE_KEYS, UserData, UserRole } from '@/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -85,7 +86,8 @@ export default function NativeNavigator() {
   const [userName, setUserName] = useState<string>('');
   const [userEmail, setUserEmail] = useState<string>('');
   const [isLoadingSession, setIsLoadingSession] = useState(true);
-  const [authScreen, setAuthScreen] = useState<'login' | 'register'>('login');
+  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'role-selection'>('login');
+  const [pendingUserData, setPendingUserData] = useState<{ email: string } | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('home');
 
   // Load session on mount
@@ -672,7 +674,7 @@ export default function NativeNavigator() {
         <View style={{ flex: 1, position: 'relative' }}>
           {!isLoggedIn ? (
             <>
-              {authScreen === 'login' ? (
+              {authScreen === 'login' && (
                 <LoginScreen
                   onLogin={async (role, name, email) => {
                     const userData: UserData = { role, name, email };
@@ -689,21 +691,37 @@ export default function NativeNavigator() {
                   onNavigateToRegister={() => setAuthScreen('register')}
                   onForgotPassword={() => console.log('Forgot password')}
                 />
-              ) : (
+              )}
+              {authScreen === 'register' && (
                 <RegisterScreen
-                  onRegister={async (name, email, role) => {
-                    const userData: UserData = { role, name, email };
+                  onRegister={(email) => {
+                    setPendingUserData({ email });
+                    setAuthScreen('role-selection');
+                  }}
+                  onNavigateToLogin={() => setAuthScreen('login')}
+                />
+              )}
+              {authScreen === 'role-selection' && (
+                <RoleSelectionScreen
+                  onSelectRole={async (role) => {
+                    if (!pendingUserData) return;
+                    const userData: UserData = {
+                      role,
+                      name: '', // Name removed from registration
+                      email: pendingUserData.email,
+                    };
                     try {
                       await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
                     } catch (e) {
                       console.error('Save session error:', e);
                     }
                     setUserRole(role);
-                    setUserName(name);
-                    setUserEmail(email);
+                    setUserName('');
+                    setUserEmail(pendingUserData.email);
                     setIsLoggedIn(true);
+                    setPendingUserData(null);
+                    setAuthScreen('login'); // Reset for next time
                   }}
-                  onNavigateToLogin={() => setAuthScreen('login')}
                 />
               )}
             </>

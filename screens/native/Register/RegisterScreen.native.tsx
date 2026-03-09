@@ -17,12 +17,11 @@ import { SuccessModal } from '@/components/native/SuccessModal';
 import { UserRole } from '@/env';
 import TermsOfServiceScreen from '../Profile/components/TermsOfServiceScreen.native';
 import { RegisterHeader } from './components/RegisterHeader';
-import { RoleSelector } from './components/RoleSelector';
 import { SocialRegister } from './components/SocialRegister';
 import { RegisterFooter } from './components/RegisterFooter';
 
 interface RegisterScreenProps {
-    onRegister: (name: string, email: string, role: UserRole) => void;
+    onRegister: (email: string) => void;
     onNavigateToLogin: () => void;
 }
 
@@ -35,17 +34,15 @@ export default function RegisterScreen({
     const insets = useSafeAreaInsets();
     const isDark = colorScheme === 'dark';
 
-    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [selectedRole, setSelectedRole] = useState<UserRole>('customer');
     const [showPassword, setShowPassword] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [showTermsModal, setShowTermsModal] = useState(false);
     const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '' });
 
     const handleRegister = () => {
-        if (!name || !email || !password) {
+        if (!email || !password) {
             setErrorModal({
                 visible: true,
                 title: 'Missing Information',
@@ -63,7 +60,7 @@ export default function RegisterScreen({
             return;
         }
 
-        onRegister(name, email, selectedRole);
+        onRegister(email);
     };
 
     return (
@@ -83,35 +80,8 @@ export default function RegisterScreen({
                 {/* Header Section */}
                 <RegisterHeader textColor={colors.text} />
 
-                {/* Role Selector */}
-                <RoleSelector
-                    selectedRole={selectedRole}
-                    onSelectRole={setSelectedRole}
-                    primaryColor={colors.primary}
-                />
-
                 {/* Form Section */}
                 <View className="mb-6">
-                    <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
-                        Name
-                    </Text>
-                    <View
-                        className="flex-row items-center border rounded-2xl px-4 py-1 mb-4"
-                        style={{
-                            borderColor: isDark ? '#3a3a3a' : '#E5E7EB',
-                            backgroundColor: isDark ? '#1f1f1f' : '#F9FAFB',
-                        }}
-                    >
-                        <TextInput
-                            className="flex-1 h-12 text-base"
-                            style={{ color: colors.text }}
-                            placeholder="Esther Howard"
-                            placeholderTextColor={isDark ? '#555' : '#9CA3AF'}
-                            value={name}
-                            onChangeText={setName}
-                            autoCapitalize="words"
-                        />
-                    </View>
 
                     <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
                         Email
@@ -200,7 +170,10 @@ export default function RegisterScreen({
                 <TouchableOpacity
                     onPress={handleRegister}
                     className="w-full py-4 rounded-3xl items-center justify-center mb-8"
-                    style={{ backgroundColor: primaryColor }}
+                    style={{
+                        backgroundColor: primaryColor,
+                        opacity: agreeTerms ? 1 : 0.6
+                    }}
                     activeOpacity={0.8}
                 >
                     <Text className="text-white text-base font-bold">Sign Up</Text>

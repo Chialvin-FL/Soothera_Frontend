@@ -10,7 +10,7 @@ export const LoginHeader = ({ textColor }: LoginHeaderProps) => {
     return (
         <View className="items-center mb-10">
             <Image
-                source={require('../../../assets/soothera-logo.png')}
+                source={require('../../../../assets/soothera-logo.png')}
                 className="w-64 h-64"
                 resizeMode="contain"
                 style={{ marginBottom: -50 }}
