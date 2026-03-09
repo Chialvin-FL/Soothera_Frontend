@@ -7,6 +7,7 @@ import { RisingPage } from '../components/native/RisingPage';
 // Screens — tab bases
 import HomeScreen from '../screens/native/Home/HomeScreen.native';
 import HomeScreenAdmin from '../screens/native/Home/HomeAdminScreen.native';
+import HomeTherapistScreen from '../screens/native/Home/HomeTherapistScreen.native';
 import BookingsScreen from '../screens/native/Bookings/BookingsScreen.native';
 import BookingsAdminScreen from '../screens/native/Bookings/BookingsAdminScreen.native';
 import InboxScreen from '../screens/native/Messaging/InboxScreen.native';
@@ -75,6 +76,11 @@ export default function NativeNavigator() {
                 {userRole === 'admin' ? (
                   <HomeScreenAdmin
                     useNavigatorOverlays
+                    onNavigateToProfile={() => setActiveTab('profile')}
+                    onNavigateNotifications={home.openHomeNotifications}
+                  />
+                ) : userRole === 'therapist' ? (
+                  <HomeTherapistScreen
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateNotifications={home.openHomeNotifications}
                   />
