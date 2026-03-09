@@ -142,7 +142,7 @@ export default function ChatRoomScreen({ conversation, onBack }: ChatRoomScreenP
   const inputAreaHeight = 60;
 
   return (
-    <View className="flex-1 bg-white dark:bg-[#151718]" style={{paddingTop: insets.top}}>
+    <View className="flex-1 bg-white dark:bg-[#151718]">
       {/* Header */}
       <View
         className="flex-row items-center px-5 py-3 border-b border-gray-200 dark:border-[#2a2a2a]"
@@ -207,7 +207,7 @@ export default function ChatRoomScreen({ conversation, onBack }: ChatRoomScreenP
       <ScrollView
         ref={scrollViewRef}
         className="flex-1 px-5"
-        contentContainerStyle={{ 
+        contentContainerStyle={{
           paddingVertical: 16,
           paddingBottom: keyboardHeight > 0 ? keyboardHeight + inputAreaHeight : inputAreaHeight
         }}
