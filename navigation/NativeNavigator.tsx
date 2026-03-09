@@ -778,6 +778,7 @@ export default function NativeNavigator() {
                   onNavigateToProfile={() => setActiveTab('profile')}
                   onNavigateChatRoom={openChat}
                   onNavigateNotifications={openHomeNotifications}
+                  userRole={userRole}
                 />
               </RisingPage>
 

@@ -4,14 +4,25 @@ import { Text } from '@/components/Text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-type InboxTabType = 'all' | 'salon' | 'therapist' | 'chatbot';
+import { UserRole } from '@/env';
+
+export type InboxTabType = 'all' | 'salon' | 'therapist' | 'chatbot' | 'customer';
 
 interface InboxTabNavigationProps {
   activeTab: InboxTabType;
   onTabPress: (tab: InboxTabType) => void;
+  userRole?: UserRole | null;
 }
 
-const tabs: InboxTabType[] = ['all', 'salon', 'therapist', 'chatbot'];
+const getTabsForRole = (role?: UserRole | null): InboxTabType[] => {
+  if (role === 'admin') {
+    return ['all', 'customer', 'therapist', 'chatbot'];
+  }
+  if (role === 'therapist') {
+    return ['all', 'customer', 'salon', 'chatbot'];
+  }
+  return ['all', 'salon', 'therapist', 'chatbot'];
+};
 
 const getTabLabel = (tab: InboxTabType): string => {
   switch (tab) {
@@ -23,15 +34,19 @@ const getTabLabel = (tab: InboxTabType): string => {
       return 'Therapist';
     case 'chatbot':
       return 'Chatbot';
+    case 'customer':
+      return 'Customer';
     default:
       return tab;
   }
 };
 
-export default function InboxTabNavigation({ activeTab, onTabPress }: InboxTabNavigationProps) {
+export default function InboxTabNavigation({ activeTab, onTabPress, userRole }: InboxTabNavigationProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const tabs = getTabsForRole(userRole);
 
   // Auto-scroll when tab changes
   useEffect(() => {
@@ -50,9 +65,9 @@ export default function InboxTabNavigation({ activeTab, onTabPress }: InboxTabNa
 
   return (
     <View className="mx-5 mt-2 mb-4 bg-gray-100 dark:bg-[#2a2a2a] rounded-full p-1">
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef}
-        horizontal 
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 4 }}
       >

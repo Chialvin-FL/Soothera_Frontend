@@ -8,7 +8,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Header } from '@/components/native/Header';
 import { RisingItem } from '@/components/native/RisingItem';
 import ChatRoomScreen from './ChatRoomScreen.native';
-import InboxTabNavigation from './components/InboxTabNavigation';
+import InboxTabNavigation, { InboxTabType } from './components/InboxTabNavigation';
+import { UserRole } from '@/env';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -52,67 +53,67 @@ const getTherapistFromSalon = (salonId: string, therapistId: string): { name: st
 // Mock data for conversations - related to actual salons, therapists, and chatbots
 const mockConversations: Conversation[] = [
   // Salon conversations
-  { 
-    id: '1', 
-    name: topRatedSalons[0].name, 
-    lastMessage: 'Your appointment is confirmed for tomorrow at 2:00 PM. See you soon!', 
-    timestamp: '12:40 PM', 
-    unreadCount: 3, 
+  {
+    id: '1',
+    name: topRatedSalons[0].name,
+    lastMessage: 'Your appointment is confirmed for tomorrow at 2:00 PM. See you soon!',
+    timestamp: '12:40 PM',
+    unreadCount: 3,
     type: 'salon',
     salonId: topRatedSalons[0].id,
     avatar: undefined,
     isOnline: true
   },
-  { 
-    id: '3', 
-    name: topRatedSalons[2].name, 
-    lastMessage: 'We have a special promotion this week! Book now and get 20% off.', 
-    timestamp: '04:40 PM', 
-    unreadCount: 4, 
+  {
+    id: '3',
+    name: topRatedSalons[2].name,
+    lastMessage: 'We have a special promotion this week! Book now and get 20% off.',
+    timestamp: '04:40 PM',
+    unreadCount: 4,
     type: 'salon',
     salonId: topRatedSalons[2].id,
     avatar: undefined,
     isOnline: false
   },
-  { 
-    id: '6', 
-    name: topRatedSalons[5].name, 
-    lastMessage: 'Thank you for your booking! We\'re looking forward to serving you.', 
-    timestamp: '10:10 AM', 
-    unreadCount: 2, 
+  {
+    id: '6',
+    name: topRatedSalons[5].name,
+    lastMessage: 'Thank you for your booking! We\'re looking forward to serving you.',
+    timestamp: '10:10 AM',
+    unreadCount: 2,
     type: 'salon',
     salonId: topRatedSalons[5].id,
     avatar: undefined,
     isOnline: true
   },
   // Therapist conversations (from salons)
-  { 
-    id: '2', 
-    name: 'Kathryn Murphy', 
-    lastMessage: 'Hi! I\'m available for your massage session. What time works for you?', 
-    timestamp: '01:40 AM', 
+  {
+    id: '2',
+    name: 'Kathryn Murphy',
+    lastMessage: 'Hi! I\'m available for your massage session. What time works for you?',
+    timestamp: '01:40 AM',
     type: 'therapist',
     therapistId: '1',
     salonTherapistId: '1', // From Salon Elite
     avatar: undefined,
     isOnline: true
   },
-  { 
-    id: '4', 
-    name: 'Esther Howard', 
-    lastMessage: 'I\'ve prepared everything for your appointment. See you in 30 minutes!', 
-    timestamp: '09:30 AM', 
+  {
+    id: '4',
+    name: 'Esther Howard',
+    lastMessage: 'I\'ve prepared everything for your appointment. See you in 30 minutes!',
+    timestamp: '09:30 AM',
     type: 'therapist',
     therapistId: '2',
     salonTherapistId: '1', // From Salon Elite
     avatar: undefined,
     isOnline: false
   },
-  { 
-    id: '7', 
-    name: 'Jane Smith', 
-    lastMessage: 'Your massage room is ready. Please let me know if you need any adjustments.', 
-    timestamp: '03:25 PM', 
+  {
+    id: '7',
+    name: 'Jane Smith',
+    lastMessage: 'Your massage room is ready. Please let me know if you need any adjustments.',
+    timestamp: '03:25 PM',
     type: 'therapist',
     therapistId: '3',
     salonTherapistId: '2', // From Beauty Haven
@@ -120,22 +121,22 @@ const mockConversations: Conversation[] = [
     isOnline: true
   },
   // Chatbot conversations
-  { 
-    id: '5', 
-    name: mockChatbots[0].name, 
-    lastMessage: 'I can help you find the perfect salon or book an appointment. What would you like to do?', 
-    timestamp: '08:40 AM', 
+  {
+    id: '5',
+    name: mockChatbots[0].name,
+    lastMessage: 'I can help you find the perfect salon or book an appointment. What would you like to do?',
+    timestamp: '08:40 AM',
     type: 'chatbot',
     chatbotId: mockChatbots[0].id,
     avatar: undefined,
     isOnline: true
   },
-  { 
-    id: '8', 
-    name: mockChatbots[1].name, 
-    lastMessage: 'I found 3 available time slots for tomorrow. Would you like to see them?', 
-    timestamp: '07:00 AM', 
-    unreadCount: 1, 
+  {
+    id: '8',
+    name: mockChatbots[1].name,
+    lastMessage: 'I found 3 available time slots for tomorrow. Would you like to see them?',
+    timestamp: '07:00 AM',
+    unreadCount: 1,
     type: 'chatbot',
     chatbotId: mockChatbots[1].id,
     avatar: undefined,
@@ -149,18 +150,19 @@ interface InboxScreenProps {
   useNavigatorOverlays?: boolean;
   onNavigateChatRoom?: (conversation: Conversation) => void;
   onNavigateNotifications?: () => void;
+  userRole?: UserRole | null;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TRANSITION_DURATION = 300;
 
-export default function InboxScreen({ onChatRoomChange, onNavigateToProfile, useNavigatorOverlays = false, onNavigateChatRoom, onNavigateNotifications }: InboxScreenProps = {}) {
+export default function InboxScreen({ onChatRoomChange, onNavigateToProfile, useNavigatorOverlays = false, onNavigateChatRoom, onNavigateNotifications, userRole }: InboxScreenProps = {}) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'salon' | 'therapist' | 'chatbot'>('all');
+  const [activeTab, setActiveTab] = useState<InboxTabType>('all');
   const maxAnimatedItems = 8;
   const baseItemDelay = 120;
   const perItemDelay = 110;
@@ -172,12 +174,12 @@ export default function InboxScreen({ onChatRoomChange, onNavigateToProfile, use
   const filteredConversations = mockConversations.filter(conv => {
     // Filter by tab
     const matchesTab = activeTab === 'all' || conv.type === activeTab;
-    
+
     // Filter by search query
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch = searchQuery === '' ||
       conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     return matchesTab && matchesSearch;
   });
 
@@ -222,10 +224,10 @@ export default function InboxScreen({ onChatRoomChange, onNavigateToProfile, use
   }));
 
   return (
-  <View className="flex-1 bg-white dark:bg-[#151718]">
+    <View className="flex-1 bg-white dark:bg-[#151718]">
       {/* Header Section */}
       <RisingItem delay={0}>
-        <Header 
+        <Header
           onProfilePress={onNavigateToProfile}
           onNotificationPress={onNavigateNotifications}
         />
@@ -250,9 +252,10 @@ export default function InboxScreen({ onChatRoomChange, onNavigateToProfile, use
 
       {/* Tab Navigation */}
       <RisingItem delay={80}>
-        <InboxTabNavigation 
-          activeTab={activeTab} 
-          onTabPress={setActiveTab} 
+        <InboxTabNavigation
+          activeTab={activeTab}
+          onTabPress={setActiveTab}
+          userRole={userRole}
         />
       </RisingItem>
 
@@ -264,7 +267,7 @@ export default function InboxScreen({ onChatRoomChange, onNavigateToProfile, use
       >
         {filteredConversations.map((conversation, index) => {
           const delay = baseItemDelay + Math.min(index, maxAnimatedItems) * perItemDelay;
-          
+
           // Get avatar/image based on conversation type
           const getConversationAvatar = () => {
             if (conversation.type === 'salon' && conversation.salonId) {
@@ -281,7 +284,7 @@ export default function InboxScreen({ onChatRoomChange, onNavigateToProfile, use
           };
 
           const avatarSource = getConversationAvatar();
-          
+
           return (
             <RisingItem key={conversation.id} delay={delay}>
               <TouchableOpacity
