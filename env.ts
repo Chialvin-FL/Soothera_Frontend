@@ -11,9 +11,6 @@ export interface UserData {
   role: UserRole;
 }
 
-// Mapbox Access Token
-export const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
-
 // Dummy Accounts for Testing
 export const DUMMY_ACCOUNTS = [
   {
