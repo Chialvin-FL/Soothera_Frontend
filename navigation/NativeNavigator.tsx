@@ -729,7 +729,7 @@ export default function NativeNavigator() {
           ) : (
             <>
               {/* Tab bases */}
-              <RisingPage visible={activeTab === 'home'}>
+              <RisingPage visible={activeTab === 'home'} fadeIn={false} fadeOut={false}>
                 {userRole === 'admin' ? (
                   <HomeScreenAdmin
                     useNavigatorOverlays

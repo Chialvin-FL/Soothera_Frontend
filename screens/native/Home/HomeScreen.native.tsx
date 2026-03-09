@@ -288,7 +288,7 @@ export default function HomeScreen({
       >
         {/* Header Section */}
         <RisingItem delay={0}>
-          <Header 
+          <Header
             onProfilePress={onNavigateToProfile}
             onNotificationPress={() => {
               if (useNavigatorOverlays) {
@@ -302,14 +302,14 @@ export default function HomeScreen({
 
         {/* Search Bar and Filter */}
         <RisingItem delay={160}>
-          <SearchBar 
+          <SearchBar
             onPress={() => {
               if (useNavigatorOverlays) {
                 onNavigateTopRated?.({ autoOpenFilter: false, autoFocusSearch: true });
               } else {
                 setShowTopRatedSalonsScreen(true);
               }
-            }} 
+            }}
             onFilterPress={() => {
               if (useNavigatorOverlays) {
                 onNavigateTopRated?.({ autoOpenFilter: true, autoFocusSearch: true });
@@ -417,7 +417,7 @@ export default function HomeScreen({
                 topRatedAnimatedStyle,
               ]}
             >
-              <TopRatedSalonsScreen 
+              <TopRatedSalonsScreen
                 onBack={() => {
                   topRatedTranslateX.value = withTiming(
                     SCREEN_WIDTH,
