@@ -4,6 +4,8 @@ import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS, UserData } from '@/env';
 
 interface HeaderProps {
   userName?: string;
@@ -12,10 +14,33 @@ interface HeaderProps {
   hasNotifications?: boolean;
 }
 
-export const Header = ({ userName = 'John Doe', onNotificationPress, onProfilePress, hasNotifications = true }: HeaderProps) => {
+export const Header = ({ userName, onNotificationPress, onProfilePress, hasNotifications = true }: HeaderProps) => {
+  const [currentUserName, setCurrentUserName] = React.useState(userName || 'John Doe');
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const fetchUserName = async () => {
+      if (userName) {
+        setCurrentUserName(userName);
+        return;
+      }
+      try {
+        const storedData = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+        if (storedData) {
+          const userData: UserData = JSON.parse(storedData);
+          if (userData.name) {
+            setCurrentUserName(userData.name);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user name in Header:', error);
+      }
+    };
+
+    fetchUserName();
+  }, [userName]);
 
   useEffect(() => {
     if (hasNotifications) {
@@ -66,17 +91,19 @@ export const Header = ({ userName = 'John Doe', onNotificationPress, onProfilePr
   }, [hasNotifications, shakeAnim]);
 
   const animatedStyle = {
-    transform: [{ rotate: shakeAnim.interpolate({
-      inputRange: [-10, 10],
-      outputRange: ['-10deg', '10deg'],
-    }) }],
+    transform: [{
+      rotate: shakeAnim.interpolate({
+        inputRange: [-10, 10],
+        outputRange: ['-10deg', '10deg'],
+      })
+    }],
   };
 
   return (
     <View className="flex-row items-center justify-between px-5 pt-4 pb-4">
       {/* User Profile */}
-      <TouchableOpacity 
-        className="flex-row items-center" 
+      <TouchableOpacity
+        className="flex-row items-center"
         onPress={onProfilePress}
         activeOpacity={0.7}
       >
@@ -85,7 +112,7 @@ export const Header = ({ userName = 'John Doe', onNotificationPress, onProfilePr
           className="w-10 h-10 rounded-full mr-3"
         />
         <Text className="text-base font-semibold" style={{ color: colors.text }}>
-          {userName}
+          {currentUserName}
         </Text>
       </TouchableOpacity>
 
