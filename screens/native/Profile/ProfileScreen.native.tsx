@@ -182,7 +182,7 @@ export default function ProfileScreen({
         </View>
 
         {/* Your Favorites Section */}
-        {userRole !== 'admin' && (
+        {userRole !== 'admin' && userRole !== 'therapist' && (
           <RisingItem delay={200} visible={isVisible}>
             <TopRatedSalons
               title="Your Favorites"
@@ -195,7 +195,7 @@ export default function ProfileScreen({
         )}
 
         {/* You May Also Like Section */}
-        {userRole !== 'admin' && (
+        {userRole !== 'admin' && userRole !== 'therapist' && (
           <RisingItem delay={260} visible={isVisible}>
             <TopRatedSalons
               title="You May Also Like"
