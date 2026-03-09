@@ -182,26 +182,30 @@ export default function ProfileScreen({
         </View>
 
         {/* Your Favorites Section */}
-        <RisingItem delay={200} visible={isVisible}>
-          <TopRatedSalons
-            title="Your Favorites"
-            salons={topRatedSalons.slice(0, 3)}
-            showSeeAllInHeader
-            onSeeAll={onNavigateToFavorites}
-            onSalonPress={onNavigateSalonDetails}
-          />
-        </RisingItem>
+        {userRole !== 'admin' && (
+          <RisingItem delay={200} visible={isVisible}>
+            <TopRatedSalons
+              title="Your Favorites"
+              salons={topRatedSalons.slice(0, 3)}
+              showSeeAllInHeader
+              onSeeAll={onNavigateToFavorites}
+              onSalonPress={onNavigateSalonDetails}
+            />
+          </RisingItem>
+        )}
 
         {/* You May Also Like Section */}
-        <RisingItem delay={260} visible={isVisible}>
-          <TopRatedSalons
-            title="You May Also Like"
-            salons={topRatedSalons.slice(3, 7)}
-            showSeeAllInHeader
-            onSeeAll={onNavigateToTopRated}
-            onSalonPress={onNavigateSalonDetails}
-          />
-        </RisingItem>
+        {userRole !== 'admin' && (
+          <RisingItem delay={260} visible={isVisible}>
+            <TopRatedSalons
+              title="You May Also Like"
+              salons={topRatedSalons.slice(3, 7)}
+              showSeeAllInHeader
+              onSeeAll={onNavigateToTopRated}
+              onSalonPress={onNavigateSalonDetails}
+            />
+          </RisingItem>
+        )}
 
       </ScrollView>
     </View>
