@@ -1,27 +1,27 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     View,
     TouchableOpacity,
     TextInput,
-    Image,
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    Alert,
 } from 'react-native';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DUMMY_ACCOUNTS, UserRole } from '@/env';
 import { SuccessModal } from '@/components/native/SuccessModal';
 import { LoginHeader } from './components/LoginHeader';
 import { SocialLogin } from './components/SocialLogin';
 import { LoginFooter } from './components/LoginFooter';
+import { useLoginSlice } from './loginSlice';
+import { useState } from 'react';
 
 interface LoginScreenProps {
-    onLogin: (role: UserRole, name: string, email: string) => void;
+    onLogin: (role: number, name: string, email: string) => void;
     onNavigateToRegister: () => void;
     onForgotPassword?: () => void;
 }
@@ -36,35 +36,33 @@ export default function LoginScreen({
     const insets = useSafeAreaInsets();
     const isDark = colorScheme === 'dark';
 
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const loginSlice = useLoginSlice();
     const [showPassword, setShowPassword] = useState(false);
-    const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '' });
+    const [modal, setModal] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        variant: 'success' | 'error';
+    }>({ visible: false, title: '', message: '', variant: 'error' });
 
-    const handleLogin = () => {
-        if (!email || !password) {
-            setErrorModal({
-                visible: true,
-                title: 'Missing Information',
-                message: 'Please enter both email and password.',
-            });
-            return;
-        }
+    const handleLogin = async () => {
+        await loginSlice.handleLogin(async (user) => {
+            await onLogin(user.role, user.name, user.email);
+        });
+    };
 
-        const user = DUMMY_ACCOUNTS.find(
-            (acc) => acc.email.toLowerCase() === email.toLowerCase() && acc.password === password
-        );
-
-        if (user) {
-            onLogin(user.role, user.name, user.email);
-        } else {
-            setErrorModal({
+    // Show error from slice as modal
+    React.useEffect(() => {
+        if (loginSlice.error) {
+            setModal({
                 visible: true,
                 title: 'Login Failed',
-                message: 'The email or password you entered is incorrect.',
+                message: loginSlice.error,
+                variant: 'error',
             });
+            loginSlice.clearError();
         }
-    };
+    }, [loginSlice.error]);
 
     return (
         <KeyboardAvoidingView
@@ -100,10 +98,11 @@ export default function LoginScreen({
                             style={{ color: colors.text }}
                             placeholder="example@gmail.com"
                             placeholderTextColor={isDark ? '#555' : '#9CA3AF'}
-                            value={email}
-                            onChangeText={setEmail}
+                            value={loginSlice.email}
+                            onChangeText={loginSlice.setEmail}
                             keyboardType="email-address"
                             autoCapitalize="none"
+                            editable={!loginSlice.isLoading}
                         />
                     </View>
 
@@ -122,10 +121,11 @@ export default function LoginScreen({
                             style={{ color: colors.text }}
                             placeholder="••••••••••••"
                             placeholderTextColor={isDark ? '#555' : '#9CA3AF'}
-                            value={password}
-                            onChangeText={setPassword}
+                            value={loginSlice.password}
+                            onChangeText={loginSlice.setPassword}
                             secureTextEntry={!showPassword}
                             autoCapitalize="none"
+                            editable={!loginSlice.isLoading}
                         />
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                             <Ionicons
@@ -149,11 +149,19 @@ export default function LoginScreen({
                 {/* Sign In Button */}
                 <TouchableOpacity
                     onPress={handleLogin}
+                    disabled={loginSlice.isLoading}
                     className="w-full py-4 rounded-3xl items-center justify-center mb-8"
-                    style={{ backgroundColor: primaryColor }}
+                    style={{
+                        backgroundColor: primaryColor,
+                        opacity: loginSlice.isLoading ? 0.7 : 1,
+                    }}
                     activeOpacity={0.8}
                 >
-                    <Text className="text-white text-base font-bold">Sign In</Text>
+                    {loginSlice.isLoading ? (
+                        <ActivityIndicator color="white" />
+                    ) : (
+                        <Text className="text-white text-base font-bold">Sign In</Text>
+                    )}
                 </TouchableOpacity>
 
                 {/* Social Sign In */}
@@ -167,11 +175,11 @@ export default function LoginScreen({
             </ScrollView>
 
             <SuccessModal
-                visible={errorModal.visible}
-                title={errorModal.title}
-                message={errorModal.message}
-                variant="error"
-                onClose={() => setErrorModal({ ...errorModal, visible: false })}
+                visible={modal.visible}
+                title={modal.title}
+                message={modal.message}
+                variant={modal.variant}
+                onClose={() => setModal({ ...modal, visible: false })}
             />
         </KeyboardAvoidingView>
     );

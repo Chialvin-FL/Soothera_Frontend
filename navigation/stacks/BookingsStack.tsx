@@ -9,7 +9,7 @@ import GetDirectionsScreen from '../../screens/native/Bookings/GetDirectionsScre
 import { getBookingDetails } from '../../screens/native/Bookings/configs/mockBookingDetailsData';
 import { topRatedSalons, getSalonDetails } from '../../screens/native/Home/configs/mockData';
 import type { BookingsStackState } from '../hooks/useBookingsStack';
-import type { UserRole } from '@/env';
+import type { UIRole } from '../hooks/useSessionLoader';
 
 const OVERLAY_BASE = {
     position: 'absolute' as const,
@@ -21,7 +21,7 @@ const OVERLAY_BASE = {
 
 interface BookingsStackProps {
     bookings: BookingsStackState;
-    userRole: UserRole | null;
+    userRole: UIRole | null;
     onRebook: (salonId: string) => void;
 }
 

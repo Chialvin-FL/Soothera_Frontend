@@ -4,34 +4,53 @@ import {
     TouchableOpacity,
     Image,
     SafeAreaView,
+    ActivityIndicator,
 } from 'react-native';
 import { Text } from '@/components/Text';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { UserRole } from '@/env';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { UserRole } from '@/api/types';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { RisingItem } from '@/components/native/RisingItem';
+import { SuccessModal } from '@/components/native/SuccessModal';
+
+/** UI role ID used internally by this screen. */
+type UIRoleId = 'customer' | 'admin';
 
 interface RoleSelectionScreenProps {
-    onSelectRole: (role: UserRole) => void;
+    onSelectRole: (role: UIRoleId) => void;
+    isLoading?: boolean;
+    error?: string | null;
 }
 
-export default function RoleSelectionScreen({ onSelectRole }: RoleSelectionScreenProps) {
+export default function RoleSelectionScreen({
+    onSelectRole,
+    isLoading = false,
+    error = null,
+}: RoleSelectionScreenProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
     const isDark = colorScheme === 'dark';
-    const [selectedRoleId, setSelectedRoleId] = useState<UserRole | null>(null);
+    const [selectedRoleId, setSelectedRoleId] = useState<UIRoleId | null>(null);
+    const [errorModal, setErrorModal] = useState({ visible: false, message: '' });
 
-    const roles = [
+    // Show API error when it changes
+    React.useEffect(() => {
+        if (error) {
+            setErrorModal({ visible: true, message: error });
+        }
+    }, [error]);
+
+    const roles: { id: UIRoleId; title: string; image: any }[] = [
         {
-            id: 'customer' as UserRole,
+            id: 'customer',
             title: 'Customer',
             image: require('../../../assets/illustrations/customer_role.png'),
         },
         {
-            id: 'admin' as UserRole,
+            id: 'admin',
             title: 'Salon Owner',
             image: require('../../../assets/illustrations/salon_owner_role.png'),
         },
@@ -61,6 +80,7 @@ export default function RoleSelectionScreen({ onSelectRole }: RoleSelectionScree
                             >
                                 <TouchableOpacity
                                     onPress={() => setSelectedRoleId(role.id)}
+                                    disabled={isLoading}
                                     activeOpacity={0.8}
                                     className="w-full bg-white dark:bg-gray-800 rounded-[20px] items-center justify-center border-2 py-6"
                                     style={{
@@ -106,20 +126,30 @@ export default function RoleSelectionScreen({ onSelectRole }: RoleSelectionScree
                 <RisingItem delay={1000} className="mb-10">
                     <TouchableOpacity
                         onPress={() => selectedRoleId && onSelectRole(selectedRoleId)}
-                        disabled={!selectedRoleId}
+                        disabled={!selectedRoleId || isLoading}
                         className="w-full py-4 rounded-3xl items-center justify-center flex-row"
                         style={{
                             backgroundColor: selectedRoleId ? primaryColor : '#E5E7EB',
-                            opacity: selectedRoleId ? 1 : 0.6
+                            opacity: selectedRoleId && !isLoading ? 1 : 0.6
                         }}
                         activeOpacity={0.8}
                     >
-                        <Text className="text-white text-lg font-bold mr-2">Continue</Text>
+                        {isLoading ? (
+                            <ActivityIndicator color="white" />
+                        ) : (
+                            <Text className="text-white text-lg font-bold mr-2">Continue</Text>
+                        )}
                     </TouchableOpacity>
                 </RisingItem>
-
-
             </View>
+
+            <SuccessModal
+                visible={errorModal.visible}
+                title="Registration Failed"
+                message={errorModal.message}
+                variant="error"
+                onClose={() => setErrorModal({ visible: false, message: '' })}
+            />
         </SafeAreaView>
     );
 }

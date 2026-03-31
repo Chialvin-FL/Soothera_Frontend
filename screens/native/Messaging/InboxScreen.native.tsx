@@ -9,7 +9,7 @@ import { Header } from '@/components/native/Header';
 import { RisingItem } from '@/components/native/RisingItem';
 import ChatRoomScreen from './ChatRoomScreen.native';
 import InboxTabNavigation, { InboxTabType } from './components/InboxTabNavigation';
-import { UserRole } from '@/env';
+import type { UIRole } from '@/navigation/hooks/useSessionLoader';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -150,7 +150,7 @@ interface InboxScreenProps {
   useNavigatorOverlays?: boolean;
   onNavigateChatRoom?: (conversation: Conversation) => void;
   onNavigateNotifications?: () => void;
-  userRole?: UserRole | null;
+  userRole?: UIRole | null;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

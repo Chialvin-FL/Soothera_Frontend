@@ -14,14 +14,13 @@ import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SuccessModal } from '@/components/native/SuccessModal';
-import { UserRole } from '@/env';
 import TermsOfServiceScreen from '../Profile/components/TermsOfServiceScreen.native';
 import { RegisterHeader } from './components/RegisterHeader';
 import { SocialRegister } from './components/SocialRegister';
 import { RegisterFooter } from './components/RegisterFooter';
 
 interface RegisterScreenProps {
-    onRegister: (email: string) => void;
+    onRegister: (email: string, password: string) => void;
     onNavigateToLogin: () => void;
 }
 
@@ -60,7 +59,7 @@ export default function RegisterScreen({
             return;
         }
 
-        onRegister(email);
+        onRegister(email, password);
     };
 
     return (

@@ -5,7 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS, UserData } from '@/env';
+import { STORAGE_KEYS } from '@/env';
+import { UserData } from '@/api/types';
+import { getRoleLabel } from '@/utils/roleHelpers';
+import type { UIRole } from '@/navigation/hooks/useSessionLoader';
 
 interface HeaderProps {
   userName?: string;
@@ -30,8 +33,13 @@ export const Header = ({ userName, onNotificationPress, onProfilePress, hasNotif
         const storedData = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
         if (storedData) {
           const userData: UserData = JSON.parse(storedData);
-          if (userData.name) {
-            setCurrentUserName(userData.name);
+          // Build name from available fields
+          const displayName = [userData.firstName, userData.lastName]
+            .filter(Boolean)
+            .join(' ') || userData.username || userData.email;
+          
+          if (displayName) {
+            setCurrentUserName(displayName);
           }
         }
       } catch (error) {

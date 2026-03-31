@@ -8,6 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { RisingItem } from '@/components/native/RisingItem';
 import { TopRatedSalons } from '../Home/components/Home/TopRatedSalons';
 import { topRatedSalons } from '../Home/configs/mockData';
+import type { UIRole } from '@/navigation/hooks/useSessionLoader';
 
 interface SettingItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -51,7 +52,7 @@ interface ProfileScreenProps {
   onLogout?: () => void;
   userName?: string;
   userEmail?: string;
-  userRole?: string | null;
+  userRole?: UIRole | null;
 }
 
 export default function ProfileScreen({

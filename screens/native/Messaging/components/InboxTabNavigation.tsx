@@ -4,17 +4,17 @@ import { Text } from '@/components/Text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-import { UserRole } from '@/env';
+import type { UIRole } from '@/navigation/hooks/useSessionLoader';
 
 export type InboxTabType = 'all' | 'salon' | 'therapist' | 'chatbot' | 'customer';
 
 interface InboxTabNavigationProps {
   activeTab: InboxTabType;
   onTabPress: (tab: InboxTabType) => void;
-  userRole?: UserRole | null;
+  userRole?: UIRole | null;
 }
 
-const getTabsForRole = (role?: UserRole | null): InboxTabType[] => {
+const getTabsForRole = (role?: UIRole | null): InboxTabType[] => {
   if (role === 'admin') {
     return ['all', 'customer', 'therapist', 'chatbot'];
   }

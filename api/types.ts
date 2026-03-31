@@ -273,3 +273,15 @@ export interface ApiError {
     statusCode: number;
     data: null;
 }
+
+// UserData matches what we persist in AsyncStorage after login
+export interface UserData {
+    uid: string;
+    email: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    role: number;
+    profilePicture: string | null;
+    createdAt: string;
+}
