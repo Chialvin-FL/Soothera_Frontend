@@ -1,3 +1,9 @@
 {
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "http://fl-soothera-api.somee.com/api/:path*"
+    }
+  ]
 }
