@@ -7,7 +7,7 @@
  *    replace 'localhost' with your machine's IP (e.g., 192.168.x.x).
  */
 
-const IS_LOCAL = true; // <--- TOGGLE THIS
+const IS_LOCAL = false; // <--- TOGGLE THIS
 
 const LOCAL_URL = 'https://localhost:7043';
 const DEPLOYED_URL = 'http://fl-soothera-api.somee.com';

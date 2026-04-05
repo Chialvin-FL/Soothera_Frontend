@@ -22,25 +22,30 @@ import { RegisterFooter } from './components/RegisterFooter';
 interface RegisterScreenProps {
     onRegister: (email: string, password: string) => void;
     onNavigateToLogin: () => void;
+    initialEmail?: string;
+    initialPassword?: string;
 }
 
 export default function RegisterScreen({
     onRegister,
     onNavigateToLogin,
+    initialEmail = '',
+    initialPassword = '',
 }: RegisterScreenProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
     const insets = useSafeAreaInsets();
     const isDark = colorScheme === 'dark';
 
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [email, setEmail] = useState(initialEmail);
+    const [password, setPassword] = useState(initialPassword);
     const [showPassword, setShowPassword] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [showTermsModal, setShowTermsModal] = useState(false);
     const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '' });
 
     const handleRegister = () => {
+        console.log('[Registration Debug] User clicked Sign Up with:', { email, password });
         if (!email || !password) {
             setErrorModal({
                 visible: true,
@@ -59,6 +64,7 @@ export default function RegisterScreen({
             return;
         }
 
+        console.log('[Registration Debug] calling onRegister(email, password)');
         onRegister(email, password);
     };
 

@@ -16,7 +16,9 @@ export interface RegisterSliceState {
     clearError: () => void;
     handleRegister: (
         role: UserRole,
-        onSuccess: (message: string) => void
+        onSuccess: (message: string) => void,
+        overrideEmail?: string,
+        overridePassword?: string
     ) => Promise<void>;
 }
 
@@ -30,9 +32,16 @@ export function useRegisterSlice(): RegisterSliceState {
 
     const handleRegister = async (
         role: UserRole,
-        onSuccess: (message: string) => void
+        onSuccess: (message: string) => void,
+        overrideEmail?: string,
+        overridePassword?: string
     ) => {
-        if (!email || !password) {
+        const currentEmail = overrideEmail ?? email;
+        const currentPassword = overridePassword ?? password;
+
+        console.log('[Registration Debug] registerSlice.handleRegister called with role:', role, 'and current email:', currentEmail);
+        if (!currentEmail || !currentPassword) {
+            console.warn('[Registration Debug] handleRegister aborted: missing email or password');
             setError('Please fill in all fields.');
             return;
         }
@@ -40,7 +49,9 @@ export function useRegisterSlice(): RegisterSliceState {
         setIsLoading(true);
         setError(null);
 
-        const result = await performRegister(email, password, role);
+        console.log('[Registration Debug] calling performRegister');
+        const result = await performRegister(currentEmail, currentPassword, role);
+        console.log('[Registration Debug] performRegister result:', result);
 
         if (result.success) {
             onSuccess(result.message);

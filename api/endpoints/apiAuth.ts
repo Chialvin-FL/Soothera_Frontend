@@ -2,9 +2,9 @@ import axiosClient, { setStoredToken, clearStoredToken } from '../axiosClient';
 import type {
   ApiResponse,
   LoginRequest,
-  LoginResponseData,
+  LoginResponse,
   RegisterRequest,
-  RegisterResponseData,
+  RegisterResponse,
   ForgotPasswordRequest,
   ChangeEmailRequest,
   ChangePasswordRequest,
@@ -25,15 +25,15 @@ const BASE = '/Authentication';
  */
 export async function login(
   payload: LoginRequest,
-): Promise<ApiResponse<LoginResponseData>> {
-  const { data } = await axiosClient.post<ApiResponse<LoginResponseData>>(
+): Promise<LoginResponse> {
+  const { data } = await axiosClient.post<LoginResponse>(
     `${BASE}/login`,
     payload,
   );
 
   // Persist the JWT so the interceptor attaches it on future requests
-  if (data.success && data.data?.token) {
-    await setStoredToken(data.data.token);
+  if (data.success && data.token) {
+    await setStoredToken(data.token);
   }
 
   return data;
@@ -46,12 +46,19 @@ export async function login(
  */
 export async function register(
   payload: RegisterRequest,
-): Promise<ApiResponse<RegisterResponseData>> {
-  const { data } = await axiosClient.post<ApiResponse<RegisterResponseData>>(
-    `${BASE}/register`,
-    payload,
-  );
-  return data;
+): Promise<RegisterResponse> {
+  console.log('[Registration Debug] apiAuth.register calling POST /Authentication/register with payload:', payload);
+  try {
+    const { data } = await axiosClient.post<RegisterResponse>(
+      `${BASE}/register`,
+      payload,
+    );
+    console.log('[Registration Debug] apiAuth.register received response:', data);
+    return data;
+  } catch (error) {
+    console.error('[Registration Debug] apiAuth.register axios error:', error);
+    throw error;
+  }
 }
 
 /**

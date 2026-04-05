@@ -21,12 +21,16 @@ type UIRoleId = 'customer' | 'admin';
 
 interface RoleSelectionScreenProps {
     onSelectRole: (role: UIRoleId) => void;
+    onBack?: () => void;
+    clearError?: () => void;
     isLoading?: boolean;
     error?: string | null;
 }
 
 export default function RoleSelectionScreen({
     onSelectRole,
+    onBack,
+    clearError,
     isLoading = false,
     error = null,
 }: RoleSelectionScreenProps) {
@@ -59,6 +63,17 @@ export default function RoleSelectionScreen({
     return (
         <SafeAreaView className="flex-1 bg-white dark:bg-[#151718]">
             <View className="flex-1 px-6 pt-10">
+                {onBack && (
+                    <TouchableOpacity
+                        onPress={onBack}
+                        className="mb-6 flex-row items-center"
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        disabled={isLoading}
+                    >
+                        <Ionicons name="arrow-back" size={28} color={colors.text} />
+                    </TouchableOpacity>
+                )}
+                
                 <RisingItem delay={200}>
                     <Text className="text-3xl font-bold text-center mb-2" style={{ color: colors.text }}>
                         Choose your role
@@ -148,7 +163,12 @@ export default function RoleSelectionScreen({
                 title="Registration Failed"
                 message={errorModal.message}
                 variant="error"
-                onClose={() => setErrorModal({ visible: false, message: '' })}
+                onClose={() => {
+                    setErrorModal({ visible: false, message: '' });
+                    if (clearError) {
+                        clearError();
+                    }
+                }}
             />
         </SafeAreaView>
     );

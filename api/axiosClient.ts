@@ -79,9 +79,16 @@ axiosClient.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log(`[axiosClient Debug] Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, {
+      headers: config.headers,
+      data: config.data,
+    });
     return config;
   },
-  (error) => Promise.reject(error),
+  (error) => {
+    console.error('[axiosClient Debug] Request Error:', error);
+    return Promise.reject(error);
+  },
 );
 
 // ─────────────────────────────────────────────────────────────

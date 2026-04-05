@@ -69,28 +69,48 @@ export interface ChangePasswordRequest {
     firebaseToken: string;
 }
 
-/** Shape of the `data` payload on a successful login. */
-export interface LoginResponseData {
+/** Backend mUser representation */
+export interface MUser {
     uid: string;
+    username: string;
+    firstName: string;
+    lastName: string;
     email: string;
-    token: string;
-    expiresIn: number;
-    user: {
-        username: string;
-        firstName: string;
-        lastName: string;
-        role: number;
-        profilePicture: string | null;
-        createdAt: string;
-    };
+    role: number;
+    profilePicture: string | null;
+    createdAt: number;
 }
 
-/** Shape of the `data` payload on a successful registration. */
-export interface RegisterResponseData {
+/** GET /api/User/get-user etc response body (using standard envelope) */
+export interface UserResponse {
     uid: string;
+    fullName: string;
+    firstName: string;
+    lastName: string;
     email: string;
+    phoneNumber: string;
+    username: string;
+    profilePicture: string | null;
     role: string;
-    verificationLink: string;
+    createdAt: number;
+    status: string;
+}
+
+/** Response from login exactly matching LoginResponseDTO */
+export interface LoginResponse {
+    success: boolean;
+    statusCode: number;
+    message: string;
+    token: string;
+    user: MUser;
+}
+
+/** Response from register exactly matching RegisterResponseDTO */
+export interface RegisterResponse {
+    success: boolean;
+    statusCode: number;
+    message: string;
+    user: MUser;
 }
 
 // ─── User ────────────────────────────────────────────────────
@@ -283,5 +303,5 @@ export interface UserData {
     lastName: string;
     role: number;
     profilePicture: string | null;
-    createdAt: string;
+    createdAt: number;
 }

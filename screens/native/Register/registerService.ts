@@ -29,10 +29,13 @@ export async function performRegister(
     password: string,
     role: UserRole
 ): Promise<RegisterResult | RegisterError> {
+    console.log('[Registration Debug] performRegister calling apiRegister with:', { email, role });
     try {
         const response = await apiRegister({ email, password, role });
+        console.log('[Registration Debug] apiRegister response:', response);
 
         if (!response.success) {
+            console.error('[Registration Debug] apiRegister failed:', response.message);
             return { success: false, message: response.message };
         }
 
@@ -42,6 +45,7 @@ export async function performRegister(
         };
     } catch (err) {
         const apiErr = err as ApiError;
+        console.error('[Registration Debug] Exception in performRegister:', apiErr);
         return {
             success: false,
             message: apiErr?.message ?? 'An unexpected error occurred during registration.',

@@ -1,7 +1,7 @@
 import { login as apiLogin, forgotPassword as apiForgotPassword } from '@/api/endpoints/apiAuth';
 import { clearStoredToken } from '@/api/axiosClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { LoginResponseData, ApiError } from '@/api/types';
+import type { LoginResponse, ApiError } from '@/api/types';
 
 // ─────────────────────────────────────────────────────────────
 // Storage keys
@@ -43,36 +43,36 @@ export interface LoginError {
  * Authenticates the user, persists token + user data + expiry.
  * The token itself is stored by `apiAuth.login` → `setStoredToken`.
  */
-export async function performLogin(
+    export async function performLogin(
     email: string,
     password: string
 ): Promise<LoginResult | LoginError> {
     try {
         const response = await apiLogin({ email, password });
 
-        if (!response.success || !response.data) {
+        if (!response.success || !response.user) {
             return { success: false, message: response.message };
         }
 
-        const { data } = response;
+        const { user } = response;
 
         // Build the user object to persist
         const userData: StoredUserData = {
-            uid: data.uid,
-            email: data.email,
-            username: data.user?.username ?? '',
-            firstName: data.user?.firstName ?? '',
-            lastName: data.user?.lastName ?? '',
-            role: data.user?.role ?? 3,
-            profilePicture: data.user?.profilePicture ?? null,
-            createdAt: data.user?.createdAt ?? '',
+            uid: user.uid,
+            email: user.email,
+            username: user.username ?? '',
+            firstName: user.firstName ?? '',
+            lastName: user.lastName ?? '',
+            role: user.role ?? 3,
+            profilePicture: user.profilePicture ?? null,
+            createdAt: user.createdAt?.toString() ?? '',
         };
 
         // Persist user data
         await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
 
-        // Persist token expiry (expiresIn is in seconds from Firebase)
-        const expiryTimestamp = Date.now() + (data.expiresIn * 1000);
+        // Persist token expiry (assume 1 hr for Firebase ID tokens)
+        const expiryTimestamp = Date.now() + (3600 * 1000);
         await AsyncStorage.setItem(TOKEN_EXPIRY_KEY, expiryTimestamp.toString());
 
         return { success: true, user: userData };

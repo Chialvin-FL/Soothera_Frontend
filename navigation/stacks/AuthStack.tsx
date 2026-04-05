@@ -5,6 +5,7 @@ import RoleSelectionScreen from '../../screens/native/Register/RoleSelectionScre
 import type { SessionState } from '../hooks/useSessionLoader';
 import { useRegisterSlice } from '../../screens/native/Register/registerSlice';
 import { UserRole } from '@/api/types';
+import { SuccessModal } from '@/components/native/SuccessModal';
 
 interface AuthStackProps {
     session: SessionState;
@@ -33,9 +34,13 @@ export function AuthStack({ session }: AuthStackProps) {
             )}
             {authScreen === 'register' && (
                 <RegisterScreen
+                    initialEmail={pendingUserData?.email}
+                    initialPassword={pendingUserData?.password}
                     onRegister={(email, password) => {
+                        console.log('[Registration Debug] AuthStack onRegister received:', { email, password });
                         setPendingUserData({ email, password });
                         setAuthScreen('role-selection');
+                        console.log('[Registration Debug] Transitioning to role-selection');
                     }}
                     onNavigateToLogin={() => setAuthScreen('login')}
                 />
@@ -44,8 +49,14 @@ export function AuthStack({ session }: AuthStackProps) {
                 <RoleSelectionScreen
                     isLoading={registerSlice.isLoading}
                     error={registerSlice.error}
+                    clearError={registerSlice.clearError}
+                    onBack={() => setAuthScreen('register')}
                     onSelectRole={async (role: 'customer' | 'admin') => {
-                        if (!pendingUserData) return;
+                        console.log('[Registration Debug] AuthStack onSelectRole selected:', role);
+                        if (!pendingUserData) {
+                            console.warn('[Registration Debug] pendingUserData is null in role-selection!');
+                            return;
+                        }
 
                         // Set email/password from pending data into the slice
                         registerSlice.setEmail(pendingUserData.email);
@@ -54,15 +65,32 @@ export function AuthStack({ session }: AuthStackProps) {
                         // Map UI role string to backend enum
                         const roleEnum = role === 'admin' ? UserRole.Admin : UserRole.Customer;
 
-                        await registerSlice.handleRegister(roleEnum, (message) => {
-                            // Registration successful — go back to login
-                            setPendingUserData(null);
-                            setAuthScreen('login');
-                            // The user now needs to verify their email before logging in
-                        });
+                        console.log('[Registration Debug] calling registerSlice.handleRegister with role:', roleEnum);
+                        await registerSlice.handleRegister(
+                            roleEnum, 
+                            (message) => {
+                                console.log('[Registration Debug] Registration successful message:', message);
+                                // Show success modal instead of immediately redirecting
+                                setRegisterResult({ success: true, message });
+                                setPendingUserData(null);
+                            },
+                            pendingUserData.email,
+                            pendingUserData.password
+                        );
                     }}
                 />
             )}
+            
+            <SuccessModal
+                visible={registerResult !== null}
+                title="Registration Successful"
+                message={registerResult?.message ?? ''}
+                variant="success"
+                onClose={() => {
+                    setRegisterResult(null);
+                    setAuthScreen('login');
+                }}
+            />
         </>
     );
 }
