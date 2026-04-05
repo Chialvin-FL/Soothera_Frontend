@@ -6,6 +6,7 @@ import RatingSpaScreen from '../../screens/native/Bookings/RatingSpaScreen.nativ
 import RatingTherapistScreen from '../../screens/native/Bookings/RatingTherapistScreen.native';
 import InvoiceScreen from '../../screens/native/Bookings/components/InvoiceScreen.native';
 import GetDirectionsScreen from '../../screens/native/Bookings/GetDirectionsScreen.native';
+import BookAppointmentScreen from '../../screens/native/Home/BookAppointmentScreen.native';
 import { getBookingDetails } from '../../screens/native/Bookings/configs/mockBookingDetailsData';
 import { topRatedSalons, getSalonDetails } from '../../screens/native/Home/configs/mockData';
 import type { BookingsStackState } from '../hooks/useBookingsStack';
@@ -32,16 +33,19 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
         bookingRatingTherapistId,
         invoiceOverlay,
         getDirectionsDestination,
+        walkInBookingVisible,
         bookingsDetailsStyle,
         bookingsRatingSpaStyle,
         bookingsRatingTherapistStyle,
         bookingsInvoiceStyle,
         getDirectionsStyle,
+        walkInBookingStyle,
         closeBookingDetails,
         closeBookingRatingSpa,
         closeBookingRatingTherapist,
         closeBookingInvoice,
         closeGetDirections,
+        closeWalkInBooking,
         openBookingInvoice,
         openGetDirections,
         openBookingRatingSpa,
@@ -135,6 +139,20 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
                         destination={getDirectionsDestination}
                         destinationName={getDirectionsDestination.name}
                         onBack={closeGetDirections}
+                    />
+                </Animated.View>
+            )}
+
+            {walkInBookingVisible && (
+                <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 16 }, walkInBookingStyle]}>
+                    <BookAppointmentScreen
+                        salonDetails={getSalonDetails('1')!}
+                        onBack={closeWalkInBooking}
+                        onComplete={() => {
+                            console.log('Walk-in booking completed');
+                            closeWalkInBooking();
+                        }}
+                        isAdmin={userRole === 'admin'}
                     />
                 </Animated.View>
             )}

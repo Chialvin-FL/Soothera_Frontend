@@ -22,6 +22,7 @@ interface OverlayActiveOptions {
         | 'bookingRatingTherapistId'
         | 'invoiceOverlay'
         | 'getDirectionsDestination'
+        | 'walkInBookingVisible'
     >;
     profile: Pick<
         ProfileStackState,
@@ -50,6 +51,7 @@ export function useOverlayActive({
             !!bookings.bookingRatingTherapistId ||
             !!bookings.invoiceOverlay ||
             !!bookings.getDirectionsDestination ||
+            bookings.walkInBookingVisible ||
             !!profile.profileOverlay ||
             !!profile.selectedFaq ||
             !!profile.helpLegalScreen ||
@@ -68,6 +70,7 @@ export function useOverlayActive({
             bookings.bookingRatingTherapistId,
             bookings.invoiceOverlay,
             bookings.getDirectionsDestination,
+            bookings.walkInBookingVisible,
             profile.profileOverlay,
             profile.selectedFaq,
             profile.helpLegalScreen,

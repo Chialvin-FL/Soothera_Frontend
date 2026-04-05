@@ -104,6 +104,7 @@ export default function NativeNavigator() {
                     useNavigatorOverlays
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateBookingDetails={bookings.openBookingDetails}
+                    onNavigateWalkInBooking={bookings.openWalkInBooking}
                     onNavigateNotifications={home.openHomeNotifications}
                   />
                 ) : userRole === 'therapist' ? (

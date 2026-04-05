@@ -18,6 +18,7 @@ import AdminBookingCard from './components/AdminBookingCard';
 import TabNavigation from './components/TabNavigation';
 import BookingDetailsAdminScreen from './BookingDetailsAdminScreen.native';
 import { getBookingDetails } from './configs/mockBookingDetailsData';
+
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -32,6 +33,7 @@ interface BookingsAdminScreenProps {
     useNavigatorOverlays?: boolean;
     onNavigateBookingDetails?: (bookingId: string) => void;
     onNavigateNotifications?: () => void;
+    onNavigateWalkInBooking?: () => void;
 }
 
 export default function BookingsAdminScreen({
@@ -41,6 +43,7 @@ export default function BookingsAdminScreen({
     useNavigatorOverlays = false,
     onNavigateBookingDetails,
     onNavigateNotifications,
+    onNavigateWalkInBooking,
 }: BookingsAdminScreenProps = {}) {
     const insets = useSafeAreaInsets();
     const colorScheme = useColorScheme();
@@ -49,10 +52,12 @@ export default function BookingsAdminScreen({
     const [activeTab, setActiveTab] = useState<'upcoming' | 'completed' | 'cancelled' | 'all'>('all');
     const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 
+
     const screenWidth = Dimensions.get('window').width;
 
     // Shared values for horizontal slide transitions
     const bookingDetailsTranslateX = useSharedValue(screenWidth);
+
 
     // Tab order for paging (All is first)
     const tabs: Array<'all' | 'upcoming' | 'completed' | 'cancelled'> = ['all', 'upcoming', 'completed', 'cancelled'];
@@ -118,6 +123,8 @@ export default function BookingsAdminScreen({
         );
     };
 
+
+
     // If booking details not found, reset selection
     useEffect(() => {
         if (selectedBookingId) {
@@ -143,10 +150,14 @@ export default function BookingsAdminScreen({
         }
     }, [selectedBookingId, bookingDetailsTranslateX, screenWidth]);
 
+
+
     // Animated styles
     const bookingDetailsAnimatedStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: bookingDetailsTranslateX.value }],
     }));
+
+
 
     // Handle ScrollView layout to set initial position immediately
     const handleScrollViewLayout = () => {
@@ -282,8 +293,11 @@ export default function BookingsAdminScreen({
                     elevation: 5,
                 }}
                 onPress={() => {
-                    console.log('Navigate to Walk-in Booking Screen');
-                    // TODO: Add actual navigation to walk-in screen once created
+                    if (useNavigatorOverlays) {
+                        onNavigateWalkInBooking?.();
+                    } else {
+                        console.log('Navigate to Walk-in Booking Screen fallback');
+                    }
                 }}
             >
                 <Ionicons name="add" size={30} color="white" />
@@ -309,6 +323,8 @@ export default function BookingsAdminScreen({
                     />
                 </Animated.View>
             )}
+
+
         </View>
     );
 }

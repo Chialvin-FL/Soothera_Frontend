@@ -21,6 +21,12 @@ interface BookingData {
   promoCode: string;
   salonDetails: SalonDetails;
   totalPrice: number;
+  customerDetails?: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string;
+  };
 }
 
 interface BookAppointmentScreenProps {
@@ -28,6 +34,7 @@ interface BookAppointmentScreenProps {
   onBack: () => void;
   onComplete?: () => void;
   onPaymentSuccess?: (bookingData: BookingData) => void;
+  isAdmin?: boolean;
 }
 
 interface AddOn {
@@ -36,7 +43,7 @@ interface AddOn {
   price: number;
 }
 
-const TOTAL_STEPS = 5;
+
 
 // Mock add-ons data
 const addOns: AddOn[] = [
@@ -51,14 +58,23 @@ export default function BookAppointmentScreen({
   onBack,
   onComplete,
   onPaymentSuccess,
+  isAdmin = false,
 }: BookAppointmentScreenProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
   const isDark = colorScheme === 'dark';
 
+  const TOTAL_STEPS = isAdmin ? 6 : 5;
+
   // Step state
   const [currentStep, setCurrentStep] = useState(1);
+  const [customerDetails, setCustomerDetails] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: ''
+  });
 
   // Step 1: Service selection
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -318,6 +334,7 @@ export default function BookAppointmentScreen({
         promoCode: promoCode,
         salonDetails: salonDetails,
         totalPrice: calculatePrice(),
+        ...(isAdmin ? { customerDetails } : {}),
       };
 
       // Navigate to payment success screen
@@ -1013,6 +1030,105 @@ export default function BookAppointmentScreen({
               </Text>
             </>
           )}
+
+          {isAdmin && (
+            <>
+              <Text className="text-sm font-medium mt-4 mb-2" style={{ color: colors.icon }}>
+                Customer Details
+              </Text>
+              <View className="p-4 rounded-xl border" style={{ borderColor: isDark ? '#3a3a3a' : '#E5E7EB', backgroundColor: isDark ? '#1f1f1f' : '#F9FAFB' }}>
+                <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                  {customerDetails.firstName} {customerDetails.lastName}
+                </Text>
+                <Text className="text-sm mt-1" style={{ color: colors.icon }}>
+                  {customerDetails.phone}
+                </Text>
+                {customerDetails.email ? (
+                  <Text className="text-sm mt-1" style={{ color: colors.icon }}>
+                    {customerDetails.email}
+                  </Text>
+                ) : null}
+              </View>
+            </>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  // Render Customer Details for Admin
+  const renderAdminCustomerDetails = () => {
+    return (
+      <View className="px-5 py-4">
+        <Text className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
+          Customer Details
+        </Text>
+        
+        <View className="mb-4">
+          <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>First Name</Text>
+          <TextInput
+            className="p-4 rounded-xl border text-base"
+            style={{
+              borderColor: isDark ? '#3a3a3a' : '#E5E7EB',
+              backgroundColor: isDark ? '#1f1f1f' : '#F9FAFB',
+              color: colors.text,
+            }}
+            placeholder="Juan"
+            placeholderTextColor={colors.icon}
+            value={customerDetails.firstName}
+            onChangeText={(text) => setCustomerDetails({...customerDetails, firstName: text})}
+          />
+        </View>
+
+        <View className="mb-4">
+          <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>Last Name</Text>
+          <TextInput
+            className="p-4 rounded-xl border text-base"
+            style={{
+              borderColor: isDark ? '#3a3a3a' : '#E5E7EB',
+              backgroundColor: isDark ? '#1f1f1f' : '#F9FAFB',
+              color: colors.text,
+            }}
+            placeholder="Dela Cruz"
+            placeholderTextColor={colors.icon}
+            value={customerDetails.lastName}
+            onChangeText={(text) => setCustomerDetails({...customerDetails, lastName: text})}
+          />
+        </View>
+
+        <View className="mb-4">
+          <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>Phone Number</Text>
+          <TextInput
+            className="p-4 rounded-xl border text-base"
+            style={{
+              borderColor: isDark ? '#3a3a3a' : '#E5E7EB',
+              backgroundColor: isDark ? '#1f1f1f' : '#F9FAFB',
+              color: colors.text,
+            }}
+            placeholder="0912 345 6789"
+            placeholderTextColor={colors.icon}
+            keyboardType="phone-pad"
+            value={customerDetails.phone}
+            onChangeText={(text) => setCustomerDetails({...customerDetails, phone: text})}
+          />
+        </View>
+
+        <View className="mb-4">
+          <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>Email (Optional)</Text>
+          <TextInput
+            className="p-4 rounded-xl border text-base"
+            style={{
+              borderColor: isDark ? '#3a3a3a' : '#E5E7EB',
+              backgroundColor: isDark ? '#1f1f1f' : '#F9FAFB',
+              color: colors.text,
+            }}
+            placeholder="juan@example.com"
+            placeholderTextColor={colors.icon}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={customerDetails.email}
+            onChangeText={(text) => setCustomerDetails({...customerDetails, email: text})}
+          />
         </View>
       </View>
     );
@@ -1020,7 +1136,13 @@ export default function BookAppointmentScreen({
 
   // Render current step content
   const renderStepContent = () => {
-    switch (currentStep) {
+    if (isAdmin && currentStep === 1) {
+      return renderAdminCustomerDetails();
+    }
+
+    const actualStep = isAdmin ? currentStep - 1 : currentStep;
+
+    switch (actualStep) {
       case 1:
         return renderStep1();
       case 2:
@@ -1038,7 +1160,15 @@ export default function BookAppointmentScreen({
 
   // Check if can proceed to next step
   const canProceed = () => {
-    switch (currentStep) {
+    if (isAdmin && currentStep === 1) {
+      return customerDetails.firstName.trim() !== '' && 
+             customerDetails.lastName.trim() !== '' && 
+             customerDetails.phone.trim() !== '';
+    }
+
+    const actualStep = isAdmin ? currentStep - 1 : currentStep;
+
+    switch (actualStep) {
       case 1:
         return selectedService !== null;
       case 2:

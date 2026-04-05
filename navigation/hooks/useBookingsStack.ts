@@ -15,12 +15,14 @@ export interface BookingsStackState {
         discounts: number;
     } | null;
     getDirectionsDestination: { latitude: number; longitude: number; name?: string } | null;
+    walkInBookingVisible: boolean;
 
     bookingsDetailsStyle: ReturnType<typeof useAnimatedStyle>;
     bookingsRatingSpaStyle: ReturnType<typeof useAnimatedStyle>;
     bookingsRatingTherapistStyle: ReturnType<typeof useAnimatedStyle>;
     bookingsInvoiceStyle: ReturnType<typeof useAnimatedStyle>;
     getDirectionsStyle: ReturnType<typeof useAnimatedStyle>;
+    walkInBookingStyle: ReturnType<typeof useAnimatedStyle>;
 
     openBookingDetails: (id: string) => void;
     openBookingRatingSpa: (id: string, fromReview?: boolean) => void;
@@ -33,12 +35,14 @@ export interface BookingsStackState {
         destination: { latitude: number; longitude: number },
         destinationName?: string
     ) => void;
+    openWalkInBooking: () => void;
 
     closeBookingDetails: () => void;
     closeBookingRatingSpa: () => void;
     closeBookingRatingTherapist: () => void;
     closeBookingInvoice: () => void;
     closeGetDirections: () => void;
+    closeWalkInBooking: () => void;
 }
 
 export function useBookingsStack(): BookingsStackState {
@@ -57,12 +61,14 @@ export function useBookingsStack(): BookingsStackState {
         longitude: number;
         name?: string;
     } | null>(null);
+    const [walkInBookingVisible, setWalkInBookingVisible] = useState(false);
 
     const bookingsDetailsTx = useSharedValue(SCREEN_WIDTH);
     const bookingsRatingSpaTx = useSharedValue(SCREEN_WIDTH);
     const bookingsRatingTherapistTx = useSharedValue(SCREEN_WIDTH);
     const bookingsInvoiceTx = useSharedValue(SCREEN_WIDTH);
     const getDirectionsTx = useSharedValue(SCREEN_WIDTH);
+    const walkInBookingTx = useSharedValue(SCREEN_WIDTH);
 
     useEffect(() => {
         bookingsDetailsTx.value = withTiming(bookingSelectedId ? 0 : SCREEN_WIDTH, {
@@ -95,6 +101,12 @@ export function useBookingsStack(): BookingsStackState {
         });
     }, [getDirectionsDestination, getDirectionsTx]);
 
+    useEffect(() => {
+        walkInBookingTx.value = withTiming(walkInBookingVisible ? 0 : SCREEN_WIDTH, {
+            duration: TRANSITION_DURATION,
+        });
+    }, [walkInBookingVisible, walkInBookingTx]);
+
     const bookingsDetailsStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: bookingsDetailsTx.value }],
     }));
@@ -109,6 +121,9 @@ export function useBookingsStack(): BookingsStackState {
     }));
     const getDirectionsStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: getDirectionsTx.value }],
+    }));
+    const walkInBookingStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: walkInBookingTx.value }],
     }));
 
     const openBookingDetails = (id: string) => setBookingSelectedId(id);
@@ -137,6 +152,7 @@ export function useBookingsStack(): BookingsStackState {
     ) => {
         setGetDirectionsDestination({ ...destination, name: destinationName });
     };
+    const openWalkInBooking = () => setWalkInBookingVisible(true);
 
     const closeBookingDetails = () => {
         bookingsDetailsTx.value = withTiming(SCREEN_WIDTH, { duration: TRANSITION_DURATION }, () =>
@@ -169,6 +185,11 @@ export function useBookingsStack(): BookingsStackState {
             runOnJS(setGetDirectionsDestination)(null)
         );
     };
+    const closeWalkInBooking = () => {
+        walkInBookingTx.value = withTiming(SCREEN_WIDTH, { duration: TRANSITION_DURATION }, () =>
+            runOnJS(setWalkInBookingVisible)(false)
+        );
+    };
 
     return {
         bookingSelectedId,
@@ -177,20 +198,24 @@ export function useBookingsStack(): BookingsStackState {
         bookingRatingFromReview,
         invoiceOverlay,
         getDirectionsDestination,
+        walkInBookingVisible,
         bookingsDetailsStyle,
         bookingsRatingSpaStyle,
         bookingsRatingTherapistStyle,
         bookingsInvoiceStyle,
         getDirectionsStyle,
+        walkInBookingStyle,
         openBookingDetails,
         openBookingRatingSpa,
         openBookingRatingTherapist,
         openBookingInvoice,
         openGetDirections,
+        openWalkInBooking,
         closeBookingDetails,
         closeBookingRatingSpa,
         closeBookingRatingTherapist,
         closeBookingInvoice,
         closeGetDirections,
+        closeWalkInBooking,
     };
 }
