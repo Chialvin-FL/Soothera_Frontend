@@ -67,9 +67,9 @@ export async function removeTherapist(uid: string) {
     }
 }
 
-export async function editTherapist(uid: string, email: string) {
+export async function editTherapist(uid: string, fname: string, lname: string) {
     try {
-        const response = await updateUser(uid, { email });
+        const response = await updateUser(uid, { fname, lname });
         if (response.success) {
             return { success: true };
         }

@@ -4,11 +4,15 @@ import type { UserDto } from '@/api/types';
 
 export interface StaffRegisterSliceState {
     email: string;
+    fname: string;
+    lname: string;
     isLoading: boolean;
     isFetching: boolean;
     error: string | null;
     therapists: UserDto[];
     setEmail: (email: string) => void;
+    setFname: (fname: string) => void;
+    setLname: (lname: string) => void;
     clearError: () => void;
     handleRegister: (onSuccess: (message: string) => void) => Promise<void>;
     handleUpdate: (uid: string, onSuccess: (message: string) => void) => Promise<void>;
@@ -19,6 +23,8 @@ export interface StaffRegisterSliceState {
 
 export function useStaffRegisterSlice(): StaffRegisterSliceState {
     const [email, setEmail] = useState('');
+    const [fname, setFname] = useState('');
+    const [lname, setLname] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isFetching, setIsFetching] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -28,6 +34,8 @@ export function useStaffRegisterSlice(): StaffRegisterSliceState {
 
     const resetForm = () => {
         setEmail('');
+        setFname('');
+        setLname('');
         setError(null);
     };
 
@@ -55,15 +63,15 @@ export function useStaffRegisterSlice(): StaffRegisterSliceState {
     };
 
     const handleUpdate = async (uid: string, onSuccess: (message: string) => void) => {
-        if (!email) {
-            setError('Please enter an email address or username.');
+        if (!fname || !lname) {
+            setError('Please enter both first and last name.');
             return;
         }
 
         setIsLoading(true);
         setError(null);
         
-        const result = await editTherapist(uid, email);
+        const result = await editTherapist(uid, fname, lname);
         if (result.success) {
             resetForm();
             await loadTherapists();
@@ -101,11 +109,15 @@ export function useStaffRegisterSlice(): StaffRegisterSliceState {
 
     return {
         email,
+        fname,
+        lname,
         isLoading,
         isFetching,
         error,
         therapists,
         setEmail,
+        setFname,
+        setLname,
         clearError,
         handleRegister,
         handleUpdate,

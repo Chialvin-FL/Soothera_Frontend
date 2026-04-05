@@ -24,11 +24,15 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
 
     const {
         email,
+        fname,
+        lname,
         isLoading,
         isFetching,
         therapists,
         error,
         setEmail,
+        setFname,
+        setLname,
         clearError,
         handleRegister,
         handleUpdate,
@@ -54,7 +58,8 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
     };
 
     const openEditModal = (staff: UserDto) => {
-        setEmail(staff.email || '');
+        setFname(staff.firstName || '');
+        setLname(staff.lastName || '');
         setEditingStaffId(staff.uid);
         setIsAddStaffModalVisible(true);
     };
@@ -209,19 +214,48 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
                                     </View>
                                 ) : null}
 
-                                <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
-                                    Email
-                                </Text>
-                                <TextInput
-                                    className="w-full p-4 rounded-xl mb-6 bg-gray-100 dark:bg-[#2a2a2a]"
-                                    style={{ color: colors.text }}
-                                    placeholder="Enter staff email"
-                                    placeholderTextColor={colors.icon}
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                    value={email}
-                                    onChangeText={(text) => { setEmail(text); clearError(); }}
-                                />
+                                {editingStaffId ? (
+                                    <>
+                                        <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
+                                            First Name
+                                        </Text>
+                                        <TextInput
+                                            className="w-full p-4 rounded-xl mb-4 bg-gray-100 dark:bg-[#2a2a2a]"
+                                            style={{ color: colors.text }}
+                                            placeholder="Enter first name"
+                                            placeholderTextColor={colors.icon}
+                                            value={fname}
+                                            onChangeText={(text) => { setFname(text); clearError(); }}
+                                        />
+                                        <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
+                                            Last Name
+                                        </Text>
+                                        <TextInput
+                                            className="w-full p-4 rounded-xl mb-6 bg-gray-100 dark:bg-[#2a2a2a]"
+                                            style={{ color: colors.text }}
+                                            placeholder="Enter last name"
+                                            placeholderTextColor={colors.icon}
+                                            value={lname}
+                                            onChangeText={(text) => { setLname(text); clearError(); }}
+                                        />
+                                    </>
+                                ) : (
+                                    <>
+                                        <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
+                                            Email
+                                        </Text>
+                                        <TextInput
+                                            className="w-full p-4 rounded-xl mb-6 bg-gray-100 dark:bg-[#2a2a2a]"
+                                            style={{ color: colors.text }}
+                                            placeholder="Enter staff email"
+                                            placeholderTextColor={colors.icon}
+                                            keyboardType="email-address"
+                                            autoCapitalize="none"
+                                            value={email}
+                                            onChangeText={(text) => { setEmail(text); clearError(); }}
+                                        />
+                                    </>
+                                )}
 
                                 <TouchableOpacity
                                     className="w-full p-4 rounded-xl items-center flex-row justify-center"

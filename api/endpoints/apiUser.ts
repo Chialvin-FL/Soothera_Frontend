@@ -32,7 +32,7 @@ export async function createUser(
 }
 
 /**
- * PATCH /api/User/update-user/:uid
+ * PUT /api/User/update-user/:uid
  * Updates user profile fields. All fields are optional.
  * Policy: All
  */
@@ -40,7 +40,7 @@ export async function updateUser(
   uid: string,
   payload: UpdateUserRequest,
 ): Promise<ApiResponse<UserDto>> {
-  const { data } = await axiosClient.patch<ApiResponse<UserDto>>(
+  const { data } = await axiosClient.put<ApiResponse<UserDto>>(
     `${BASE}/update-user/${uid}`,
     payload,
   );
