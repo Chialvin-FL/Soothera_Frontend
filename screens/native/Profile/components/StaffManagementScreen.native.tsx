@@ -6,15 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { RisingItem } from '@/components/native/RisingItem';
-import { useStaffRegisterSlice } from './staffRegisterSlice';
+import { useStaffRegisterSlice } from '../staffRegisterSlice';
 import { SuccessModal } from '@/components/native/SuccessModal';
-
-// Mock staff data
-const mockStaffList = [
-    { id: '1', name: 'Jane Doe', role: 'Senior Therapist', status: 'Active' },
-    { id: '2', name: 'John Smith', role: 'Massage Therapist', status: 'Inactive' },
-    { id: '3', name: 'Emily Clark', role: 'Receptionist', status: 'Active' },
-];
+import { ConfirmationModal } from '@/components/native/ConfirmationModal';
+import type { UserDto } from '@/api/types';
+import { useEffect } from 'react';
 
 interface StaffManagementScreenProps {
     onBack: () => void;
@@ -29,15 +25,53 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
     const {
         email,
         isLoading,
+        isFetching,
+        therapists,
         error,
         setEmail,
         clearError,
         handleRegister,
+        handleUpdate,
+        handleDelete,
+        loadTherapists,
         resetForm
     } = useStaffRegisterSlice();
 
     const [isAddStaffModalVisible, setIsAddStaffModalVisible] = useState(false);
     const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+    const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+    const [therapistToDelete, setTherapistToDelete] = useState<string | null>(null);
+    const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+
+    useEffect(() => {
+        loadTherapists();
+    }, [loadTherapists]);
+
+    const openAddModal = () => {
+        resetForm();
+        setEditingStaffId(null);
+        setIsAddStaffModalVisible(true);
+    };
+
+    const openEditModal = (staff: UserDto) => {
+        setEmail(staff.email || staff.username || '');
+        setEditingStaffId(staff.uid);
+        setIsAddStaffModalVisible(true);
+    };
+
+    const openDeleteModal = (id: string) => {
+        setTherapistToDelete(id);
+        setIsDeleteModalVisible(true);
+    };
+
+    const confirmDelete = () => {
+        if (therapistToDelete) {
+            handleDelete(therapistToDelete, () => {
+                setIsDeleteModalVisible(false);
+                setTherapistToDelete(null);
+            });
+        }
+    };
 
     return (
         <View className="flex-1 bg-white dark:bg-[#151718]">
@@ -72,34 +106,38 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
                     paddingHorizontal: 20,
                 }}
             >
-                {mockStaffList.map((staff, index) => (
-                    <RisingItem key={staff.id} delay={index * 100}>
+                {isFetching ? (
+                    <View className="py-10 items-center justify-center">
+                        <ActivityIndicator size="large" color={primaryColor} />
+                    </View>
+                ) : therapists.map((staff: UserDto, index: number) => (
+                    <RisingItem key={staff.uid} delay={index * 100}>
                         <View
                             className="p-4 mb-4 rounded-2xl bg-white dark:bg-[#1F1F1F] flex-row items-center shadow-sm"
                             style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}
                         >
                             <View className="w-12 h-12 rounded-full items-center justify-center mr-4" style={{ backgroundColor: colors.primary + '20' }}>
                                 <Text className="text-lg font-bold" style={{ color: colors.primary }}>
-                                    {staff.name.charAt(0)}
+                                    {staff.fullName ? staff.fullName.charAt(0).toUpperCase() : '?'}
                                 </Text>
                             </View>
                             <View className="flex-1">
                                 <Text className="text-base font-bold mb-1" style={{ color: colors.text }}>
-                                    {staff.name}
+                                    {staff.fullName || staff.username || 'Therapist'}
                                 </Text>
                                 <Text className="text-sm" style={{ color: colors.icon }}>
-                                    {staff.role}
+                                    Role {staff.role}
                                 </Text>
                             </View>
                             <View className="mr-3">
                                 <View className={`px-2 py-1 rounded-full ${staff.status === 'Active' ? 'bg-green-100' : 'bg-gray-100'}`}>
-                                    <Text className={`text-xs ${staff.status === 'Active' ? 'text-green-700' : 'text-gray-500'}`}>{staff.status}</Text>
+                                    <Text className={`text-xs ${staff.status === 'Active' ? 'text-green-700' : 'text-gray-500'}`}>{staff.status || 'Active'}</Text>
                                 </View>
                             </View>
-                            <TouchableOpacity className="p-2" onPress={() => console.log('Edit', staff.id)}>
+                            <TouchableOpacity className="p-2" onPress={() => openEditModal(staff)}>
                                 <Ionicons name="pencil-outline" size={20} color={colors.text} />
                             </TouchableOpacity>
-                            <TouchableOpacity className="p-2" onPress={() => console.log('Delete', staff.id)}>
+                            <TouchableOpacity className="p-2" onPress={() => openDeleteModal(staff.uid)}>
                                 <Ionicons name="trash-outline" size={20} color="#EF4444" />
                             </TouchableOpacity>
                         </View>
@@ -116,7 +154,7 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
                     right: 20,
                     elevation: 5,
                 }}
-                onPress={() => setIsAddStaffModalVisible(true)}
+                onPress={openAddModal}
             >
                 <Ionicons name="add" size={30} color="#fff" />
             </TouchableOpacity>
@@ -140,7 +178,7 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
                             >
                                 <View className="flex-row justify-between items-center mb-6">
                                     <Text className="text-xl font-bold" style={{ color: colors.text }}>
-                                        Add New Staff
+                                        {editingStaffId ? 'Edit Staff' : 'Add New Staff'}
                                     </Text>
                                     <TouchableOpacity onPress={() => {
                                         setIsAddStaffModalVisible(false);
@@ -174,16 +212,25 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
                                     className="w-full p-4 rounded-xl items-center flex-row justify-center"
                                     style={{ backgroundColor: primaryColor, opacity: isLoading ? 0.7 : 1 }}
                                     disabled={isLoading}
-                                    onPress={() => handleRegister((msg) => {
-                                        setIsAddStaffModalVisible(false);
-                                        setIsSuccessModalVisible(true);
-                                    })}
+                                    onPress={() => {
+                                        if (editingStaffId) {
+                                            handleUpdate(editingStaffId, (msg: string) => {
+                                                setIsAddStaffModalVisible(false);
+                                                setIsSuccessModalVisible(true);
+                                            });
+                                        } else {
+                                            handleRegister((msg: string) => {
+                                                setIsAddStaffModalVisible(false);
+                                                setIsSuccessModalVisible(true);
+                                            });
+                                        }
+                                    }}
                                 >
                                     {isLoading ? (
                                         <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
                                     ) : null}
                                     <Text className="text-white font-bold text-lg">
-                                        {isLoading ? 'Adding...' : 'Add Staff'}
+                                        {isLoading ? (editingStaffId ? 'Saving...' : 'Adding...') : (editingStaffId ? 'Save Changes' : 'Add Staff')}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
@@ -194,9 +241,20 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
 
             <SuccessModal
                 visible={isSuccessModalVisible}
-                title="Staff Added"
-                message="Staff member added successfully! Please check email for verification."
+                title={editingStaffId ? "Changes Saved" : "Staff Added"}
+                message={editingStaffId ? "Staff member updated successfully." : "Staff member added successfully! Please check email for verification."}
                 onClose={() => setIsSuccessModalVisible(false)}
+            />
+
+            <ConfirmationModal
+                visible={isDeleteModalVisible}
+                title="Delete Therapist"
+                message="Are you sure you want to delete this therapist? This action cannot be undone."
+                confirmText={isLoading ? "Deleting..." : "Delete"}
+                confirmButtonColor="#EF4444"
+                icon="warning"
+                onConfirm={confirmDelete}
+                onCancel={() => { setIsDeleteModalVisible(false); setTherapistToDelete(null); }}
             />
         </View>
     );

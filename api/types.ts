@@ -72,7 +72,6 @@ export interface ChangePasswordRequest {
 /** Backend mUser representation */
 export interface MUser {
     uid: string;
-    username: string;
     firstName: string;
     lastName: string;
     email: string;
@@ -89,10 +88,9 @@ export interface UserResponse {
     lastName: string;
     email: string;
     phoneNumber: string;
-    username: string;
     profilePicture: string | null;
     role: string;
-    createdAt: number;
+    createdAt: string;
     status: string;
 }
 
@@ -125,7 +123,6 @@ export enum UserRole {
 
 /** POST /api/User/create-user — request body. */
 export interface CreateUserRequest {
-    username: string;
     fname: string;
     lname: string;
     role: UserRole;
@@ -133,14 +130,15 @@ export interface CreateUserRequest {
 
 /** PATCH /api/User/update-user/:uid — request body (all optional). */
 export interface UpdateUserRequest {
-    username?: string;
+    email?: string;
+    firebaseToken?: string;
     fname?: string;
     lname?: string;
     role?: UserRole;
-    profilePicture?: string;
+    profilePic?: string;
 }
 
-/** User DTO matching the backend's UserDto. */
+/** User DTO matching the backend's UserResponseDTO. */
 export interface UserDto {
     uid: string;
     fullName: string;
@@ -148,15 +146,10 @@ export interface UserDto {
     lastName: string;
     email: string;
     phoneNumber: string;
-    username: string;
     profilePicture: string | null;
     role: string;
     createdAt: string;
     status: string;
-    lenderInstitution: string | null;
-    lenderAddress: string | null;
-    businessName: string | null;
-    businessAddress: string | null;
 }
 
 /** GET /api/User/get-user — query params. */
@@ -165,7 +158,6 @@ export interface GetUsersParams extends PaginationParams {
     role?: number;
     fname?: string;
     lname?: string;
-    username?: string;
 }
 
 // ─── Salon Establishment ─────────────────────────────────────
@@ -215,13 +207,15 @@ export enum DocumentStatus {
 
 /** Document model returned by the backend. */
 export interface UserDocument {
-    status: DocumentStatus;
-    documentUrls: string[];
-    uploadedAt: string;
     uid: string;
+    fullName: string;
+    documentUrls: string[];
+    status: DocumentStatus;
+    statusName: string;
     remarks: string;
-    reviewedByUID: string | null;
+    uploadedAt: string;
     updatedAt: string;
+    updatedBy: string;
 }
 
 /** POST /api/DocumentUpload/update-doc-status — request body. */
@@ -270,6 +264,7 @@ export interface IdentityVerification {
     uploadedAt: string;
     confidenceLevel: number;
     verifyStatus: number;
+    statusName: string;
     verifiedAt: string;
 }
 
@@ -278,6 +273,47 @@ export interface FaceVerifyResultData {
     confidence: number;
     verifyStatus: number;
     statusName: string;
+}
+
+// ─── Salon Service ───────────────────────────────────────────
+
+export interface SalonServiceResponse {
+    salonServiceId: string;
+    uid: string;
+    establishmentId: string;
+    serviceName: string;
+    description: string;
+    category: string;
+    price: number;
+    durationMinutes: number;
+    imageUrl: string;
+    isActive: boolean;
+    createdDate: string;
+    updatedDate: string;
+    updatedBy: string;
+}
+
+export interface CreateSalonServiceRequest {
+    uid?: string;
+    establishmentId: string;
+    serviceName: string;
+    description: string;
+    category: number;
+    price: number;
+    durationMinutes: number;
+    imageFile?: File;
+    isActive?: boolean;
+}
+
+export interface UpdateSalonServiceRequest {
+    serviceName?: string;
+    description?: string;
+    category?: number;
+    price?: number;
+    durationMinutes?: number;
+    imageFile?: File;
+    isActive?: boolean;
+    updatedBy?: string;
 }
 
 // ─── Error Handling ──────────────────────────────────────────
@@ -298,7 +334,6 @@ export interface ApiError {
 export interface UserData {
     uid: string;
     email: string;
-    username: string;
     firstName: string;
     lastName: string;
     role: number;
