@@ -47,7 +47,7 @@ export async function fetchTherapists() {
     try {
         const response = await getUsers({ role: UserRole.Therapist, pageSize: 100, page: 1 });
         if (response.success && response.data) {
-            return { success: true, data: response.data.users };
+            return { success: true, data: response.data.items };
         }
         return { success: false, message: response.message };
     } catch (err) {
@@ -69,9 +69,7 @@ export async function removeTherapist(uid: string) {
 
 export async function editTherapist(uid: string, email: string) {
     try {
-        // We patch the username since UpdateUserRequest uses username, or we could just ignore it if backend doesn't support email updates easily. 
-        // Best approach based on the DTO: update username or pass generic update
-        const response = await updateUser(uid, { username: email });
+        const response = await updateUser(uid, { email });
         if (response.success) {
             return { success: true };
         }

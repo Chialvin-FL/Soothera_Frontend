@@ -28,7 +28,7 @@ export interface PaginationMeta {
 
 /** Paginated list wrapper (matches PaginatedUsersResponse shape). */
 export interface PaginatedResponse<T> extends PaginationMeta {
-    users: T[]; // backend currently names the array "users"
+    items: T[]; // matches backend's Items
 }
 
 /** Query params accepted by paginated endpoints. */
