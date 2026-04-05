@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useProfileSlice } from '../profileSlice';
 
 interface PasswordChangeScreenProps {
   onBack: () => void;
@@ -23,9 +24,16 @@ export default function PasswordChangeScreen({ onBack }: PasswordChangeScreenPro
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const handleSave = () => {
-    // TODO: validate and call API
-    onBack();
+  const { isLoading, error, successMessage, handleChangePassword } = useProfileSlice();
+
+  const handleSave = async () => {
+    if (isLoading) return;
+    await handleChangePassword(currentPassword, newPassword, confirmPassword, () => {
+      // Delay navigation slightly so they can see success msg
+      setTimeout(() => {
+        onBack();
+      }, 1000);
+    });
   };
 
   return (
@@ -44,6 +52,7 @@ export default function PasswordChangeScreen({ onBack }: PasswordChangeScreenPro
           onPress={onBack}
           className="w-10 h-10 items-center justify-center rounded-full mr-3"
           style={{ backgroundColor: isDark ? '#2a2a2a' : '#F3F4F6' }}
+          disabled={isLoading}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
@@ -61,6 +70,17 @@ export default function PasswordChangeScreen({ onBack }: PasswordChangeScreenPro
           paddingHorizontal: 20,
         }}
       >
+        {error ? (
+          <Text className="text-sm font-semibold mb-3 text-red-500">
+            {error}
+          </Text>
+        ) : null}
+        {successMessage ? (
+          <Text className="text-sm font-semibold mb-3 text-green-500">
+            {successMessage}
+          </Text>
+        ) : null}
+
         <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
           Current Password
         </Text>
@@ -73,8 +93,9 @@ export default function PasswordChangeScreen({ onBack }: PasswordChangeScreenPro
             value={currentPassword}
             onChangeText={setCurrentPassword}
             secureTextEntry={!showCurrent}
+            editable={!isLoading}
           />
-          <TouchableOpacity onPress={() => setShowCurrent((s) => !s)}>
+          <TouchableOpacity onPress={() => setShowCurrent((s) => !s)} disabled={isLoading}>
             <Ionicons name={showCurrent ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.icon} />
           </TouchableOpacity>
         </View>
@@ -91,8 +112,9 @@ export default function PasswordChangeScreen({ onBack }: PasswordChangeScreenPro
             value={newPassword}
             onChangeText={setNewPassword}
             secureTextEntry={!showNew}
+            editable={!isLoading}
           />
-          <TouchableOpacity onPress={() => setShowNew((s) => !s)}>
+          <TouchableOpacity onPress={() => setShowNew((s) => !s)} disabled={isLoading}>
             <Ionicons name={showNew ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.icon} />
           </TouchableOpacity>
         </View>
@@ -109,8 +131,9 @@ export default function PasswordChangeScreen({ onBack }: PasswordChangeScreenPro
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry={!showConfirm}
+            editable={!isLoading}
           />
-          <TouchableOpacity onPress={() => setShowConfirm((s) => !s)}>
+          <TouchableOpacity onPress={() => setShowConfirm((s) => !s)} disabled={isLoading}>
             <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.icon} />
           </TouchableOpacity>
         </View>
@@ -126,11 +149,13 @@ export default function PasswordChangeScreen({ onBack }: PasswordChangeScreenPro
       >
         <TouchableOpacity
           onPress={handleSave}
-          className="w-full py-4 rounded-xl items-center justify-center"
-          style={{ backgroundColor: primaryColor }}
+          className="w-full py-4 rounded-xl flex-row items-center justify-center opacity-100"
+          style={{ backgroundColor: primaryColor, opacity: isLoading ? 0.7 : 1 }}
+          disabled={isLoading}
         >
+          {isLoading && <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />}
           <Text className="text-base font-semibold" style={{ color: '#fff' }}>
-            Update Password
+            {isLoading ? 'Updating...' : 'Update Password'}
           </Text>
         </TouchableOpacity>
       </View>

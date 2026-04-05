@@ -9,6 +9,7 @@ import { RisingItem } from '@/components/native/RisingItem';
 import { TopRatedSalons } from '../Home/components/Home/TopRatedSalons';
 import { topRatedSalons } from '../Home/configs/mockData';
 import type { UIRole } from '@/navigation/hooks/useSessionLoader';
+import { useProfileSlice } from './profileSlice';
 
 interface SettingItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -79,6 +80,8 @@ export default function ProfileScreen({
   const insets = useSafeAreaInsets();
   const isVisible = isActive ?? true;
   const [imageError, setImageError] = useState(false);
+
+  const { handleLogout, isLoading: isLoadingProfile } = useProfileSlice();
 
   // User data
   const userName = propUserName || 'User Profile';
@@ -176,7 +179,21 @@ export default function ProfileScreen({
               </View>
               <View className="border-t border-gray-200 dark:border-[#2a2a2a]">
                 <SettingItem icon="help-circle-outline" label="Help" colors={colors} onPress={onNavigateToHelp} />
-                <SettingItem icon="log-out-outline" label="Logout" colors={colors} textColor="#EF4444" iconColor="#EF4444" onPress={onLogout} />
+                <SettingItem 
+                  icon="log-out-outline" 
+                  label={isLoadingProfile ? "Logging out..." : "Logout"} 
+                  colors={colors} 
+                  textColor="#EF4444" 
+                  iconColor="#EF4444" 
+                  onPress={async () => {
+                    if (isLoadingProfile) return;
+                    await handleLogout(async () => {
+                      if (onLogout) {
+                        await onLogout();
+                      }
+                    });
+                  }} 
+                />
               </View>
             </View>
           </RisingItem>
