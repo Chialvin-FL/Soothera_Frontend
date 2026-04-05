@@ -76,7 +76,9 @@ const axiosClient = axios.create({
 axiosClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const token = await getStoredToken();
-    if (token && config.headers) {
+    const isAuthRoute = config.url?.includes('/login') || config.url?.includes('/register') || config.url?.includes('/forgot-password');
+    
+    if (token && config.headers && !isAuthRoute) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     console.log(`[axiosClient Debug] Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, {

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Image, Modal, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { RisingItem } from '@/components/native/RisingItem';
+import { useStaffRegisterSlice } from './staffRegisterSlice';
+import { SuccessModal } from '@/components/native/SuccessModal';
 
 // Mock staff data
 const mockStaffList = [
@@ -23,6 +25,19 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
     const colors = Colors[colorScheme ?? 'light'];
     const insets = useSafeAreaInsets();
     const isDark = colorScheme === 'dark';
+
+    const {
+        email,
+        isLoading,
+        error,
+        setEmail,
+        clearError,
+        handleRegister,
+        resetForm
+    } = useStaffRegisterSlice();
+
+    const [isAddStaffModalVisible, setIsAddStaffModalVisible] = useState(false);
+    const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
 
     return (
         <View className="flex-1 bg-white dark:bg-[#151718]">
@@ -101,10 +116,88 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
                     right: 20,
                     elevation: 5,
                 }}
-                onPress={() => console.log('Add Staff')}
+                onPress={() => setIsAddStaffModalVisible(true)}
             >
                 <Ionicons name="add" size={30} color="#fff" />
             </TouchableOpacity>
+
+            {/* Add Staff Modal */}
+            <Modal
+                visible={isAddStaffModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => {
+                    setIsAddStaffModalVisible(false);
+                    resetForm();
+                }}
+            >
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View className="flex-1 justify-end bg-black/50">
+                        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                            <View
+                                className="bg-white dark:bg-[#151718] rounded-t-3xl p-6"
+                                style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+                            >
+                                <View className="flex-row justify-between items-center mb-6">
+                                    <Text className="text-xl font-bold" style={{ color: colors.text }}>
+                                        Add New Staff
+                                    </Text>
+                                    <TouchableOpacity onPress={() => {
+                                        setIsAddStaffModalVisible(false);
+                                        resetForm();
+                                    }}>
+                                        <Ionicons name="close" size={24} color={colors.text} />
+                                    </TouchableOpacity>
+                                </View>
+
+                                {error ? (
+                                    <View className="bg-red-100 p-3 rounded-lg mb-4">
+                                        <Text className="text-red-600 text-sm">{error}</Text>
+                                    </View>
+                                ) : null}
+
+                                <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
+                                    Email
+                                </Text>
+                                <TextInput
+                                    className="w-full p-4 rounded-xl mb-6 bg-gray-100 dark:bg-[#2a2a2a]"
+                                    style={{ color: colors.text }}
+                                    placeholder="Enter staff email"
+                                    placeholderTextColor={colors.icon}
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    value={email}
+                                    onChangeText={(text) => { setEmail(text); clearError(); }}
+                                />
+
+                                <TouchableOpacity
+                                    className="w-full p-4 rounded-xl items-center flex-row justify-center"
+                                    style={{ backgroundColor: primaryColor, opacity: isLoading ? 0.7 : 1 }}
+                                    disabled={isLoading}
+                                    onPress={() => handleRegister((msg) => {
+                                        setIsAddStaffModalVisible(false);
+                                        setIsSuccessModalVisible(true);
+                                    })}
+                                >
+                                    {isLoading ? (
+                                        <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
+                                    ) : null}
+                                    <Text className="text-white font-bold text-lg">
+                                        {isLoading ? 'Adding...' : 'Add Staff'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </KeyboardAvoidingView>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
+
+            <SuccessModal
+                visible={isSuccessModalVisible}
+                title="Staff Added"
+                message="Staff member added successfully! Please check email for verification."
+                onClose={() => setIsSuccessModalVisible(false)}
+            />
         </View>
     );
 }
