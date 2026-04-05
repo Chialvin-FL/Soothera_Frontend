@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Image, Modal, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Image, Modal, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,7 +38,7 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
     } = useStaffRegisterSlice();
 
     const [isAddStaffModalVisible, setIsAddStaffModalVisible] = useState(false);
-    const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+    const [successModalConfig, setSuccessModalConfig] = useState({ visible: false, title: '', message: '' });
     const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
     const [therapistToDelete, setTherapistToDelete] = useState<string | null>(null);
     const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
     };
 
     const openEditModal = (staff: UserDto) => {
-        setEmail(staff.email || staff.username || '');
+        setEmail(staff.email || '');
         setEditingStaffId(staff.uid);
         setIsAddStaffModalVisible(true);
     };
@@ -69,6 +69,11 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
             handleDelete(therapistToDelete, () => {
                 setIsDeleteModalVisible(false);
                 setTherapistToDelete(null);
+                setSuccessModalConfig({
+                    visible: true,
+                    title: "Therapist Removed",
+                    message: "The therapist has been successfully removed from the system."
+                });
             });
         }
     };
@@ -100,6 +105,9 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
             <ScrollView
                 className="flex-1"
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={isFetching} onRefresh={loadTherapists} tintColor={primaryColor} />
+                }
                 contentContainerStyle={{
                     paddingTop: insets.top + 56 + 20,
                     paddingBottom: insets.bottom + 80, // Extra padding for FAB
@@ -116,22 +124,29 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
                             className="p-4 mb-4 rounded-2xl bg-white dark:bg-[#1F1F1F] flex-row items-center shadow-sm"
                             style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}
                         >
-                            <View className="w-12 h-12 rounded-full items-center justify-center mr-4" style={{ backgroundColor: colors.primary + '20' }}>
-                                <Text className="text-lg font-bold" style={{ color: colors.primary }}>
-                                    {staff.fullName ? staff.fullName.charAt(0).toUpperCase() : '?'}
-                                </Text>
-                            </View>
+                            {staff.profilePicture ? (
+                                <Image 
+                                    source={{ uri: staff.profilePicture }} 
+                                    className="w-12 h-12 rounded-full mr-4" 
+                                />
+                            ) : (
+                                <View className="w-12 h-12 rounded-full items-center justify-center mr-4" style={{ backgroundColor: colors.primary + '20' }}>
+                                    <Text className="text-lg font-bold" style={{ color: colors.primary }}>
+                                        {staff.firstName ? staff.firstName.charAt(0).toUpperCase() : '?'}
+                                    </Text>
+                                </View>
+                            )}
                             <View className="flex-1">
                                 <Text className="text-base font-bold mb-1" style={{ color: colors.text }}>
-                                    {staff.fullName || staff.username || 'Therapist'}
+                                    {`${staff.firstName || 'N/A'} ${staff.lastName || 'N/A'}`}
                                 </Text>
-                                <Text className="text-sm" style={{ color: colors.icon }}>
-                                    Role {staff.role}
+                                <Text className="text-sm" style={{ color: colors.icon }} numberOfLines={1}>
+                                    {staff.email || 'N/A'}
                                 </Text>
                             </View>
                             <View className="mr-3">
-                                <View className={`px-2 py-1 rounded-full ${staff.status === 'Active' ? 'bg-green-100' : 'bg-gray-100'}`}>
-                                    <Text className={`text-xs ${staff.status === 'Active' ? 'text-green-700' : 'text-gray-500'}`}>{staff.status || 'Active'}</Text>
+                                <View className="px-2 py-1 rounded-full bg-green-100">
+                                    <Text className="text-xs text-green-700">Active</Text>
                                 </View>
                             </View>
                             <TouchableOpacity className="p-2" onPress={() => openEditModal(staff)}>
@@ -216,12 +231,20 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
                                         if (editingStaffId) {
                                             handleUpdate(editingStaffId, (msg: string) => {
                                                 setIsAddStaffModalVisible(false);
-                                                setIsSuccessModalVisible(true);
+                                                setSuccessModalConfig({
+                                                    visible: true,
+                                                    title: "Changes Saved",
+                                                    message: "Staff member updated successfully."
+                                                });
                                             });
                                         } else {
                                             handleRegister((msg: string) => {
                                                 setIsAddStaffModalVisible(false);
-                                                setIsSuccessModalVisible(true);
+                                                setSuccessModalConfig({
+                                                    visible: true,
+                                                    title: "Staff Added",
+                                                    message: "Staff member added successfully! Please check email for verification."
+                                                });
                                             });
                                         }
                                     }}
@@ -240,10 +263,10 @@ export default function StaffManagementScreen({ onBack }: StaffManagementScreenP
             </Modal>
 
             <SuccessModal
-                visible={isSuccessModalVisible}
-                title={editingStaffId ? "Changes Saved" : "Staff Added"}
-                message={editingStaffId ? "Staff member updated successfully." : "Staff member added successfully! Please check email for verification."}
-                onClose={() => setIsSuccessModalVisible(false)}
+                visible={successModalConfig.visible}
+                title={successModalConfig.title}
+                message={successModalConfig.message}
+                onClose={() => setSuccessModalConfig(prev => ({ ...prev, visible: false }))}
             />
 
             <ConfirmationModal

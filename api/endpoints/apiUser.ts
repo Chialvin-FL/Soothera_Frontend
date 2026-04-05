@@ -55,9 +55,19 @@ export async function updateUser(
 export async function deleteUser(
   uid: string,
 ): Promise<ApiResponse<null>> {
-  const { data } = await axiosClient.delete<ApiResponse<null>>(
+  const response = await axiosClient.delete<ApiResponse<null>>(
     `${BASE}/delete-user/${uid}`,
   );
+  const { data, status } = response;
+  // Handle 204 No Content, where ASP.NET Core natively strips the JSON body entirely.
+  if (status === 204 || !data || (typeof data === 'string' && data === '')) {
+    return {
+      success: true,
+      message: 'Deleted successfully',
+      statusCode: status || 204,
+      data: null,
+    } as ApiResponse<null>;
+  }
   return data;
 }
 
