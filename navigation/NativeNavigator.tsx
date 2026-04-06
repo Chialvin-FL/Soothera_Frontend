@@ -5,6 +5,8 @@ import { BottomTabs } from '../components/native/BottomTabs';
 import { RisingPage } from '../components/native/RisingPage';
 import { useDocUploadSlice } from '../slices/docUploadSlice';
 import { DocumentVerification } from '../components/native/DocumentVerification';
+import { useIdVerificationSlice } from '../slices/idVerificationSlice';
+import { SelfieVerificationModal } from '../components/native/SelfieVerificationModal';
 
 // Screens — tab bases
 import HomeScreen from '../screens/native/Home/HomeScreen.native';
@@ -44,10 +46,12 @@ export default function NativeNavigator() {
 
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const docUploadSlice = useDocUploadSlice();
+  const idVerificationSlice = useIdVerificationSlice();
 
   useEffect(() => {
     if (isLoggedIn && userRole === 'admin') {
       docUploadSlice.checkDocuments();
+      idVerificationSlice.checkVerification();
     }
   }, [isLoggedIn, userRole]);
 
@@ -205,6 +209,21 @@ export default function NativeNavigator() {
             isUploading={docUploadSlice.isUploading}
             error={docUploadSlice.error}
             onUpload={docUploadSlice.uploadDocs}
+          />
+          <SelfieVerificationModal
+            visible={
+              !docUploadSlice.isChecking &&
+              !docUploadSlice.requiresUpload &&
+              idVerificationSlice.requiresVerification &&
+              !idVerificationSlice.isChecking &&
+              userRole === 'admin'
+            }
+            isUploading={idVerificationSlice.isUploading}
+            isVerifying={idVerificationSlice.isVerifying}
+            error={idVerificationSlice.error}
+            successMessage={idVerificationSlice.successMessage}
+            onUpload={idVerificationSlice.uploadAndVerify}
+            onSuccessAcknowledge={idVerificationSlice.acknowledgeSuccess}
           />
         </View>
       )}
