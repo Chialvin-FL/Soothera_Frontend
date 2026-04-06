@@ -171,6 +171,9 @@ export interface SalonEstablishment {
     socials: string[];
     uid: string;
     createdAt: string;
+    description?: string | null;
+    contactNumber?: string | null;
+    businessHours?: string | null;
 }
 
 /**
@@ -181,8 +184,11 @@ export interface CreateSalonRequest {
     name: string;
     address: string;
     socials: string[];
-    pictureFile: File;
+    pictureFile?: File | { uri: string; name: string; type: string };
     uid?: string; // optional — uses JWT UID if omitted
+    description?: string;
+    contactNumber?: string;
+    businessHours?: string;
 }
 
 /**
@@ -193,7 +199,10 @@ export interface UpdateSalonRequest {
     name?: string;
     address?: string;
     socials?: string[];
-    pictureFile?: File;
+    pictureFile?: File | { uri: string; name: string; type: string };
+    description?: string;
+    contactNumber?: string;
+    businessHours?: string;
 }
 
 // ─── Document Upload ─────────────────────────────────────────

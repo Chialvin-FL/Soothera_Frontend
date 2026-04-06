@@ -33,10 +33,30 @@ function buildSalonFormData(
     payload.socials.forEach((s) => formData.append('Socials', s));
   }
   if ('pictureFile' in payload && payload.pictureFile != null) {
-    formData.append('PictureFile', payload.pictureFile);
+    const file = payload.pictureFile as any;
+    if (file.uri) {
+      // React Native ImagePicker asset: { uri, name, type }
+      formData.append('PictureFile', {
+        uri: file.uri,
+        name: file.name ?? 'salon_image.jpg',
+        type: file.type ?? 'image/jpeg',
+      } as any);
+    } else {
+      // Web File object
+      formData.append('PictureFile', file);
+    }
   }
   if ('uid' in payload && payload.uid != null) {
     formData.append('UID', payload.uid);
+  }
+  if ('description' in payload && payload.description != null) {
+    formData.append('Description', payload.description);
+  }
+  if ('contactNumber' in payload && payload.contactNumber != null) {
+    formData.append('ContactNumber', payload.contactNumber);
+  }
+  if ('businessHours' in payload && payload.businessHours != null) {
+    formData.append('BusinessHours', payload.businessHours);
   }
 
   return formData;
