@@ -65,7 +65,11 @@ export async function fetchMyEstablishment(): Promise<FetchEstablishmentResponse
             message: mine ? 'Establishment loaded.' : 'No establishment found.',
             data: mine,
         };
-    } catch (err) {
+    } catch (err: any) {
+        // 404 simply means no establishment has been created yet — not a real error
+        if (err?.response?.status === 404) {
+            return { success: true, message: 'No establishment found.', data: null };
+        }
         const apiErr = err as ApiError;
         return {
             success: false,

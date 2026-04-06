@@ -19,6 +19,78 @@ import { RisingItem } from '@/components/native/RisingItem';
 import * as ImagePicker from 'expo-image-picker';
 import { useBusinessSettingsSlice } from '../businessSettingsSlice';
 
+// ── Input Field Component (defined outside to keep a stable reference) ──
+interface InputFieldProps {
+    label: string;
+    placeholder: string;
+    multiline?: boolean;
+    value: string;
+    onChangeText: (t: string) => void;
+    icon?: keyof typeof Ionicons.glyphMap;
+    keyboardType?: 'default' | 'phone-pad' | 'url';
+    isDark: boolean;
+    textColor: string;
+    iconColor: string;
+}
+
+function InputField({
+    label,
+    placeholder,
+    multiline = false,
+    value,
+    onChangeText,
+    icon,
+    keyboardType = 'default',
+    isDark,
+    textColor,
+    iconColor,
+}: InputFieldProps) {
+    return (
+        <View className="mb-4">
+            <Text className="text-sm font-semibold mb-2" style={{ color: textColor }}>
+                {label}
+            </Text>
+            <View
+                style={{
+                    flexDirection: 'row',
+                    alignItems: multiline ? 'flex-start' : 'center',
+                    backgroundColor: isDark ? '#1F1F1F' : '#F3F4F6',
+                    borderRadius: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: multiline ? 12 : 0,
+                    minHeight: multiline ? 96 : 48,
+                    borderWidth: 1,
+                    borderColor: isDark ? '#2a2a2a' : '#E5E7EB',
+                }}
+            >
+                {icon && (
+                    <Ionicons
+                        name={icon}
+                        size={18}
+                        color={iconColor}
+                        style={{ marginRight: 8, marginTop: multiline ? 2 : 0 }}
+                    />
+                )}
+                <TextInput
+                    placeholder={placeholder}
+                    placeholderTextColor={iconColor}
+                    multiline={multiline}
+                    value={value}
+                    onChangeText={onChangeText}
+                    keyboardType={keyboardType}
+                    style={{
+                        flex: 1,
+                        color: textColor,
+                        textAlignVertical: multiline ? 'top' : 'center',
+                        fontSize: 15,
+                        paddingVertical: multiline ? 0 : 12,
+                    }}
+                />
+            </View>
+        </View>
+    );
+}
+
 interface BusinessSettingsScreenProps {
     onBack: () => void;
 }
@@ -94,68 +166,6 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
             Alert.alert('Deleted', 'Your establishment has been removed.');
         });
     };
-
-    // ── Input Field Component ──
-    const InputField = ({
-        label,
-        placeholder,
-        multiline = false,
-        value,
-        onChangeText,
-        icon,
-        keyboardType = 'default',
-    }: {
-        label: string;
-        placeholder: string;
-        multiline?: boolean;
-        value: string;
-        onChangeText: (t: string) => void;
-        icon?: keyof typeof Ionicons.glyphMap;
-        keyboardType?: 'default' | 'phone-pad' | 'url';
-    }) => (
-        <View className="mb-4">
-            <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
-                {label}
-            </Text>
-            <View
-                style={{
-                    flexDirection: 'row',
-                    alignItems: multiline ? 'flex-start' : 'center',
-                    backgroundColor: isDark ? '#1F1F1F' : '#F3F4F6',
-                    borderRadius: 12,
-                    paddingHorizontal: 14,
-                    paddingVertical: multiline ? 12 : 0,
-                    minHeight: multiline ? 96 : 48,
-                    borderWidth: 1,
-                    borderColor: isDark ? '#2a2a2a' : '#E5E7EB',
-                }}
-            >
-                {icon && (
-                    <Ionicons
-                        name={icon}
-                        size={18}
-                        color={colors.icon}
-                        style={{ marginRight: 8, marginTop: multiline ? 2 : 0 }}
-                    />
-                )}
-                <TextInput
-                    placeholder={placeholder}
-                    placeholderTextColor={colors.icon}
-                    multiline={multiline}
-                    value={value}
-                    onChangeText={onChangeText}
-                    keyboardType={keyboardType}
-                    style={{
-                        flex: 1,
-                        color: colors.text,
-                        textAlignVertical: multiline ? 'top' : 'center',
-                        fontSize: 15,
-                        paddingVertical: multiline ? 0 : 12,
-                    }}
-                />
-            </View>
-        </View>
-    );
 
     if (isLoading) {
         return (
@@ -373,6 +383,9 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                         value={form.name}
                         onChangeText={(t) => setForm({ name: t })}
                         icon="storefront-outline"
+                        isDark={isDark}
+                        textColor={colors.text}
+                        iconColor={colors.icon}
                     />
                     <InputField
                         label="Description"
@@ -381,6 +394,9 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                         value={form.description}
                         onChangeText={(t) => setForm({ description: t })}
                         icon="document-text-outline"
+                        isDark={isDark}
+                        textColor={colors.text}
+                        iconColor={colors.icon}
                     />
                     <InputField
                         label="Location / Address *"
@@ -388,6 +404,9 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                         value={form.address}
                         onChangeText={(t) => setForm({ address: t })}
                         icon="location-outline"
+                        isDark={isDark}
+                        textColor={colors.text}
+                        iconColor={colors.icon}
                     />
                     <InputField
                         label="Contact Number"
@@ -396,6 +415,9 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                         onChangeText={(t) => setForm({ contactNumber: t })}
                         keyboardType="phone-pad"
                         icon="call-outline"
+                        isDark={isDark}
+                        textColor={colors.text}
+                        iconColor={colors.icon}
                     />
                     <InputField
                         label="Business Hours"
@@ -403,6 +425,9 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                         value={form.businessHours}
                         onChangeText={(t) => setForm({ businessHours: t })}
                         icon="time-outline"
+                        isDark={isDark}
+                        textColor={colors.text}
+                        iconColor={colors.icon}
                     />
 
                     {/* ── Socials ── */}
@@ -424,6 +449,9 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                         onChangeText={(t) => setForm({ facebookLink: t })}
                         keyboardType="url"
                         icon="logo-facebook"
+                        isDark={isDark}
+                        textColor={colors.text}
+                        iconColor={colors.icon}
                     />
 
                     {/* ── Navigation Items ── */}
