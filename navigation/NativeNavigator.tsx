@@ -3,6 +3,8 @@ import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomTabs } from '../components/native/BottomTabs';
 import { RisingPage } from '../components/native/RisingPage';
+import { useDocUploadSlice } from '../slices/docUploadSlice';
+import { DocumentVerification } from '../components/native/DocumentVerification';
 
 // Screens — tab bases
 import HomeScreen from '../screens/native/Home/HomeScreen.native';
@@ -32,7 +34,7 @@ import { useBackHandler } from './hooks/useBackHandler';
 
 // Types
 import type { TabId } from './types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { topRatedSalons } from '../screens/native/Home/configs/mockData';
 import type { Booking } from '../screens/native/Bookings/types/Booking';
 
@@ -41,6 +43,13 @@ export default function NativeNavigator() {
   const { isLoggedIn, isLoadingSession, userRole, userName, userEmail, logout } = session;
 
   const [activeTab, setActiveTab] = useState<TabId>('home');
+  const docUploadSlice = useDocUploadSlice();
+
+  useEffect(() => {
+    if (isLoggedIn && userRole === 'admin') {
+      docUploadSlice.checkDocuments();
+    }
+  }, [isLoggedIn, userRole]);
 
   const home = useHomeStack();
   const bookings = useBookingsStack();
@@ -190,6 +199,13 @@ export default function NativeNavigator() {
           >
             <BottomTabs activeTab={activeTab} onTabPress={setActiveTab} />
           </RisingPage>
+
+          <DocumentVerification
+            visible={docUploadSlice.requiresUpload && !docUploadSlice.isChecking && userRole === 'admin'}
+            isUploading={docUploadSlice.isUploading}
+            error={docUploadSlice.error}
+            onUpload={docUploadSlice.uploadDocs}
+          />
         </View>
       )}
     </SafeAreaView>
