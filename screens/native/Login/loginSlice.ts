@@ -57,7 +57,7 @@ export function useLoginSlice(): LoginSliceState {
             const { user } = result;
             const displayName = [user.firstName, user.lastName]
                 .filter(Boolean)
-                .join(' ') || user.username || user.email;
+                .join(' ') || user.email;
 
             await onSuccess({
                 uid: user.uid,

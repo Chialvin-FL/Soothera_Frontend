@@ -34,15 +34,43 @@ export async function createUser(
 /**
  * PUT /api/User/update-user/:uid
  * Updates user profile fields. All fields are optional.
+ * The backend uses [FromForm] so we always send multipart/form-data,
+ * which also supports the optional IFormFile ProfilePic upload.
  * Policy: All
  */
 export async function updateUser(
   uid: string,
   payload: UpdateUserRequest,
 ): Promise<ApiResponse<UserDto>> {
+  const formData = new FormData();
+
+  if (payload.email != null)       formData.append('Email', payload.email);
+  if (payload.firebaseToken != null) formData.append('FirebaseToken', payload.firebaseToken);
+  if (payload.fname != null)       formData.append('Fname', payload.fname);
+  if (payload.lname != null)       formData.append('Lname', payload.lname);
+  if (payload.role != null)        formData.append('Role', String(payload.role));
+  if (payload.phoneNumber != null) formData.append('PhoneNumber', payload.phoneNumber);
+  if (payload.status != null)      formData.append('Status', String(payload.status));
+
+  if (payload.profilePic != null) {
+    const pic = payload.profilePic as any;
+    if (pic.uri) {
+      // React Native ImagePicker asset: { uri, name, type }
+      formData.append('ProfilePic', {
+        uri: pic.uri,
+        name: pic.name ?? 'profile_picture.jpg',
+        type: pic.type ?? 'image/jpeg',
+      } as any);
+    } else {
+      // Web File object
+      formData.append('ProfilePic', pic);
+    }
+  }
+
   const { data } = await axiosClient.put<ApiResponse<UserDto>>(
     `${BASE}/update-user/${uid}`,
-    payload,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
   return data;
 }

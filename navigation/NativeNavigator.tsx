@@ -105,7 +105,7 @@ export default function NativeNavigator() {
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateServices={home.openHomeServices}
                     onNavigateTopRated={(options) => home.openHomeTopRated(options)}
-                    onNavigateSalonDetails={home.openHomeSalon}
+                    onNavigateMassageSpaDetails={home.openHomeSalon}
                     onNavigateBookAppointment={home.openHomeBook}
                     onNavigateNotifications={home.openHomeNotifications}
                   />

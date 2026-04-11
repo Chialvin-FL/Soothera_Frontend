@@ -17,7 +17,6 @@ const TOKEN_EXPIRY_KEY = 'soothera_token_expiry';
 export interface StoredUserData {
     uid: string;
     email: string;
-    username: string;
     firstName: string;
     lastName: string;
     role: number;
@@ -60,7 +59,6 @@ export interface LoginError {
         const userData: StoredUserData = {
             uid: user.uid,
             email: user.email,
-            username: user.username ?? '',
             firstName: user.firstName ?? '',
             lastName: user.lastName ?? '',
             role: user.role ?? 3,

@@ -28,7 +28,11 @@ export default function PasswordChangeScreen({ onBack }: PasswordChangeScreenPro
 
   const handleSave = async () => {
     if (isLoading) return;
+    console.log('[PasswordChange] Update password button pressed.');
+    console.log('[PasswordChange] Calling handleChangePassword API...');
+
     await handleChangePassword(currentPassword, newPassword, confirmPassword, () => {
+      console.log('[PasswordChange] Password update SUCCESS.');
       // Delay navigation slightly so they can see success msg
       setTimeout(() => {
         onBack();

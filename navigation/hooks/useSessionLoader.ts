@@ -110,7 +110,7 @@ export function useSessionLoader(): SessionState {
     const applyUserData = (user: StoredUserData) => {
         const displayName = [user.firstName, user.lastName]
             .filter(Boolean)
-            .join(' ') || user.username || user.email;
+            .join(' ') || user.email;
         setUserName(displayName);
         setUserEmail(user.email);
         setUserRole(getRoleLabel(user.role) as UIRole);

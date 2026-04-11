@@ -36,7 +36,7 @@ export const Header = ({ userName, onNotificationPress, onProfilePress, hasNotif
           // Build name from available fields
           const displayName = [userData.firstName, userData.lastName]
             .filter(Boolean)
-            .join(' ') || userData.username || userData.email;
+            .join(' ') || userData.email;
           
           if (displayName) {
             setCurrentUserName(displayName);

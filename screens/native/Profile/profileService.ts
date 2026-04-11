@@ -1,5 +1,6 @@
 import { changePassword as apiChangePassword, logout as apiLogout } from '@/api/endpoints/apiAuth';
-import type { ApiError } from '@/api/types';
+import { updateUser as apiUpdateUser, getUsers as apiGetUsers } from '@/api/endpoints/apiUser';
+import type { ApiError, UpdateUserRequest, UserDto } from '@/api/types';
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -8,6 +9,10 @@ import type { ApiError } from '@/api/types';
 export interface ProfileActionResponse {
     success: boolean;
     message: string;
+}
+
+export interface ProfileDataResponse extends ProfileActionResponse {
+    data: UserDto | null;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -54,6 +59,57 @@ export async function performApiLogout(): Promise<ProfileActionResponse> {
         return {
             success: false,
             message: apiErr?.message ?? 'Failed to call logout API.',
+        };
+    }
+}
+
+/**
+ * Updates basic user profile information.
+ */
+export async function performUpdateProfile(
+    uid: string,
+    payload: UpdateUserRequest
+): Promise<ProfileActionResponse> {
+    try {
+        const response = await apiUpdateUser(uid, payload);
+        if (!response.success) {
+            return { success: false, message: response.message };
+        }
+        return { success: true, message: response.message || 'Profile updated successfully.' };
+    } catch (err) {
+        const apiErr = err as ApiError;
+        return {
+            success: false,
+            message: apiErr?.message ?? 'Failed to update profile.',
+        };
+    }
+}
+
+
+/**
+ * Fetches the user profile data from the API filtered by UID.
+ */
+export async function performFetchProfile(uid: string): Promise<ProfileDataResponse> {
+    try {
+        const response = await apiGetUsers({ uid });
+        if (!response.success || !response.data || response.data.items.length === 0) {
+            return { 
+                success: false, 
+                message: response.message || 'User not found.', 
+                data: null 
+            };
+        }
+        return { 
+            success: true, 
+            message: 'Profile fetched successfully.', 
+            data: response.data.items[0] 
+        };
+    } catch (err) {
+        const apiErr = err as ApiError;
+        return {
+            success: false,
+            message: apiErr?.message ?? 'Failed to fetch profile.',
+            data: null,
         };
     }
 }

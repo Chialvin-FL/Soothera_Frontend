@@ -6,7 +6,6 @@ import type {
   RegisterRequest,
   RegisterResponse,
   ForgotPasswordRequest,
-  ChangeEmailRequest,
   ChangePasswordRequest,
 } from '../types';
 
@@ -70,21 +69,6 @@ export async function forgotPassword(
 ): Promise<ApiResponse<null>> {
   const { data } = await axiosClient.post<ApiResponse<null>>(
     `${BASE}/forgot-password`,
-    payload,
-  );
-  return data;
-}
-
-/**
- * PUT /api/Authentication/change-email
- * Requires a valid Bearer token (handled by interceptor).
- * Also requires the raw Firebase ID token in the body for re-authentication.
- */
-export async function changeEmail(
-  payload: ChangeEmailRequest,
-): Promise<ApiResponse<null>> {
-  const { data } = await axiosClient.put<ApiResponse<null>>(
-    `${BASE}/change-email`,
     payload,
   );
   return data;

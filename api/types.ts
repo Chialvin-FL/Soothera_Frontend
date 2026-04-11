@@ -57,12 +57,6 @@ export interface ForgotPasswordRequest {
     email: string;
 }
 
-/** PUT /api/Authentication/change-email — request body. */
-export interface ChangeEmailRequest {
-    newEmail: string;
-    firebaseToken: string;
-}
-
 /** PUT /api/Authentication/change-password — request body. */
 export interface ChangePasswordRequest {
     newPassword: string;
@@ -126,16 +120,21 @@ export interface CreateUserRequest {
     fname: string;
     lname: string;
     role: UserRole;
+    phoneNumber?: string;
 }
 
-/** PATCH /api/User/update-user/:uid — request body (all optional). */
+/** PUT /api/User/update-user/:uid — request body (all optional). Sent as FormData. */
 export interface UpdateUserRequest {
     email?: string;
     firebaseToken?: string;
     fname?: string;
     lname?: string;
     role?: UserRole;
-    profilePic?: string;
+    /** RN ImagePicker asset or web File for profile picture upload */
+    profilePic?: { uri: string; name: string; type: string } | File;
+    phoneNumber?: string;
+    /** 0 = Disable, 1 = Active */
+    status?: UserStatus;
 }
 
 /** User DTO matching the backend's UserResponseDTO. */
@@ -234,14 +233,19 @@ export interface DocumentStatusRequest {
     remarks: string;
 }
 
-/** GET /api/DocumentUpload/get-user-docs — query params. */
+/** GET /api/DocumentUpload/get-user-docs — query params.
+ *  Date fields are Unix epoch milliseconds (long? on the backend). */
 export interface GetUserDocsParams {
     search?: string;
     status?: DocumentStatus;
-    uploadedStart?: string;
-    uploadedEnd?: string;
-    updatedStart?: string;
-    updatedEnd?: string;
+    /** Unix epoch ms */
+    uploadedStart?: number;
+    /** Unix epoch ms */
+    uploadedEnd?: number;
+    /** Unix epoch ms */
+    updatedStart?: number;
+    /** Unix epoch ms */
+    updatedEnd?: number;
 }
 
 /** Response data from check-my-docs. */
