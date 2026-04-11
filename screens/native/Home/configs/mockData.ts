@@ -136,11 +136,11 @@ export const topRatedSalons: TopRatedSalon[] = [
   },
   {
     id: '4',
-    name: '108 SPA',
+    name: 'The First Spa and Asian Healing',
     rating: 4.8,
-    location: 'T. Borces St., Cebu City, 6000 Cebu',
-    image: require('../../../../assets/spas/108.png'),
-    services: ['Swedish Massage', 'Thai Massage', 'Aromatherapy', 'Hot Stone Massage']
+    location: 'Unit 4, ESY bldg, MP Yap st, cor Juana Osmeña St, Cebu City',
+    image: require('../../../../assets/spas/first.png'),
+    services: ['Thai Massage', 'Hot Stone Massage', 'Aromatherapy', 'Hilot']
   },
   {
     id: '5',
@@ -208,11 +208,11 @@ export const topRatedSalons: TopRatedSalon[] = [
   },
   {
     id: '13',
-    name: 'The First Spa and Asian Healing',
+    name: '108 SPA',
     rating: 4.8,
-    location: 'Unit 4, ESY bldg, MP Yap st, cor Juana Osmeña St, Cebu City',
-    image: require('../../../../assets/spas/first.png'),
-    services: ['Thai Massage', 'Hot Stone Massage', 'Aromatherapy', 'Hilot']
+    location: 'T. Borces St., Cebu City, 6000 Cebu',
+    image: require('../../../../assets/spas/108.png'),
+    services: ['Swedish Massage', 'Thai Massage', 'Aromatherapy', 'Hot Stone Massage']
   },
   {
     id: '14',
@@ -352,17 +352,17 @@ export const getSalonDetails = (salonId: string): SalonDetails | null => {
   if (salonId === '4') {
     return {
       ...salon,
-      description: '108 Spa is a luxury wellness destination specializing in premium massage therapies. Our award-winning therapists combine traditional techniques with modern innovations to deliver unparalleled relaxation experiences. With over a decade of excellence, we\'ve perfected the art of therapeutic massage.',
-      address: 'T. Borces St., Cebu City, 6000 Cebu',
-      latitude: 10.3500,
-      longitude: 123.9167,
-      operatingHours: 'Mon - Sun | 10:00 AM - 05:00 AM',
+      description: 'The First Spa and Asian Healing combines sophistication with therapeutic excellence. Our Thai massage and hot stone treatments are performed by internationally trained therapists. Experience refined luxury and exceptional service in our beautifully appointed JY Square location.',
+      address: 'Unit 4, ESY bldg, MP Yap st, cor Juana Osmeña St, Cebu City',
+      latitude: 10.3350,
+      longitude: 123.8950,
+      operatingHours: 'Mon - Sun | 2:00 PM - 11:30 PM',
       distance: '15 min • 1.5km',
       reviewCount: 1200,
       therapists: therapists.slice(0, 4),
       reviews: reviews,
-      phoneNumber: '09285555651',
-      facebookUrl: 'https://www.facebook.com/MassageSpaElite',
+      phoneNumber: '09623314535',
+      facebookUrl: 'https://www.facebook.com/EleganceMassageSpa',
     };
   }
 
@@ -505,17 +505,17 @@ export const getSalonDetails = (salonId: string): SalonDetails | null => {
   if (salonId === '13') {
     return {
       ...salon,
-      description: 'The First Spa and Asian Healing combines sophistication with therapeutic excellence. Our Thai massage and hot stone treatments are performed by internationally trained therapists. Experience refined luxury and exceptional service in our beautifully appointed JY Square location.',
-      address: 'Unit 4, ESY bldg, MP Yap st, cor Juana Osmeña St, Cebu City',
-      latitude: 10.3350,
-      longitude: 123.8950,
-      operatingHours: 'Mon - Sun | 2:00 PM - 11:30 PM',
+      description: '108 Spa is a luxury wellness destination specializing in premium massage therapies. Our award-winning therapists combine traditional techniques with modern innovations to deliver unparalleled relaxation experiences. With over a decade of excellence, we\'ve perfected the art of therapeutic massage.',
+      address: 'T. Borces St., Cebu City, 6000 Cebu',
+      latitude: 10.3500,
+      longitude: 123.9167,
+      operatingHours: 'Mon - Sun | 10:00 AM - 05:00 AM',
       distance: '15 min • 1.5km',
       reviewCount: 1200,
       therapists: therapists.slice(0, 4),
       reviews: reviews,
-      phoneNumber: '09623314535',
-      facebookUrl: 'https://www.facebook.com/EleganceMassageSpa',
+      phoneNumber: '09285555651',
+      facebookUrl: 'https://www.facebook.com/MassageSpaElite',
     };
   }
 
