@@ -34,7 +34,7 @@ export interface SalonFormData {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Fetch the current user's salon establishment (1 per Admin)
+// Fetch the current user's massage spa establishment (1 per Admin)
 // ─────────────────────────────────────────────────────────────
 
 export async function fetchMyEstablishment(): Promise<FetchEstablishmentResponse> {
@@ -50,7 +50,7 @@ export async function fetchMyEstablishment(): Promise<FetchEstablishmentResponse
             return { success: true, message: 'No establishment found.', data: null };
         }
 
-        // The API returns all salons — find the one belonging to this user
+        // The API returns all massage spas — find the one belonging to this user
         const all = Array.isArray(response.data)
             ? (response.data as SalonEstablishment[])
             : [response.data as SalonEstablishment];

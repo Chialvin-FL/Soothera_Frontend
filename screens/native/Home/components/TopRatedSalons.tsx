@@ -7,12 +7,12 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { topRatedSalons } from '../configs/mockData';
 
-interface TopRatedSalonsProps {
+interface TopRatedMassageSpasProps {
   onSeeAll?: () => void;
   onSalonPress?: (salonId: string) => void;
 }
 
-export function TopRatedSalons({ onSeeAll, onSalonPress }: TopRatedSalonsProps = {}) {
+export function TopRatedMassageSpas({ onSeeAll, onSalonPress }: TopRatedMassageSpasProps = {}) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [isAtEnd, setIsAtEnd] = useState(false);
@@ -75,7 +75,7 @@ export function TopRatedSalons({ onSeeAll, onSalonPress }: TopRatedSalonsProps =
     <View className="mb-6 pb-6">
       <View className="flex-row items-center px-5 mb-4">
         <Text className="text-xl font-bold" style={{ color: colors.text }}>
-          Top Rated Salons
+          Top Rated Massage Spas
         </Text>
       </View>
 

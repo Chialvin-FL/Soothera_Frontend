@@ -55,7 +55,7 @@ export default function RoleSelectionScreen({
         },
         {
             id: 'admin',
-            title: 'Salon Owner',
+            title: 'Massage Spa Owner',
             image: require('../../../assets/illustrations/salon_owner_role.png'),
         },
     ];

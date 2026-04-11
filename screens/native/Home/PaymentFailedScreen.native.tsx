@@ -237,10 +237,10 @@ export default function PaymentFailedScreen({
               borderColor: isDark ? '#3a3a3a' : '#E5E7EB',
             }}
           >
-            {/* Salon Name */}
+            {/* Massage Spa Name */}
             <View className="flex-row justify-between items-start mb-3">
               <Text className="text-sm font-medium" style={{ color: colors.icon }}>
-                Salon
+                Massage Spa
               </Text>
               <View className="flex-1 ml-4 items-end">
                 <Text className="text-sm font-semibold text-right" style={{ color: colors.text }}>

@@ -19,7 +19,7 @@ export interface FilterModalProps {
 }
 
 export const filterCategories: FilterCategory[] = [
-  { id: 'salon', label: 'Salon', icon: 'business-outline' },
+  { id: 'salon', label: 'Massage Spa', icon: 'business-outline' },
   { id: 'services', label: 'Services', icon: 'cut-outline' },
   { id: 'ratings', label: 'Ratings', icon: 'star-outline' },
   { id: 'therapists', label: 'Therapists', icon: 'people-outline' },
@@ -31,7 +31,7 @@ export const filterCategories: FilterCategory[] = [
 export const getPlaceholderForFilter = (filterId: string | null): string => {
   switch (filterId) {
     case 'salon':
-      return 'Search Salons...';
+      return 'Search Massage Spas...';
     case 'services':
       return 'Search Services...';
     case 'ratings':
@@ -43,7 +43,7 @@ export const getPlaceholderForFilter = (filterId: string | null): string => {
     case 'priceRange':
       return 'Search by Price Range...';
     default:
-      return 'Search Salons...';
+      return 'Search Massage Spas...';
   }
 };
 

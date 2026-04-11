@@ -32,7 +32,7 @@ export default function NotificationsScreen({ onBack }: NotificationsScreenProps
     {
       id: '1',
       type: 'appointment',
-      salonName: 'Salon Elite',
+      salonName: 'Massage Spa Elite',
       serviceName: 'Haircut & Styling',
       date: 'Tomorrow',
       time: '2:00 PM',
@@ -102,7 +102,7 @@ export default function NotificationsScreen({ onBack }: NotificationsScreenProps
     {
       id: '8',
       type: 'cancellation',
-      salonName: 'Salon Elite',
+      salonName: 'Massage Spa Elite',
       serviceName: 'Hair Treatment',
       date: 'December 19, 2024',
       time: '2:30 PM',

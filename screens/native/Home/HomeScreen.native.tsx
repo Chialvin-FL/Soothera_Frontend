@@ -6,10 +6,10 @@ import { RisingItem } from '@/components/native/RisingItem';
 import { SearchBar } from './components/Home/SearchBar';
 import { SpecialDeals } from './components/Home/SpecialDeals';
 import { Services } from './components/Home/Services';
-import { TopRatedSalons } from './components/Home/TopRatedSalons';
+import { TopRatedMassageSpas } from './components/Home/TopRatedSalons';
 import ServicesScreen from './ServicesScreen.native';
-import TopRatedSalonsScreen from './TopRatedSalonsScreen.native';
-import SalonDetailsScreen from './SalonDetailsScreen.native';
+import TopRatedMassageSpasScreen from './TopRatedSalonsScreen.native';
+import MassageSpaDetailsScreen from './SalonDetailsScreen.native';
 import BookAppointmentScreen from './BookAppointmentScreen.native';
 import PaymentSuccessfulScreen from './PaymentSuccessfulScreen.native';
 import PaymentFailedScreen from './PaymentFailedScreen.native';
@@ -41,7 +41,7 @@ interface HomeScreenProps {
   // Legacy change notifications (for backward compatibility)
   onServicesScreenChange?: (isActive: boolean) => void;
   onTopRatedSalonsScreenChange?: (isActive: boolean) => void;
-  onSalonDetailsScreenChange?: (isActive: boolean) => void;
+  onMassageSpaDetailsScreenChange?: (isActive: boolean) => void;
   onBookAppointmentScreenChange?: (isActive: boolean) => void;
   onNotificationsScreenChange?: (isActive: boolean) => void;
   onNavigateToProfile?: () => void;
@@ -50,7 +50,7 @@ interface HomeScreenProps {
   useNavigatorOverlays?: boolean;
   onNavigateServices?: () => void;
   onNavigateTopRated?: (options?: { autoOpenFilter?: boolean; autoFocusSearch?: boolean }) => void;
-  onNavigateSalonDetails?: (salonId: string) => void;
+  onNavigateMassageSpaDetails?: (salonId: string) => void;
   onNavigateBookAppointment?: (salonId: string) => void;
   onNavigateNotifications?: () => void;
 }
@@ -61,14 +61,14 @@ const TRANSITION_DURATION = 300;
 export default function HomeScreen({
   onServicesScreenChange,
   onTopRatedSalonsScreenChange,
-  onSalonDetailsScreenChange,
+  onMassageSpaDetailsScreenChange,
   onBookAppointmentScreenChange,
   onNotificationsScreenChange,
   onNavigateToProfile,
   useNavigatorOverlays = false,
   onNavigateServices,
   onNavigateTopRated,
-  onNavigateSalonDetails,
+  onNavigateMassageSpaDetails,
   onNavigateBookAppointment,
   onNavigateNotifications,
 }: HomeScreenProps = {}) {
@@ -105,8 +105,8 @@ export default function HomeScreen({
   // Notify parent when salon details screen state changes
   useEffect(() => {
     if (useNavigatorOverlays) return;
-    onSalonDetailsScreenChange?.(selectedSalonId !== null);
-  }, [selectedSalonId, onSalonDetailsScreenChange, useNavigatorOverlays]);
+    onMassageSpaDetailsScreenChange?.(selectedSalonId !== null);
+  }, [selectedSalonId, onMassageSpaDetailsScreenChange, useNavigatorOverlays]);
 
   // Notify parent when book appointment screen state changes
   useEffect(() => {
@@ -173,7 +173,7 @@ export default function HomeScreen({
   // Handle salon press
   const handleSalonPress = (salonId: string) => {
     if (useNavigatorOverlays) {
-      onNavigateSalonDetails?.(salonId);
+      onNavigateMassageSpaDetails?.(salonId);
       return;
     }
     setSelectedSalonId(salonId);
@@ -347,9 +347,9 @@ export default function HomeScreen({
           />
         </RisingItem>
 
-        {/* Top Rated Salons Section */}
+        {/* Top Rated Massage Spas Section */}
         <RisingItem delay={520}>
-          <TopRatedSalons
+          <TopRatedMassageSpas
             showSeeAllInHeader
             onSeeAll={() => {
               if (useNavigatorOverlays) {
@@ -417,7 +417,7 @@ export default function HomeScreen({
                 topRatedAnimatedStyle,
               ]}
             >
-              <TopRatedSalonsScreen
+              <TopRatedMassageSpasScreen
                 onBack={() => {
                   topRatedTranslateX.value = withTiming(
                     SCREEN_WIDTH,
@@ -454,7 +454,7 @@ export default function HomeScreen({
                 const salonDetails = getSalonDetails(selectedSalonId);
                 if (!salonDetails) return null;
                 return (
-                  <SalonDetailsScreen
+                  <MassageSpaDetailsScreen
                     salonDetails={salonDetails}
                     onBack={handleBackFromSalonDetails}
                     onBookAppointment={() => {

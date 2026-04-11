@@ -14,11 +14,11 @@ const mockRatings = [
     { id: '3', user: 'Charlie M.', rating: 5, comment: 'The ambiance is perfect. Will definitely come back.', date: '2 weeks ago' },
 ];
 
-interface SalonRatingsScreenProps {
+interface MassageSpaRatingsScreenProps {
     onBack: () => void;
 }
 
-export default function SalonRatingsScreen({ onBack }: SalonRatingsScreenProps) {
+export default function MassageSpaRatingsScreen({ onBack }: MassageSpaRatingsScreenProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
     const insets = useSafeAreaInsets();
@@ -44,7 +44,7 @@ export default function SalonRatingsScreen({ onBack }: SalonRatingsScreenProps) 
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
                 </TouchableOpacity>
                 <Text className="text-lg font-semibold flex-1" style={{ color: colors.text }} numberOfLines={1}>
-                    Salon Ratings
+                    Massage Spa Ratings
                 </Text>
             </View>
 

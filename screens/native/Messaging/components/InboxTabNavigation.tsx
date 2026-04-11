@@ -29,7 +29,7 @@ const getTabLabel = (tab: InboxTabType): string => {
     case 'all':
       return 'All';
     case 'salon':
-      return 'Salon';
+      return 'Massage Spa';
     case 'therapist':
       return 'Therapist';
     case 'chatbot':

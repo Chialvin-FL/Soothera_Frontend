@@ -135,7 +135,7 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
             setForm({
                 pictureFile: {
                     uri: asset.uri,
-                    name: asset.fileName ?? 'salon_image.jpg',
+                    name: asset.fileName ?? 'massage_spa_image.jpg',
                     type: asset.mimeType ?? 'image/jpeg',
                 },
             });
@@ -145,9 +145,9 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
     // ── Save handler ──
     const onSave = () => {
         clearMessages();
-        // Salon image is required when creating a new establishment
+        // Massage spa image is required when creating a new establishment
         if (!existingId && !form.pictureFile?.uri) {
-            Alert.alert('Image Required', 'Please select a salon image before creating your establishment.');
+            Alert.alert('Image Required', 'Please select a massage spa image before creating your establishment.');
             return;
         }
         handleSave(() => {
@@ -316,14 +316,14 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                         />
                         <Text style={{ fontSize: 13, color: primaryColor, flex: 1, fontWeight: '500' }}>
                             {existingId
-                                ? 'Editing your salon establishment'
+                                ? 'Editing your massage spa establishment'
                                 : 'No establishment yet — fill in the form to create one'}
                         </Text>
                     </View>
 
-                    {/* ── Salon Banner Image ── */}
+                    {/* ── Massage Spa Banner Image ── */}
                     <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
-                        Salon Image
+                        Massage Spa Image
                     </Text>
                     <TouchableOpacity
                         onPress={pickImage}
@@ -352,7 +352,7 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                                 <Text
                                     style={{ color: colors.icon, marginTop: 8, fontSize: 13 }}
                                 >
-                                    Tap to select a salon image
+                                    Tap to select a massage spa image
                                 </Text>
                                 <Text style={{ color: colors.icon, fontSize: 11, marginTop: 2 }}>
                                     JPG / PNG (16:9 recommended)
@@ -378,8 +378,8 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
 
                     {/* ── Basic Info ── */}
                     <InputField
-                        label="Salon Name *"
-                        placeholder="Enter salon name"
+                        label="Massage Spa Name *"
+                        placeholder="Enter massage spa name"
                         value={form.name}
                         onChangeText={(t) => setForm({ name: t })}
                         icon="storefront-outline"
@@ -389,7 +389,7 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                     />
                     <InputField
                         label="Description"
-                        placeholder="Tell customers about your salon…"
+                        placeholder="Tell customers about your massage spa…"
                         multiline
                         value={form.description}
                         onChangeText={(t) => setForm({ description: t })}
@@ -444,7 +444,7 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                     </Text>
                     <InputField
                         label="Facebook Page URL"
-                        placeholder="https://facebook.com/your-salon"
+                        placeholder="https://facebook.com/your-massage-spa"
                         value={form.facebookLink}
                         onChangeText={(t) => setForm({ facebookLink: t })}
                         keyboardType="url"
@@ -558,7 +558,7 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                         <Text
                             style={[styles.modalBody, { color: colors.icon }]}
                         >
-                            This will permanently delete your salon establishment and all its
+                            This will permanently delete your massage spa establishment and all its
                             settings. This action cannot be undone.
                         </Text>
                         <View style={styles.modalActions}>

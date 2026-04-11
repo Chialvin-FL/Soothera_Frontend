@@ -5,7 +5,7 @@ import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { SalonCardsList } from '../../Home/components/SalonCardsList';
+import { MassageSpaCardsList } from '../../Home/components/SalonCardsList';
 import { topRatedSalons } from '../../Home/configs/mockData';
 
 interface FavoritesScreenProps {
@@ -49,8 +49,8 @@ export default function FavoritesScreen({ onBack, onSalonPress, autoOpenFilter =
         </Text>
       </View>
 
-      {/* Favorite Salons in Card View - Single Column */}
-      <SalonCardsList
+      {/* Favorite Massage Spas in Card View - Single Column */}
+      <MassageSpaCardsList
         salons={favoriteSalons}
         contentContainerStyle={{
           paddingHorizontal: 20,

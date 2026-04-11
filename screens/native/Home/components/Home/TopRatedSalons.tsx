@@ -8,7 +8,7 @@ import { Colors } from '@/constants/theme';
 import { topRatedSalons } from '../../configs/mockData';
 import type { TopRatedSalon } from '../../types/Home';
 
-interface TopRatedSalonsProps {
+interface TopRatedMassageSpasProps {
   title?: string;
   salons?: TopRatedSalon[];
   showSeeAllInHeader?: boolean;
@@ -16,13 +16,13 @@ interface TopRatedSalonsProps {
   onSalonPress?: (salonId: string) => void;
 }
 
-export function TopRatedSalons({
-  title = 'Top Rated Salons',
+export function TopRatedMassageSpas({
+  title = 'Top Rated Massage Spas',
   salons = topRatedSalons.slice(0, 4),
   showSeeAllInHeader = false,
   onSeeAll,
   onSalonPress,
-}: TopRatedSalonsProps = {}) {
+}: TopRatedMassageSpasProps = {}) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [isAtEnd, setIsAtEnd] = useState(false);

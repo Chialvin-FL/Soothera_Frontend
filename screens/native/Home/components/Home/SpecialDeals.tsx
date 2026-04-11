@@ -67,7 +67,7 @@ export function SpecialDeals() {
                 </View>
               </View>
               <View className="flex-row items-center justify-between">
-                <Text className="text-xs text-white/70">All Salons available | T&C Applied</Text>
+                <Text className="text-xs text-white/70">All Massage Spas available | T&C Applied</Text>
                 <TouchableOpacity
                   className="bg-white/20 px-6 py-2 rounded-full"
                   style={{ backgroundColor: primaryColor }}
@@ -95,7 +95,7 @@ export function SpecialDeals() {
       <SuccessModal
         visible={successModalVisible}
         title="Deal Claimed!"
-        message="Your special discount has been applied. You can use it at any participating salon."
+        message="Your special discount has been applied. You can use it at any participating massage spa."
         onClose={() => setSuccessModalVisible(false)}
       />
     </View>

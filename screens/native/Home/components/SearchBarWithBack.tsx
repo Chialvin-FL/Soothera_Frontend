@@ -19,7 +19,7 @@ interface SearchBarWithBackProps {
 
 export function SearchBarWithBack({ 
   onBack, 
-  placeholder: initialPlaceholder = "Search Salons...",
+  placeholder: initialPlaceholder = "Search Massage Spas...",
   value,
   onChangeText,
   autoFocus = false,

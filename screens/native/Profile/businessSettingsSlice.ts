@@ -99,7 +99,7 @@ export function useBusinessSettingsSlice(): BusinessSettingsSliceState {
     // ── Save (create or update) ──
     const handleSave = async (onSuccess?: () => void) => {
         if (!form.name.trim() || !form.address.trim()) {
-            setError('Salon name and address are required.');
+            setError('Massage spa name and address are required.');
             return;
         }
 

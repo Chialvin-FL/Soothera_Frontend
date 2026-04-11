@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { RisingItem } from '@/components/native/RisingItem';
-import { TopRatedSalons } from '../Home/components/Home/TopRatedSalons';
+import { TopRatedMassageSpas } from '../Home/components/Home/TopRatedSalons';
 import { topRatedSalons } from '../Home/configs/mockData';
 import type { UIRole } from '@/navigation/hooks/useSessionLoader';
 import { useProfileSlice } from './profileSlice';
@@ -142,7 +142,7 @@ export default function ProfileScreen({
                   <SettingItem icon="people-outline" label="Staff Management" colors={colors} onPress={onNavigateToStaffManagement} />
                   <SettingItem icon="business-outline" label="Business Settings" colors={colors} onPress={onNavigateToBusinessSettings} />
                   <SettingItem icon="card-outline" label="Subscription" colors={colors} onPress={onNavigateToSubscription} />
-                  <SettingItem icon="star-outline" label="Salon Ratings" colors={colors} onPress={onNavigateToSalonRatings} />
+                  <SettingItem icon="star-outline" label="Massage Spa Ratings" colors={colors} onPress={onNavigateToSalonRatings} />
                   <SettingItem icon="document-text-outline" label="Access Logs" colors={colors} onPress={onNavigateToAccessLogs} />
                 </View>
               </View>
@@ -202,7 +202,7 @@ export default function ProfileScreen({
         {/* Your Favorites Section */}
         {userRole !== 'admin' && userRole !== 'therapist' && (
           <RisingItem delay={200} visible={isVisible}>
-            <TopRatedSalons
+            <TopRatedMassageSpas
               title="Your Favorites"
               salons={topRatedSalons.slice(0, 3)}
               showSeeAllInHeader
@@ -215,7 +215,7 @@ export default function ProfileScreen({
         {/* You May Also Like Section */}
         {userRole !== 'admin' && userRole !== 'therapist' && (
           <RisingItem delay={260} visible={isVisible}>
-            <TopRatedSalons
+            <TopRatedMassageSpas
               title="You May Also Like"
               salons={topRatedSalons.slice(3, 7)}
               showSeeAllInHeader

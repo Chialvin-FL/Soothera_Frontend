@@ -1,17 +1,17 @@
 import React from 'react';
 import { View } from 'react-native';
 import { SearchBarWithBack } from './components/SearchBarWithBack';
-import { SalonCardsList } from './components/SalonCardsList';
+import { MassageSpaCardsList } from './components/SalonCardsList';
 import { topRatedSalons } from './configs/mockData';
 
-interface TopRatedSalonsScreenProps {
+interface TopRatedMassageSpasScreenProps {
   onBack?: () => void;
   onSalonPress?: (salonId: string) => void;
   autoOpenFilter?: boolean;
   autoFocusSearch?: boolean;
 }
 
-export default function TopRatedSalonsScreen({ onBack, onSalonPress, autoOpenFilter = false, autoFocusSearch = false }: TopRatedSalonsScreenProps = {}) {
+export default function TopRatedMassageSpasScreen({ onBack, onSalonPress, autoOpenFilter = false, autoFocusSearch = false }: TopRatedMassageSpasScreenProps = {}) {
   return (
     <View className="flex-1 bg-white">
       {/* Search Bar with Back Button */}
@@ -21,8 +21,8 @@ export default function TopRatedSalonsScreen({ onBack, onSalonPress, autoOpenFil
         autoOpenFilter={autoOpenFilter}
       />
 
-      {/* All Salons in Card View - Single Column */}
-      <SalonCardsList 
+      {/* All Massage Spas in Card View - Single Column */}
+      <MassageSpaCardsList 
         salons={topRatedSalons}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
         onSalonPress={onSalonPress}

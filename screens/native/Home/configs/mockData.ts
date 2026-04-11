@@ -112,7 +112,7 @@ export const services: Service[] = [
 export const topRatedSalons: TopRatedSalon[] = [
   { 
     id: '1', 
-    name: 'Salon Elite', 
+    name: 'Massage Spa Elite', 
     rating: 4.8, 
     location: 'Talamban, Cebu', 
     image: require('../../../../assets/salon.jpg'),
@@ -184,7 +184,7 @@ export const topRatedSalons: TopRatedSalon[] = [
   },
   { 
     id: '10', 
-    name: 'Elegance Salon', 
+    name: 'Elegance Massage Spa', 
     rating: 4.8, 
     location: 'JY Square, Cebu', 
     image: require('../../../../assets/salon.jpg'),
@@ -202,14 +202,14 @@ export const getSalonDetails = (salonId: string): SalonDetails | null => {
     {
       id: '1',
       name: 'Kathryn Murphy',
-      title: 'Hair Stylist',
+      title: 'Massage Specialist',
       image: require('../../../../assets/user.jpg'),
       rating: 4.8,
     },
     {
       id: '2',
       name: 'Esther Howard',
-      title: 'Nail Artist',
+      title: 'Massage Therapist',
       image: require('../../../../assets/user.jpg'),
       rating: 4.9,
     },
@@ -223,7 +223,7 @@ export const getSalonDetails = (salonId: string): SalonDetails | null => {
     {
       id: '4',
       name: 'John Doe',
-      title: 'Beauty Specialist',
+      title: 'Wellness Specialist',
       image: require('../../../../assets/user.jpg'),
       rating: 4.8,
     },
@@ -252,7 +252,7 @@ export const getSalonDetails = (salonId: string): SalonDetails | null => {
     {
       userName: 'David Wilson',
       rating: 4.7,
-      comment: 'Good value for money. Highly recommend this salon.',
+      comment: 'Good value for money. Highly recommend this massage spa.',
       date: new Date(Date.now() - 2 * 30 * 24 * 60 * 60 * 1000), // 2 months ago
     },
   ];
@@ -261,7 +261,7 @@ export const getSalonDetails = (salonId: string): SalonDetails | null => {
   if (salonId === '1') {
     return {
       ...salon,
-      description: 'Salon Elite is a luxury wellness destination specializing in premium massage therapies. Our award-winning therapists combine traditional techniques with modern innovations to deliver unparalleled relaxation experiences. With over a decade of excellence, we\'ve perfected the art of therapeutic massage.',
+      description: 'Massage Spa Elite is a luxury wellness destination specializing in premium massage therapies. Our award-winning therapists combine traditional techniques with modern innovations to deliver unparalleled relaxation experiences. With over a decade of excellence, we\'ve perfected the art of therapeutic massage.',
       address: '8502 Preston Rd. Inglewood, Maine 98380',
       latitude: 10.3500,
       longitude: 123.9167,
@@ -271,7 +271,7 @@ export const getSalonDetails = (salonId: string): SalonDetails | null => {
       therapists: therapists.slice(0, 4),
       reviews: reviews,
       phoneNumber: '+63 912 345 6789',
-      facebookUrl: 'https://www.facebook.com/SalonElite',
+      facebookUrl: 'https://www.facebook.com/MassageSpaElite',
     };
   }
 
@@ -414,7 +414,7 @@ export const getSalonDetails = (salonId: string): SalonDetails | null => {
   if (salonId === '10') {
     return {
       ...salon,
-      description: 'Elegance Salon combines sophistication with therapeutic excellence. Our Thai massage and hot stone treatments are performed by internationally trained therapists. Experience refined luxury and exceptional service in our beautifully appointed JY Square location.',
+      description: 'Elegance Massage Spa combines sophistication with therapeutic excellence. Our Thai massage and hot stone treatments are performed by internationally trained therapists. Experience refined luxury and exceptional service in our beautifully appointed JY Square location.',
       address: '369 JY Square, Lahug, Cebu City 6000',
       latitude: 10.3350,
       longitude: 123.8950,
@@ -424,7 +424,7 @@ export const getSalonDetails = (salonId: string): SalonDetails | null => {
       therapists: therapists.slice(0, 4),
       reviews: reviews,
       phoneNumber: '+63 912 345 6789',
-      facebookUrl: 'https://www.facebook.com/EleganceSalon',
+      facebookUrl: 'https://www.facebook.com/EleganceMassageSpa',
     };
   }
 

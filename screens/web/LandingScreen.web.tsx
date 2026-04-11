@@ -73,7 +73,7 @@ export default function LandingScreen({ onAdminLogin }: LandingScreenProps) {
                         <FeatureCard
                             icon="sparkles"
                             title="Premium Services"
-                            description="Access top-tier salons and certified practitioners."
+                            description="Access top-tier massage spas and certified practitioners."
                         />
                         <FeatureCard
                             icon="shield-checkmark"

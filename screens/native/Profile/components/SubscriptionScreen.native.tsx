@@ -56,7 +56,7 @@ export default function SubscriptionScreen({ onBack }: SubscriptionScreenProps) 
                 }}
             >
                 <Text className="text-base mb-6" style={{ color: colors.icon }}>
-                    Choose the best plan for your salon business.
+                    Choose the best plan for your massage spa business.
                 </Text>
 
                 {plans.map((plan, index) => (

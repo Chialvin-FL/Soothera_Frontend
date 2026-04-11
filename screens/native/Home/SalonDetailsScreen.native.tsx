@@ -19,7 +19,7 @@ try {
   RNWebView = null;
 }
 
-interface SalonDetailsScreenProps {
+interface MassageSpaDetailsScreenProps {
   salonDetails: SalonDetails;
   onBack: () => void;
   onBookAppointment?: () => void;
@@ -200,11 +200,11 @@ const formatRelativeDate = (date: Date | string | undefined): string => {
   }
 };
 
-export default function SalonDetailsScreen({
+export default function MassageSpaDetailsScreen({
   salonDetails,
   onBack,
   onBookAppointment,
-}: SalonDetailsScreenProps) {
+}: MassageSpaDetailsScreenProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
@@ -688,7 +688,7 @@ export default function SalonDetailsScreen({
 
   return (
     <View className="flex-1 bg-white">
-      {/* Salon Image with Overlay Header */}
+      {/* Massage Spa Image with Overlay Header */}
       <View className="w-full relative" style={{ height: 250 }}>
         <Image
           source={salonDetails.image}
@@ -747,12 +747,12 @@ export default function SalonDetailsScreen({
         scrollEventThrottle={16}
       >
         <View className="px-5 pt-4">
-          {/* Salon Name */}
+          {/* Massage Spa Name */}
           <Text className="text-2xl font-bold mb-2" style={{ color: colors.text }}>
             {salonDetails.name}
           </Text>
 
-          {/* Salon Rating */}
+          {/* Massage Spa Rating */}
           <View className="mb-4">
             <StarRating rating={salonDetails.rating} />
           </View>

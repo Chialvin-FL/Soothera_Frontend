@@ -52,7 +52,7 @@ const getTherapistFromSalon = (salonId: string, therapistId: string): { name: st
 
 // Mock data for conversations - related to actual salons, therapists, and chatbots
 const mockConversations: Conversation[] = [
-  // Salon conversations
+  // Massage spa conversations
   {
     id: '1',
     name: topRatedSalons[0].name,
@@ -124,7 +124,7 @@ const mockConversations: Conversation[] = [
   {
     id: '5',
     name: mockChatbots[0].name,
-    lastMessage: 'I can help you find the perfect salon or book an appointment. What would you like to do?',
+    lastMessage: 'I can help you find the perfect massage spa or book an appointment. What would you like to do?',
     timestamp: '08:40 AM',
     type: 'chatbot',
     chatbotId: mockChatbots[0].id,

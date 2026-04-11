@@ -23,7 +23,7 @@ export function SearchBar({ onPress, onFilterPress }: SearchBarProps) {
       >
         <Ionicons name="search-outline" size={20} color={colors.icon} />
         <TextInput
-          placeholder="Search Salon, Specialist..."
+          placeholder="Search Massage Spa, Specialist..."
           placeholderTextColor={colors.icon}
           className="flex-1 ml-2 text-base"
           style={{ color: colors.text }}

@@ -26,7 +26,7 @@ We collect information you provide directly to us:
 We also automatically collect certain information when you use our app:
 • Device information (type, operating system, unique identifiers)
 • Usage data (features used, time spent, interaction patterns)
-• Location data (if you grant permission, to find nearby salons)
+• Location data (if you grant permission, to find nearby massage spas)
 
 3. How We Use Your Information
 
@@ -41,7 +41,7 @@ We use the information we collect to:
 4. Information Sharing
 
 We may share your information with:
-• Service providers (spas, salons) to fulfill your bookings
+• Service providers (massage spas) to fulfill your bookings
 • Payment processors to complete transactions
 • Analytics providers to help us improve our app
 • Legal authorities when required by law

@@ -7,17 +7,17 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { RisingItem } from '@/components/native/RisingItem';
 
-interface SalonCardsListProps {
+interface MassageSpaCardsListProps {
   salons: TopRatedSalon[];
   contentContainerStyle?: object;
   onSalonPress?: (salonId: string) => void;
 }
 
-export function SalonCardsList({ salons, contentContainerStyle, onSalonPress }: SalonCardsListProps) {
+export function MassageSpaCardsList({ salons, contentContainerStyle, onSalonPress }: MassageSpaCardsListProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const renderSalonCard = (salon: TopRatedSalon, index: number) => {
+  const renderMassageSpaCard = (salon: TopRatedSalon, index: number) => {
     // Calculate number of full stars
     const fullStars = Math.floor(salon.rating);
     const hasHalfStar = salon.rating % 1 >= 0.5;
@@ -48,7 +48,7 @@ export function SalonCardsList({ salons, contentContainerStyle, onSalonPress }: 
               shadowRadius: 4,
             }}
           >
-            {/* Salon Image */}
+            {/* Massage Spa Image */}
             <View className="relative">
               <Image
                 source={salon.image}
@@ -59,7 +59,7 @@ export function SalonCardsList({ salons, contentContainerStyle, onSalonPress }: 
 
             {/* Salon Details */}
             <View className="p-3">
-              {/* Salon Name */}
+              {/* Massage Spa Name */}
               <Text 
                 className="text-base font-semibold mb-1" 
                 style={{ color: colors.text }}
@@ -159,7 +159,7 @@ export function SalonCardsList({ salons, contentContainerStyle, onSalonPress }: 
       showsVerticalScrollIndicator={false}
       contentContainerStyle={contentContainerStyle}
     >
-      {salons.map((salon, index) => renderSalonCard(salon, index))}
+      {salons.map((salon, index) => renderMassageSpaCard(salon, index))}
     </ScrollView>
   );
 }
