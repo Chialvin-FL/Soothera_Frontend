@@ -7,6 +7,7 @@ import { useDocUploadSlice } from '../slices/docUploadSlice';
 import { DocumentVerification } from '../components/native/DocumentVerification';
 import { useIdVerificationSlice } from '../slices/idVerificationSlice';
 import { SelfieVerificationModal } from '../components/native/SelfieVerificationModal';
+import { SuccessModal } from '../components/native/SuccessModal';
 
 // Screens — tab bases
 import HomeScreen from '../screens/native/Home/HomeScreen.native';
@@ -210,10 +211,18 @@ export default function NativeNavigator() {
             error={docUploadSlice.error}
             onUpload={docUploadSlice.uploadDocs}
           />
+          <SuccessModal
+            visible={docUploadSlice.showFeedback}
+            title={docUploadSlice.feedbackTitle}
+            message={docUploadSlice.feedbackMessage}
+            variant={docUploadSlice.feedbackVariant}
+            onClose={docUploadSlice.dismissFeedback}
+          />
           <SelfieVerificationModal
             visible={
               !docUploadSlice.isChecking &&
               !docUploadSlice.requiresUpload &&
+              !docUploadSlice.showFeedback &&
               idVerificationSlice.requiresVerification &&
               !idVerificationSlice.isChecking &&
               userRole === 'admin'

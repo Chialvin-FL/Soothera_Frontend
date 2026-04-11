@@ -7,8 +7,8 @@ export async function submitDocumentBatch(files: any[]) {
     } catch (error: any) {
         return {
             success: false,
-            message: error?.response?.data?.message || 'Error uploading documents.',
-            statusCode: error?.response?.status || 500,
+            message: error?.message || error?.response?.data?.message || 'Error uploading documents.',
+            statusCode: error?.statusCode || error?.response?.status || 500,
             data: null,
         };
     }
@@ -21,8 +21,8 @@ export async function fetchMyDocumentStatus() {
     } catch (error: any) {
         return {
             success: false,
-            message: error?.response?.data?.message || 'Error fetching document status.',
-            statusCode: error?.response?.status || 500,
+            message: error?.message || error?.response?.data?.message || 'Error fetching document status.',
+            statusCode: error?.statusCode || error?.response?.status || 500,
             data: null,
         };
     }

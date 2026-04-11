@@ -9,7 +9,7 @@ import type {
 
 // ─────────────────────────────────────────────────────────────
 // Document Upload Endpoints
-// Base route: /api/DocumentUpload
+// Base route: /api/DocUpload
 // ─────────────────────────────────────────────────────────────
 
 const BASE = '/DocumentUpload';

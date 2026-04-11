@@ -6,6 +6,10 @@ export function useDocUploadSlice() {
     const [requiresUpload, setRequiresUpload] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [feedbackTitle, setFeedbackTitle] = useState('');
+    const [feedbackMessage, setFeedbackMessage] = useState('');
+    const [feedbackVariant, setFeedbackVariant] = useState<'success' | 'error'>('success');
 
     const checkDocuments = async () => {
         setIsChecking(true);
@@ -18,6 +22,10 @@ export function useDocUploadSlice() {
                 } else {
                     setRequiresUpload(false);
                 }
+            } else if (res.statusCode === 404) {
+                // Backend returns 404 if no documents exist for the user
+                console.log('[docUploadSlice] No documents found (404), requiring upload.');
+                setRequiresUpload(true);
             } else {
                 console.warn('Check documents failed', res.message);
             }
@@ -34,21 +42,35 @@ export function useDocUploadSlice() {
         const res = await submitDocumentBatch(files);
         if (res.success) {
             setRequiresUpload(false);
+            setFeedbackTitle('Upload Successful');
+            setFeedbackMessage('Your documents have been uploaded and are now pending review.');
+            setFeedbackVariant('success');
+            setShowFeedback(true);
         } else {
             setError(res.message);
+            setFeedbackTitle('Upload Failed');
+            setFeedbackMessage(res.message || 'An error occurred while uploading your documents. Please try again.');
+            setFeedbackVariant('error');
+            setShowFeedback(true);
         }
         setIsUploading(false);
         return res.success;
     };
 
     const clearError = () => setError(null);
+    const dismissFeedback = () => setShowFeedback(false);
 
     return {
         isChecking,
         requiresUpload,
         isUploading,
         error,
+        showFeedback,
+        feedbackTitle,
+        feedbackMessage,
+        feedbackVariant,
         clearError,
+        dismissFeedback,
         checkDocuments,
         uploadDocs,
     };
