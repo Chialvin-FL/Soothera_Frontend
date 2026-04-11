@@ -14,6 +14,7 @@ import SubscriptionScreen from '../../screens/native/Profile/components/Subscrip
 import SalonRatingsScreen from '../../screens/native/Profile/components/SalonRatingsScreen.native';
 import AccessLogsScreen from '../../screens/native/Profile/components/AccessLogsScreen.native';
 import type { ProfileStackState } from '../hooks/useProfileStack';
+import type { SessionState } from '../hooks/useSessionLoader';
 import type { Conversation } from '../../screens/native/Messaging/InboxScreen.native';
 import { SUPPORT_CHATBOT_CONVERSATION } from '../configs/constants';
 
@@ -27,12 +28,13 @@ const OVERLAY_BASE = {
 
 interface ProfileStackProps {
     profile: ProfileStackState;
+    session: SessionState;
     /** Called when the Help screen FAB opens the support chatbot */
     onOpenChat: (conversation: Conversation) => void;
     onSalonPress: (salonId: string) => void;
 }
 
-export function ProfileStack({ profile, onOpenChat, onSalonPress }: ProfileStackProps) {
+export function ProfileStack({ profile, session, onOpenChat, onSalonPress }: ProfileStackProps) {
     const {
         profileOverlay,
         selectedFaq,
@@ -55,7 +57,7 @@ export function ProfileStack({ profile, onOpenChat, onSalonPress }: ProfileStack
         <>
             {profileOverlay && (
                 <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 16 }, profileOverlayStyle]}>
-                    {profileOverlay === 'edit' && <ProfileEditScreen onBack={closeProfileOverlay} />}
+                    {profileOverlay === 'edit' && <ProfileEditScreen onBack={closeProfileOverlay} session={session} />}
                     {profileOverlay === 'password' && <PasswordChangeScreen onBack={closeProfileOverlay} />}
                     {profileOverlay === 'notifications' && (
                         <NotificationPreferencesScreen onBack={closeProfileOverlay} />

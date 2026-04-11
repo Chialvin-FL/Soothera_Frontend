@@ -6,17 +6,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useProfileSlice } from '../profileSlice';
-import { useSessionLoader } from '@/navigation/hooks/useSessionLoader';
-import { loadStoredSession } from '@/screens/native/Login/loginService';
+import { useSessionLoader, SessionState } from '@/navigation/hooks/useSessionLoader';
+import { loadStoredSession, updateStoredUserData } from '@/screens/native/Login/loginService';
 import * as ImagePicker from 'expo-image-picker';
 import { SuccessModal } from '@/components/native/SuccessModal';
 import { API_CONFIG } from '@/api/config';
 
 interface ProfileEditScreenProps {
   onBack: () => void;
+  session: SessionState;
 }
 
-export default function ProfileEditScreen({ onBack }: ProfileEditScreenProps) {
+export default function ProfileEditScreen({ onBack, session: activeSession }: ProfileEditScreenProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
@@ -33,6 +34,12 @@ export default function ProfileEditScreen({ onBack }: ProfileEditScreenProps) {
   const [phone, setPhone] = useState('');
   const [profilePic, setProfilePic] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<{ uri: string; name: string; type: string } | null>(null);
+  const [initialData, setInitialData] = useState<{
+    firstName: string;
+    lastName: string;
+    phone: string;
+    profilePic: string | null;
+  } | null>(null);
 
   const [feedbackModal, setFeedbackModal] = useState<{
     visible: boolean;
@@ -73,6 +80,14 @@ export default function ProfileEditScreen({ onBack }: ProfileEditScreenProps) {
               setOriginalEmail(freshData.email || '');
               setPhone(freshData.phoneNumber || '');
               setProfilePic(freshData.profilePicture);
+
+              // Store initial data for comparison later
+              setInitialData({
+                  firstName: freshData.firstName || '',
+                  lastName: freshData.lastName || '',
+                  phone: freshData.phoneNumber || '',
+                  profilePic: freshData.profilePicture
+              });
           }
       }
     };
@@ -133,26 +148,56 @@ export default function ProfileEditScreen({ onBack }: ProfileEditScreenProps) {
             });
         }
 
-        // 2. Update Profile
-        console.log('[ProfileEdit] Updating profile info for UID:', uid);
-        const payload: any = {
-            fname: firstName,
-            lname: lastName,
-            phoneNumber: phone,
-        };
+        // 2. Update Profile - Only send changed fields
+        console.log('[ProfileEdit] Building update payload with changed fields only...');
+        const payload: any = {};
+        
+        if (firstName !== initialData?.firstName) payload.fname = firstName;
+        if (lastName !== initialData?.lastName) payload.lname = lastName;
+        if (phone !== initialData?.phone) payload.phoneNumber = phone;
 
-        // If we have a new image file, handle upload (usually via FormData in a real service, 
-        // but here handleUpdateProfile takes UpdateUserRequest which has profilePic string)
+        // If we have a new image file, handle upload
         if (imageFile) {
-            console.log('[ProfileEdit] New profile picture attached.');
-            // Note: UpdateUserRequest expects profilePic: string. 
-            // In a real implementation, you'd upload to S3/Cloudinary first or the API handles FormData.
-            // For now we pass the URI as requested.
+            console.log('[ProfileEdit] New profile picture detected for payload.');
             payload.profilePic = imageFile.uri;
         }
 
-        await handleUpdateProfile(uid, payload, () => {
-            console.log('[ProfileEdit] Profile update success.');
+        const hasProfileChanges = Object.keys(payload).length > 0;
+
+        if (!hasProfileChanges && email === originalEmail) {
+            console.log('[ProfileEdit] No changes detected. Closing screen.');
+            onBack();
+            return;
+        }
+
+        if (!hasProfileChanges) {
+            console.log('[ProfileEdit] No profile-specific changes (only email changed or no changes). Skipping profile API.');
+            // We already handled email above (if any), so we can just show success if email was updated.
+            if (email !== originalEmail) {
+                setFeedbackModal({
+                    visible: true,
+                    variant: 'success',
+                    title: 'Email Updated',
+                    message: 'Your email has been successfully updated.',
+                });
+            }
+            return;
+        }
+
+        console.log('[ProfileEdit] Updating profile with payload:', payload);
+        await handleUpdateProfile(uid, payload, async () => {
+            console.log('[ProfileEdit] Profile update success. Syncing local state...');
+            
+            // Sync with AsyncStorage for persistence
+            await updateStoredUserData({
+                firstName,
+                lastName,
+                profilePicture: imageFile ? imageFile.uri : profilePic
+            });
+
+            // Sync with global session for immediate UI update
+            activeSession.updateSessionData(firstName, lastName, imageFile ? imageFile.uri : profilePic);
+
             setFeedbackModal({
                 visible: true,
                 variant: 'success',

@@ -66,6 +66,7 @@ interface BookingsScreenProps {
   onNavigateNotifications?: () => void;
   onNavigateGetDirections?: (destination: { latitude: number; longitude: number }, destinationName?: string) => void;
   onNavigateRebook?: (booking: Booking) => void;
+  userProfilePic?: string | null;
 }
 
 export default function BookingsScreen({
@@ -79,6 +80,7 @@ export default function BookingsScreen({
   onNavigateNotifications,
   onNavigateGetDirections,
   onNavigateRebook,
+  userProfilePic,
 }: BookingsScreenProps = {}) {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -532,6 +534,7 @@ export default function BookingsScreen({
         <Header 
           onProfilePress={onNavigateToProfile}
           onNotificationPress={onNavigateNotifications}
+          profilePic={userProfilePic}
         />
       </RisingItem>
 

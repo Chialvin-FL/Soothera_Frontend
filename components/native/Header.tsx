@@ -9,16 +9,19 @@ import { STORAGE_KEYS } from '@/env';
 import { UserData } from '@/api/types';
 import { getRoleLabel } from '@/utils/roleHelpers';
 import type { UIRole } from '@/navigation/hooks/useSessionLoader';
+import { API_CONFIG } from '@/api/config';
 
 interface HeaderProps {
   userName?: string;
   onNotificationPress?: () => void;
   onProfilePress?: () => void;
   hasNotifications?: boolean;
+  profilePic?: string | null;
 }
 
-export const Header = ({ userName, onNotificationPress, onProfilePress, hasNotifications = true }: HeaderProps) => {
-  const [currentUserName, setCurrentUserName] = React.useState(userName || 'John Doe');
+export const Header = ({ userName, onNotificationPress, onProfilePress, hasNotifications = true, profilePic }: HeaderProps) => {
+  const [currentUserName, setCurrentUserName] = React.useState(userName || '');
+  const [currentProfilePic, setCurrentProfilePic] = React.useState<string | null>(profilePic || null);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -49,6 +52,12 @@ export const Header = ({ userName, onNotificationPress, onProfilePress, hasNotif
 
     fetchUserName();
   }, [userName]);
+
+  useEffect(() => {
+    if (profilePic !== undefined) {
+      setCurrentProfilePic(profilePic);
+    }
+  }, [profilePic]);
 
   useEffect(() => {
     if (hasNotifications) {
@@ -116,7 +125,7 @@ export const Header = ({ userName, onNotificationPress, onProfilePress, hasNotif
         activeOpacity={0.7}
       >
         <Image
-          source={require('../../assets/user.jpg')}
+          source={currentProfilePic ? { uri: currentProfilePic.startsWith('http') ? currentProfilePic : (currentProfilePic.startsWith('file') ? currentProfilePic : `${API_CONFIG.BASE_URL}${currentProfilePic}`) } : require('../../assets/user.jpg')}
           className="w-10 h-10 rounded-full mr-3"
         />
         <Text className="text-base font-semibold" style={{ color: colors.text }}>

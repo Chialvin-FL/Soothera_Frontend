@@ -151,12 +151,13 @@ interface InboxScreenProps {
   onNavigateChatRoom?: (conversation: Conversation) => void;
   onNavigateNotifications?: () => void;
   userRole?: UIRole | null;
+  userProfilePic?: string | null;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TRANSITION_DURATION = 300;
 
-export default function InboxScreen({ onChatRoomChange, onNavigateToProfile, useNavigatorOverlays = false, onNavigateChatRoom, onNavigateNotifications, userRole }: InboxScreenProps = {}) {
+export default function InboxScreen({ onChatRoomChange, onNavigateToProfile, useNavigatorOverlays = false, onNavigateChatRoom, onNavigateNotifications, userRole, userProfilePic }: InboxScreenProps = {}) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
@@ -230,6 +231,7 @@ export default function InboxScreen({ onChatRoomChange, onNavigateToProfile, use
         <Header
           onProfilePress={onNavigateToProfile}
           onNotificationPress={onNavigateNotifications}
+          profilePic={userProfilePic}
         />
       </RisingItem>
 

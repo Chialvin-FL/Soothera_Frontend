@@ -16,11 +16,13 @@ interface HomeTherapistScreenProps {
     onNavigateToProfile?: () => void;
     onNavigateNotifications?: () => void;
     useNavigatorOverlays?: boolean;
+    userProfilePic?: string | null;
 }
 
 export default function HomeTherapistScreen({
     onNavigateToProfile,
     onNavigateNotifications,
+    userProfilePic,
 }: HomeTherapistScreenProps) {
     const insets = useSafeAreaInsets();
     const colorScheme = useColorScheme();
@@ -41,6 +43,7 @@ export default function HomeTherapistScreen({
             >
                 <RisingItem delay={0}>
                     <Header
+                        profilePic={userProfilePic}
                         onProfilePress={onNavigateToProfile}
                         onNotificationPress={onNavigateNotifications}
                     />

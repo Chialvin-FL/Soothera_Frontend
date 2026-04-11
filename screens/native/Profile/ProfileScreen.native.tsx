@@ -10,6 +10,7 @@ import { TopRatedMassageSpas } from '../Home/components/Home/TopRatedSalons';
 import { topRatedSalons } from '../Home/configs/mockData';
 import type { UIRole } from '@/navigation/hooks/useSessionLoader';
 import { useProfileSlice } from './profileSlice';
+import { API_CONFIG } from '@/api/config';
 
 interface SettingItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -53,6 +54,7 @@ interface ProfileScreenProps {
   onLogout?: () => void;
   userName?: string;
   userEmail?: string;
+  userProfilePic?: string | null;
   userRole?: UIRole | null;
 }
 
@@ -73,6 +75,7 @@ export default function ProfileScreen({
   onLogout,
   userName: propUserName,
   userEmail: propUserEmail,
+  userProfilePic,
   userRole,
 }: ProfileScreenProps = {}) {
   const colorScheme = useColorScheme();
@@ -84,9 +87,11 @@ export default function ProfileScreen({
   const { handleLogout, isLoading: isLoadingProfile } = useProfileSlice();
 
   // User data
-  const userName = propUserName || 'User Profile';
-  const userEmail = propUserEmail || 'profile@soothera.com';
-  const profileImage = require('../../../assets/user.jpg');
+  const userName = propUserName || '';
+  const userEmail = propUserEmail || '';
+  const profileImage = userProfilePic 
+    ? { uri: userProfilePic.startsWith('http') ? userProfilePic : (userProfilePic.startsWith('file') ? userProfilePic : `${API_CONFIG.BASE_URL}${userProfilePic}`) }
+    : require('../../../assets/user.jpg');
 
   // Source of truth: mockData. Favorites = first 3, You May Also Like = next 4.
   const favoriteSalons = topRatedSalons.slice(0, 3);
@@ -106,7 +111,7 @@ export default function ProfileScreen({
               className="w-[100px] h-[100px] rounded-full justify-center items-center mb-4 overflow-hidden"
               style={{ backgroundColor: colors.primary }}
             >
-              {!imageError ? (
+              {!imageError && (userProfilePic || profileImage) ? (
                 <Image
                   source={profileImage}
                   className="w-full h-full"
@@ -115,7 +120,7 @@ export default function ProfileScreen({
                 />
               ) : (
                 <Text className="text-[40px] font-bold text-white">
-                  {userName.charAt(0).toUpperCase()}
+                  {userName ? userName.charAt(0).toUpperCase() : ''}
                 </Text>
               )}
             </View>

@@ -150,6 +150,23 @@ export async function getTokenRemainingMs(): Promise<number> {
     }
 }
 
+/**
+ * Partially updates the stored user data.
+ */
+export async function updateStoredUserData(updates: Partial<StoredUserData>): Promise<void> {
+    try {
+        const userJson = await AsyncStorage.getItem(USER_DATA_KEY);
+        if (!userJson) return;
+
+        const currentData = JSON.parse(userJson) as StoredUserData;
+        const newData = { ...currentData, ...updates };
+
+        await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(newData));
+    } catch (error) {
+        console.error('[LoginService] Failed to update stored user data:', error);
+    }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Logout
 // ─────────────────────────────────────────────────────────────

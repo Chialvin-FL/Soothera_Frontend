@@ -53,6 +53,7 @@ interface HomeScreenProps {
   onNavigateMassageSpaDetails?: (salonId: string) => void;
   onNavigateBookAppointment?: (salonId: string) => void;
   onNavigateNotifications?: () => void;
+  userProfilePic?: string | null;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -71,6 +72,7 @@ export default function HomeScreen({
   onNavigateMassageSpaDetails,
   onNavigateBookAppointment,
   onNavigateNotifications,
+  userProfilePic,
 }: HomeScreenProps = {}) {
   const insets = useSafeAreaInsets();
   const [showServicesScreen, setShowServicesScreen] = useState(false);
@@ -289,6 +291,7 @@ export default function HomeScreen({
         {/* Header Section */}
         <RisingItem delay={0}>
           <Header
+            profilePic={userProfilePic}
             onProfilePress={onNavigateToProfile}
             onNotificationPress={() => {
               if (useNavigatorOverlays) {

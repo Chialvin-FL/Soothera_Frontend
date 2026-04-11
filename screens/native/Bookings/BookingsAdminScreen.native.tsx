@@ -34,6 +34,7 @@ interface BookingsAdminScreenProps {
     onNavigateBookingDetails?: (bookingId: string) => void;
     onNavigateNotifications?: () => void;
     onNavigateWalkInBooking?: () => void;
+    userProfilePic?: string | null;
 }
 
 export default function BookingsAdminScreen({
@@ -44,6 +45,7 @@ export default function BookingsAdminScreen({
     onNavigateBookingDetails,
     onNavigateNotifications,
     onNavigateWalkInBooking,
+    userProfilePic,
 }: BookingsAdminScreenProps = {}) {
     const insets = useSafeAreaInsets();
     const colorScheme = useColorScheme();
@@ -192,6 +194,7 @@ export default function BookingsAdminScreen({
                 <Header
                     onProfilePress={onNavigateToProfile}
                     onNotificationPress={onNavigateNotifications}
+                    profilePic={userProfilePic}
                 />
             </RisingItem>
 

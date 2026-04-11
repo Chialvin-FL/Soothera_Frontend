@@ -43,7 +43,7 @@ import type { Booking } from '../screens/native/Bookings/types/Booking';
 
 export default function NativeNavigator() {
   const session = useSessionLoader();
-  const { isLoggedIn, isLoadingSession, userRole, userName, userEmail, logout } = session;
+  const { isLoggedIn, isLoadingSession, userRole, userName, userEmail, userProfilePic, logout } = session;
 
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const docUploadSlice = useDocUploadSlice();
@@ -93,11 +93,13 @@ export default function NativeNavigator() {
                     useNavigatorOverlays
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateNotifications={home.openHomeNotifications}
+                    userProfilePic={userProfilePic}
                   />
                 ) : userRole === 'therapist' ? (
                   <HomeTherapistScreen
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateNotifications={home.openHomeNotifications}
+                    userProfilePic={userProfilePic}
                   />
                 ) : (
                   <HomeScreen
@@ -108,6 +110,7 @@ export default function NativeNavigator() {
                     onNavigateMassageSpaDetails={home.openHomeSalon}
                     onNavigateBookAppointment={home.openHomeBook}
                     onNavigateNotifications={home.openHomeNotifications}
+                    userProfilePic={userProfilePic}
                   />
                 )}
               </RisingPage>
@@ -120,12 +123,14 @@ export default function NativeNavigator() {
                     onNavigateBookingDetails={bookings.openBookingDetails}
                     onNavigateWalkInBooking={bookings.openWalkInBooking}
                     onNavigateNotifications={home.openHomeNotifications}
+                    userProfilePic={userProfilePic}
                   />
                 ) : userRole === 'therapist' ? (
                   <BookingsTherapistScreen
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateBookingDetails={bookings.openBookingDetails}
                     onNavigateNotifications={home.openHomeNotifications}
+                    userProfilePic={userProfilePic}
                   />
                 ) : (
                   <BookingsScreen
@@ -136,6 +141,7 @@ export default function NativeNavigator() {
                     onNavigateRatingTherapist={bookings.openBookingRatingTherapist}
                     onNavigateNotifications={home.openHomeNotifications}
                     onNavigateRebook={handleRebook}
+                    userProfilePic={userProfilePic}
                   />
                 )}
               </RisingPage>
@@ -147,6 +153,7 @@ export default function NativeNavigator() {
                   onNavigateChatRoom={messaging.openChat}
                   onNavigateNotifications={home.openHomeNotifications}
                   userRole={userRole}
+                  userProfilePic={userProfilePic}
                 />
               </RisingPage>
 
@@ -167,6 +174,7 @@ export default function NativeNavigator() {
                   onNavigateToAccessLogs={() => profile.openProfileOverlay('logs')}
                   userName={userName}
                   userEmail={userEmail}
+                  userProfilePic={userProfilePic}
                   userRole={userRole}
                   onLogout={async () => {
                     await logout();
@@ -189,6 +197,7 @@ export default function NativeNavigator() {
           />
           <ProfileStack
             profile={profile}
+            session={session}
             onOpenChat={messaging.openChat}
             onSalonPress={home.openHomeSalon}
           />

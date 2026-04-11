@@ -17,13 +17,15 @@ interface BookingsTherapistScreenProps {
     onNavigateNotifications?: () => void;
     onNavigateBookingDetails?: (bookingId: string) => void;
     isActive?: boolean;
+    userProfilePic?: string | null;
 }
 
 export default function BookingsTherapistScreen({
     onNavigateToProfile,
     onNavigateNotifications,
     onNavigateBookingDetails,
-    isActive = true
+    isActive = true,
+    userProfilePic
 }: BookingsTherapistScreenProps) {
     const insets = useSafeAreaInsets();
     const colorScheme = useColorScheme();
@@ -132,6 +134,7 @@ export default function BookingsTherapistScreen({
             <Header
                 onProfilePress={onNavigateToProfile}
                 onNotificationPress={onNavigateNotifications}
+                profilePic={userProfilePic}
             />
 
             <TabNavigation

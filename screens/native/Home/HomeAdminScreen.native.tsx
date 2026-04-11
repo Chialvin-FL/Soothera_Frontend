@@ -15,11 +15,13 @@ interface HomeScreenAdminProps {
     onNavigateToProfile?: () => void;
     onNavigateNotifications?: () => void;
     useNavigatorOverlays?: boolean;
+    userProfilePic?: string | null;
 }
 
 export default function HomeScreenAdmin({
     onNavigateToProfile,
     onNavigateNotifications,
+    userProfilePic,
 }: HomeScreenAdminProps) {
     const insets = useSafeAreaInsets();
     const colorScheme = useColorScheme();
@@ -58,6 +60,7 @@ export default function HomeScreenAdmin({
             >
                 <RisingItem delay={0}>
                     <Header
+                        profilePic={userProfilePic}
                         onProfilePress={onNavigateToProfile}
                         onNotificationPress={onNavigateNotifications}
                     />

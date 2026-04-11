@@ -20,11 +20,13 @@ export interface SessionState {
     userRole: UIRole | null;
     userName: string;
     userEmail: string;
+    userProfilePic: string | null;
     authScreen: 'login' | 'register' | 'role-selection';
     pendingUserData: { email: string; password: string } | null;
     setAuthScreen: (screen: 'login' | 'register' | 'role-selection') => void;
     setPendingUserData: (data: { email: string; password: string } | null) => void;
-    login: (role: number, name: string, email: string) => Promise<void>;
+    login: (role: number, name: string, email: string, profilePic?: string | null) => Promise<void>;
+    updateSessionData: (firstName: string, lastName: string, profilePic?: string | null) => void;
     logout: () => Promise<void>;
 }
 
@@ -37,6 +39,7 @@ export function useSessionLoader(): SessionState {
     const [userRole, setUserRole] = useState<UIRole | null>(null);
     const [userName, setUserName] = useState<string>('');
     const [userEmail, setUserEmail] = useState<string>('');
+    const [userProfilePic, setUserProfilePic] = useState<string | null>(null);
     const [isLoadingSession, setIsLoadingSession] = useState(true);
     const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'role-selection'>('login');
     const [pendingUserData, setPendingUserData] = useState<{ email: string; password: string } | null>(null);
@@ -56,6 +59,7 @@ export function useSessionLoader(): SessionState {
         setUserRole(null);
         setUserName('');
         setUserEmail('');
+        setUserProfilePic(null);
         setAuthScreen('login');
     }, []);
 
@@ -113,16 +117,29 @@ export function useSessionLoader(): SessionState {
             .join(' ') || user.email;
         setUserName(displayName);
         setUserEmail(user.email);
+        setUserProfilePic(user.profilePicture);
         setUserRole(getRoleLabel(user.role) as UIRole);
     };
 
     // ── Login handler (called after API login succeeds) ──
-    const login = async (role: number, name: string, email: string) => {
+    const login = async (role: number, name: string, email: string, profilePic?: string | null) => {
         setUserRole(getRoleLabel(role) as UIRole);
         setUserName(name);
         setUserEmail(email);
+        setUserProfilePic(profilePic ?? null);
         setIsLoggedIn(true);
         await scheduleAutoLogout();
+    };
+
+    // ── Update session handler (called after profile update success) ──
+    const updateSessionData = (firstName: string, lastName: string, profilePic?: string | null) => {
+        const displayName = [firstName, lastName]
+            .filter(Boolean)
+            .join(' ') || userEmail;
+        setUserName(displayName);
+        if (profilePic !== undefined) {
+            setUserProfilePic(profilePic);
+        }
     };
 
     return {
@@ -131,11 +148,13 @@ export function useSessionLoader(): SessionState {
         userRole,
         userName,
         userEmail,
+        userProfilePic,
         authScreen,
         pendingUserData,
         setAuthScreen,
         setPendingUserData,
         login,
+        updateSessionData,
         logout,
     };
 }
