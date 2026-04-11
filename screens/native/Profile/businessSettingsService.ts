@@ -38,15 +38,20 @@ export interface SalonFormData {
 // ─────────────────────────────────────────────────────────────
 
 export async function fetchMyEstablishment(): Promise<FetchEstablishmentResponse> {
+    console.log('[BusinessSettingsService] fetchMyEstablishment: starting...');
     try {
         const session = await loadStoredSession();
         if (!session?.uid) {
+            console.warn('[BusinessSettingsService] fetchMyEstablishment: no session/uid found.');
             return { success: false, message: 'Not authenticated.', data: null };
         }
+        console.log('[BusinessSettingsService] fetchMyEstablishment: session uid =', session.uid);
 
         const response = await viewSalons();
+        console.log('[BusinessSettingsService] fetchMyEstablishment: API response =', JSON.stringify(response));
 
         if (!response.success || !response.data) {
+            console.log('[BusinessSettingsService] fetchMyEstablishment: no data in response, treating as no establishment.');
             return { success: true, message: 'No establishment found.', data: null };
         }
 
@@ -58,7 +63,10 @@ export async function fetchMyEstablishment(): Promise<FetchEstablishmentResponse
         // Paginated wrapper: data may actually be { items, ... }
         const paginatedData = response.data as any;
         const items: SalonEstablishment[] = paginatedData?.items ?? all;
+        console.log('[BusinessSettingsService] fetchMyEstablishment: total items =', items.length, '| looking for uid =', session.uid);
+
         const mine = items.find((s) => s.uid === session.uid) ?? null;
+        console.log('[BusinessSettingsService] fetchMyEstablishment: mine =', mine ? `found (id: ${mine.id})` : 'not found');
 
         return {
             success: true,
@@ -66,8 +74,10 @@ export async function fetchMyEstablishment(): Promise<FetchEstablishmentResponse
             data: mine,
         };
     } catch (err: any) {
+        console.warn('[BusinessSettingsService] fetchMyEstablishment: caught error =', err);
         // 404 simply means no establishment has been created yet — not a real error
-        if (err?.response?.status === 404) {
+        if (err?.statusCode === 404 || err?.response?.status === 404) {
+            console.log('[BusinessSettingsService] fetchMyEstablishment: 404 = no establishment yet, suppressing.');
             return { success: true, message: 'No establishment found.', data: null };
         }
         const apiErr = err as ApiError;
@@ -87,16 +97,31 @@ export async function saveEstablishment(
     form: SalonFormData,
     existingId?: string | null,
 ): Promise<BusinessSettingsActionResponse> {
+    const mode = existingId ? 'UPDATE' : 'CREATE';
+    console.log(`[BusinessSettingsService] saveEstablishment: mode=${mode}, existingId=${existingId ?? 'none'}`);
+    console.log('[BusinessSettingsService] saveEstablishment: form =', JSON.stringify({
+        name: form.name,
+        address: form.address,
+        description: form.description,
+        contactNumber: form.contactNumber,
+        businessHours: form.businessHours,
+        facebookLink: form.facebookLink,
+        hasPictureFile: !!form.pictureFile?.uri,
+    }));
+
     try {
         const session = await loadStoredSession();
         if (!session?.uid) {
+            console.warn('[BusinessSettingsService] saveEstablishment: no session found — aborting.');
             return { success: false, message: 'Not authenticated.' };
         }
+        console.log('[BusinessSettingsService] saveEstablishment: session uid =', session.uid);
 
         const socials = form.facebookLink.trim() ? [form.facebookLink.trim()] : [];
 
         if (existingId) {
             // ── UPDATE ──
+            console.log('[BusinessSettingsService] saveEstablishment: calling updateSalon for id =', existingId);
             const response = await updateSalon(existingId, {
                 name: form.name,
                 address: form.address,
@@ -106,6 +131,7 @@ export async function saveEstablishment(
                 socials,
                 pictureFile: form.pictureFile ?? undefined,
             });
+            console.log('[BusinessSettingsService] saveEstablishment: updateSalon response =', JSON.stringify(response));
 
             return {
                 success: response.success,
@@ -113,6 +139,7 @@ export async function saveEstablishment(
             };
         } else {
             // ── CREATE ──
+            console.log('[BusinessSettingsService] saveEstablishment: calling addSalon with uid =', session.uid);
             const response = await addSalon({
                 name: form.name,
                 address: form.address,
@@ -123,17 +150,19 @@ export async function saveEstablishment(
                 uid: session.uid,
                 pictureFile: form.pictureFile ?? undefined,
             });
+            console.log('[BusinessSettingsService] saveEstablishment: addSalon response =', JSON.stringify(response));
 
             return {
                 success: response.success,
                 message: response.message,
             };
         }
-    } catch (err) {
+    } catch (err: any) {
+        console.error(`[BusinessSettingsService] saveEstablishment: ERROR during ${mode}:`, err);
         const apiErr = err as ApiError;
         return {
             success: false,
-            message: apiErr?.message ?? 'Failed to save establishment.',
+            message: apiErr?.message ?? `Failed to ${mode === 'CREATE' ? 'create' : 'update'} establishment.`,
         };
     }
 }
@@ -145,10 +174,13 @@ export async function saveEstablishment(
 export async function removeEstablishment(
     id: string,
 ): Promise<BusinessSettingsActionResponse> {
+    console.log('[BusinessSettingsService] removeEstablishment: deleting id =', id);
     try {
         const response = await deleteSalon(id);
+        console.log('[BusinessSettingsService] removeEstablishment: deleteSalon response =', JSON.stringify(response));
         return { success: response.success, message: response.message };
-    } catch (err) {
+    } catch (err: any) {
+        console.error('[BusinessSettingsService] removeEstablishment: ERROR:', err);
         const apiErr = err as ApiError;
         return {
             success: false,

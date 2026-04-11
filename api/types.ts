@@ -177,7 +177,7 @@ export interface SalonEstablishment {
 }
 
 /**
- * POST /api/SalonEstablishment/add — request body.
+ * POST /api/Establishment/add — request body.
  * Sent as FormData because it includes a file upload.
  */
 export interface CreateSalonRequest {
@@ -192,7 +192,7 @@ export interface CreateSalonRequest {
 }
 
 /**
- * PUT /api/SalonEstablishment/update/:id — request body.
+ * PUT /api/Establishment/update/:id — request body.
  * Sent as FormData. All fields optional.
  */
 export interface UpdateSalonRequest {

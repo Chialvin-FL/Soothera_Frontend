@@ -6,7 +6,6 @@ import {
     TextInput,
     Image,
     ActivityIndicator,
-    Alert,
     Modal,
     StyleSheet,
 } from 'react-native';
@@ -18,6 +17,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { RisingItem } from '@/components/native/RisingItem';
 import * as ImagePicker from 'expo-image-picker';
 import { useBusinessSettingsSlice } from '../businessSettingsSlice';
+import { SuccessModal } from '@/components/native/SuccessModal';
+import { API_CONFIG } from '@/api/config';
 
 // ── Input Field Component (defined outside to keep a stable reference) ──
 interface InputFieldProps {
@@ -105,6 +106,7 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
         form,
         setForm,
         existingId,
+        establishment,
         isLoading,
         isSaving,
         isDeleting,
@@ -116,12 +118,31 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
     } = useBusinessSettingsSlice();
 
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [feedbackModal, setFeedbackModal] = useState<{
+        visible: boolean;
+        variant: 'success' | 'error';
+        title: string;
+        message: string;
+    }>({
+        visible: false,
+        variant: 'success',
+        title: '',
+        message: '',
+    });
+
+    const showFeedback = (variant: 'success' | 'error', title: string, message: string) => {
+        console.log(`[BusinessSettingsScreen] showFeedback: variant=${variant}, title=${title}`);
+        setFeedbackModal({ visible: true, variant, title, message });
+    };
+
+    const hideFeedback = () => setFeedbackModal((prev) => ({ ...prev, visible: false }));
 
     // ── Image Picker ──
     const pickImage = async () => {
+        console.log('[BusinessSettingsScreen] pickImage: requesting permission...');
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
-            Alert.alert('Permission required', 'Please allow access to your photo library.');
+            showFeedback('error', 'Permission Required', 'Please allow access to your photo library.');
             return;
         }
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -132,6 +153,7 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
         });
         if (!result.canceled && result.assets[0]) {
             const asset = result.assets[0];
+            console.log('[BusinessSettingsScreen] pickImage: image selected =', asset.uri);
             setForm({
                 pictureFile: {
                     uri: asset.uri,
@@ -139,31 +161,47 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                     type: asset.mimeType ?? 'image/jpeg',
                 },
             });
+        } else {
+            console.log('[BusinessSettingsScreen] pickImage: cancelled or no asset.');
         }
     };
 
     // ── Save handler ──
     const onSave = () => {
+        console.log('[BusinessSettingsScreen] onSave pressed. existingId =', existingId ?? 'none (CREATE)');
         clearMessages();
         // Massage spa image is required when creating a new establishment
         if (!existingId && !form.pictureFile?.uri) {
-            Alert.alert('Image Required', 'Please select a massage spa image before creating your establishment.');
+            console.warn('[BusinessSettingsScreen] onSave: missing image for CREATE.');
+            showFeedback('error', 'Image Required', 'Please select a massage spa image before creating your establishment.');
             return;
         }
+        // Capture mode before async — closure would read stale existingId after reload
+        const isCreate = !existingId;
         handleSave(() => {
-            Alert.alert('Success', 'Business settings saved successfully!');
+            console.log('[BusinessSettingsScreen] onSave: handleSave success callback fired. isCreate =', isCreate);
+            showFeedback(
+                'success',
+                isCreate ? 'Establishment Created!' : 'Changes Saved!',
+                isCreate
+                    ? 'Your massage spa establishment has been created successfully.'
+                    : 'Your business settings have been updated successfully.',
+            );
         });
     };
 
     // ── Delete handler ──
     const onDelete = () => {
+        console.log('[BusinessSettingsScreen] onDelete pressed.');
         setShowDeleteConfirm(true);
     };
 
     const confirmDelete = () => {
+        console.log('[BusinessSettingsScreen] confirmDelete: user confirmed deletion.');
         setShowDeleteConfirm(false);
         handleDelete(() => {
-            Alert.alert('Deleted', 'Your establishment has been removed.');
+            console.log('[BusinessSettingsScreen] confirmDelete: handleDelete success callback fired.');
+            showFeedback('success', 'Establishment Deleted', 'Your massage spa establishment has been removed.');
         });
     };
 
@@ -340,9 +378,14 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                             justifyContent: 'center',
                         }}
                     >
-                        {form.pictureFile?.uri ? (
+                        {form.pictureFile?.uri || establishment?.salonPicture ? (
                             <Image
-                                source={{ uri: form.pictureFile.uri }}
+                                source={{ 
+                                    uri: form.pictureFile?.uri || 
+                                         (establishment?.salonPicture?.startsWith('http') 
+                                            ? establishment.salonPicture 
+                                            : `${API_CONFIG.BASE_URL}${establishment.salonPicture}`)
+                                }}
                                 style={{ width: '100%', height: '100%', borderRadius: 14 }}
                                 resizeMode="cover"
                             />
@@ -360,7 +403,7 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                             </View>
                         )}
                         {/* Edit overlay if image exists */}
-                        {form.pictureFile?.uri && (
+                        {(form.pictureFile?.uri || establishment?.salonPicture) && (
                             <View
                                 style={{
                                     position: 'absolute',
@@ -578,6 +621,15 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                     </View>
                 </View>
             </Modal>
+
+            {/* ── Feedback Modal (Success / Error) ── */}
+            <SuccessModal
+                visible={feedbackModal.visible}
+                variant={feedbackModal.variant}
+                title={feedbackModal.title}
+                message={feedbackModal.message}
+                onClose={hideFeedback}
+            />
         </View>
     );
 }

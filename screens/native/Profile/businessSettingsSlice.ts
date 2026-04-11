@@ -66,13 +66,20 @@ export function useBusinessSettingsSlice(): BusinessSettingsSliceState {
 
     // ── Load on mount ──
     const loadEstablishment = useCallback(async () => {
+        console.log('[BusinessSettingsSlice] loadEstablishment: starting...');
         setIsLoading(true);
         clearMessages();
 
         const result = await fetchMyEstablishment();
+        console.log('[BusinessSettingsSlice] loadEstablishment: result =', JSON.stringify({
+            success: result.success,
+            message: result.message,
+            hasData: !!result.data,
+        }));
 
         if (result.success && result.data) {
             const e = result.data;
+            console.log('[BusinessSettingsSlice] loadEstablishment: setting establishment id =', e.id);
             setEstablishment(e);
             setExistingId(e.id);
             setFormState({
@@ -85,7 +92,10 @@ export function useBusinessSettingsSlice(): BusinessSettingsSliceState {
                 pictureFile: null, // don't pre-fill — user picks a new one if desired
             });
         } else if (!result.success) {
+            console.warn('[BusinessSettingsSlice] loadEstablishment: error =', result.message);
             setError(result.message);
+        } else {
+            console.log('[BusinessSettingsSlice] loadEstablishment: no establishment found, form stays empty.');
         }
         // result.success but no data = no establishment yet — leave form empty
 
@@ -98,7 +108,9 @@ export function useBusinessSettingsSlice(): BusinessSettingsSliceState {
 
     // ── Save (create or update) ──
     const handleSave = async (onSuccess?: () => void) => {
+        console.log('[BusinessSettingsSlice] handleSave: called. existingId =', existingId ?? 'none (CREATE)');
         if (!form.name.trim() || !form.address.trim()) {
+            console.warn('[BusinessSettingsSlice] handleSave: validation failed — name or address missing.');
             setError('Massage spa name and address are required.');
             return;
         }
@@ -106,14 +118,18 @@ export function useBusinessSettingsSlice(): BusinessSettingsSliceState {
         setIsSaving(true);
         clearMessages();
 
+        console.log('[BusinessSettingsSlice] handleSave: calling saveEstablishment...');
         const result = await saveEstablishment(form, existingId);
+        console.log('[BusinessSettingsSlice] handleSave: result =', JSON.stringify(result));
 
         if (result.success) {
             setSuccessMessage(result.message || 'Saved successfully.');
             // Reload to get updated data and the new ID (in case it was a create)
+            console.log('[BusinessSettingsSlice] handleSave: success, reloading establishment...');
             await loadEstablishment();
             if (onSuccess) onSuccess();
         } else {
+            console.warn('[BusinessSettingsSlice] handleSave: failed =', result.message);
             setError(result.message);
         }
 
@@ -122,20 +138,27 @@ export function useBusinessSettingsSlice(): BusinessSettingsSliceState {
 
     // ── Delete ──
     const handleDelete = async (onSuccess?: () => void) => {
-        if (!existingId) return;
+        console.log('[BusinessSettingsSlice] handleDelete: called. existingId =', existingId);
+        if (!existingId) {
+            console.warn('[BusinessSettingsSlice] handleDelete: no existingId, aborting.');
+            return;
+        }
 
         setIsDeleting(true);
         clearMessages();
 
         const result = await removeEstablishment(existingId);
+        console.log('[BusinessSettingsSlice] handleDelete: result =', JSON.stringify(result));
 
         if (result.success) {
+            console.log('[BusinessSettingsSlice] handleDelete: success, clearing state.');
             setSuccessMessage(result.message || 'Establishment deleted.');
             setEstablishment(null);
             setExistingId(null);
             setFormState({ ...EMPTY_FORM });
             if (onSuccess) onSuccess();
         } else {
+            console.warn('[BusinessSettingsSlice] handleDelete: failed =', result.message);
             setError(result.message);
         }
 
