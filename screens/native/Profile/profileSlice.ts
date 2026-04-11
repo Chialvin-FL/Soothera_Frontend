@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { performChangePassword, performApiLogout, performUpdateProfile, performFetchProfile } from './profileService';
 import { UpdateUserRequest, UserDto } from '@/api/types';
+import { getStoredToken } from '@/api/axiosClient';
 
 // ─────────────────────────────────────────────────────────────
 // Profile Slice — manages profile related state + async actions
@@ -29,7 +30,6 @@ export interface ProfileSliceState {
      */
     handleUpdateEmail: (
         newEmail: string,
-        firebaseToken: string,
         onSuccess?: () => void
     ) => Promise<void>;
     handleFetchProfile: (
@@ -66,7 +66,7 @@ export function useProfileSlice(): ProfileSliceState {
         setIsLoading(true);
         clearMessages();
 
-        const result = await performChangePassword(newPass, currentPass);
+        const result = await performChangePassword(newPass);
 
         if (result.success) {
             setSuccessMessage(result.message);
@@ -110,9 +110,9 @@ export function useProfileSlice(): ProfileSliceState {
 
     const handleUpdateEmail = async (
         newEmail: string,
-        firebaseToken: string,
         onSuccess?: () => void
     ) => {
+        const firebaseToken = await getStoredToken() || '';
         // Email changes route through updateUser (PUT /api/User/update-user/:uid),
         // which accepts Email + FirebaseToken as [FromForm] fields on the backend.
         await handleUpdateProfile(

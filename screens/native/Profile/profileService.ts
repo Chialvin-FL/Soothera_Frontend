@@ -1,6 +1,7 @@
 import { changePassword as apiChangePassword, logout as apiLogout } from '@/api/endpoints/apiAuth';
 import { updateUser as apiUpdateUser, getUsers as apiGetUsers } from '@/api/endpoints/apiUser';
 import type { ApiError, UpdateUserRequest, UserDto } from '@/api/types';
+import { getStoredToken } from '@/api/axiosClient';
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -19,17 +20,14 @@ export interface ProfileDataResponse extends ProfileActionResponse {
 // Profile Actions
 // ─────────────────────────────────────────────────────────────
 
-/**
- * Changes the user's password using the provided new password and current password (as fallback for firebase token).
- */
 export async function performChangePassword(
-    newPassword: string,
-    currentPassword: string
+    newPassword: string
 ): Promise<ProfileActionResponse> {
     try {
+        const token = await getStoredToken();
         const response = await apiChangePassword({ 
             newPassword, 
-            firebaseToken: currentPassword 
+            firebaseToken: token || '' 
         });
 
         if (!response.success) {

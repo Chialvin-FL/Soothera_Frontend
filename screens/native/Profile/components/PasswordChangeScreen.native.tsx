@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useProfileSlice } from '../profileSlice';
+import { SuccessModal } from '@/components/native/SuccessModal';
 
 interface PasswordChangeScreenProps {
   onBack: () => void;
@@ -23,21 +24,79 @@ export default function PasswordChangeScreen({ onBack }: PasswordChangeScreenPro
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  
+  const [modal, setModal] = useState<{
+    visible: boolean;
+    variant: 'success' | 'error';
+    title: string;
+    message: string;
+  }>({
+    visible: false,
+    variant: 'success',
+    title: '',
+    message: '',
+  });
 
-  const { isLoading, error, successMessage, handleChangePassword } = useProfileSlice();
+  const { isLoading, error, successMessage, handleChangePassword, clearMessages } = useProfileSlice();
+  
+  // Watch for API errors to show in the modal
+  useEffect(() => {
+    if (error) {
+        setModal({
+            visible: true,
+            variant: 'error',
+            title: 'Update Failed',
+            message: error,
+        });
+    }
+  }, [error]);
 
   const handleSave = async () => {
     if (isLoading) return;
     console.log('[PasswordChange] Update password button pressed.');
-    console.log('[PasswordChange] Calling handleChangePassword API...');
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        setModal({
+            visible: true,
+            variant: 'error',
+            title: 'Missing Information',
+            message: 'Please fill in all fields to change your password.',
+        });
+        return;
+    }
 
+    if (newPassword !== confirmPassword) {
+        setModal({
+            visible: true,
+            variant: 'error',
+            title: 'Passwords Mismatch',
+            message: 'The new password and confirmation password do not match.',
+        });
+        return;
+    }
+
+    console.log('[PasswordChange] Calling handleChangePassword API...');
     await handleChangePassword(currentPassword, newPassword, confirmPassword, () => {
       console.log('[PasswordChange] Password update SUCCESS.');
-      // Delay navigation slightly so they can see success msg
-      setTimeout(() => {
-        onBack();
-      }, 1000);
+      setModal({
+        visible: true,
+        variant: 'success',
+        title: 'Password Updated',
+        message: 'Your password has been successfully changed.',
+      });
     });
+  };
+
+  const handleModalClose = () => {
+    const wasSuccess = modal.variant === 'success';
+    setModal(prev => ({ ...prev, visible: false }));
+    
+    if (wasSuccess) {
+        onBack();
+    } else {
+        // Clear slice error state so it can be triggered again if needed
+        clearMessages();
+    }
   };
 
   return (
@@ -74,16 +133,7 @@ export default function PasswordChangeScreen({ onBack }: PasswordChangeScreenPro
           paddingHorizontal: 20,
         }}
       >
-        {error ? (
-          <Text className="text-sm font-semibold mb-3 text-red-500">
-            {error}
-          </Text>
-        ) : null}
-        {successMessage ? (
-          <Text className="text-sm font-semibold mb-3 text-green-500">
-            {successMessage}
-          </Text>
-        ) : null}
+        {/* Removed inline messages in favor of SuccessModal */}
 
         <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
           Current Password
@@ -163,6 +213,13 @@ export default function PasswordChangeScreen({ onBack }: PasswordChangeScreenPro
           </Text>
         </TouchableOpacity>
       </View>
+      <SuccessModal 
+        visible={modal.visible}
+        variant={modal.variant}
+        title={modal.title}
+        message={modal.message}
+        onClose={handleModalClose}
+      />
     </View>
   );
 }

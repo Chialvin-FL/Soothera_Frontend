@@ -143,7 +143,7 @@ export default function ProfileEditScreen({ onBack, session: activeSession }: Pr
             // Based on requirements, we use performUpdateEmail which needs a firebaseToken.
             // The user usually has to provide their current password or we have a token stored.
             // Given the requirement "use @apiAuth changeemail", we proceed.
-            await handleUpdateEmail(email, 'NEEDS_REAUTH_TOKEN', () => {
+            await handleUpdateEmail(email, () => {
                 console.log('[ProfileEdit] Email update request success.');
             });
         }
