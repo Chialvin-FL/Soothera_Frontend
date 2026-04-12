@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, ScrollView, Image, TouchableOpacity, TextInput, BackHandler, Platform, Keyboard } from 'react-native';
+import { View, ScrollView, Image, TouchableOpacity, TextInput, BackHandler, Platform, Keyboard, Switch } from 'react-native';
 import { Text } from '@/components/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,17 @@ import { SalonDetails } from './types/SalonDetails';
 import { Service } from './types/Home';
 import { Therapist } from './types/SalonDetails';
 import { services } from './configs/mockData';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
+
+let RNWebView: any = null;
+try {
+  RNWebView = require('react-native-webview');
+} catch (e) {
+  RNWebView = null;
+}
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
 interface BookingData {
   service: Service | null;
@@ -21,6 +32,10 @@ interface BookingData {
   promoCode: string;
   salonDetails: SalonDetails;
   totalPrice: number;
+  isPWD?: boolean;
+  pwdIdImage?: string | null;
+  isHomeService?: boolean;
+  userLocation?: { latitude: number; longitude: number } | null;
   customerDetails?: {
     firstName: string;
     lastName: string;
@@ -53,6 +68,174 @@ const addOns: AddOn[] = [
   { id: '4', name: 'Face Mask', price: 150 },
 ];
 
+// Map component for generic select location
+const MovableMapView = ({
+  location,
+  onLocationChange,
+}: {
+  location: { latitude: number; longitude: number } | null;
+  onLocationChange: (loc: { latitude: number; longitude: number }) => void;
+}) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  const isDark = colorScheme === 'dark';
+  const primaryColorHex = colors.primary || '#0d9488';
+
+  const defaultLat = 10.3157; // Cebu City approx
+  const defaultLng = 123.8854;
+  
+  const [initialLocation] = useState(location);
+  const initialLat = initialLocation?.latitude ?? defaultLat;
+  const initialLng = initialLocation?.longitude ?? defaultLng;
+
+  const webviewRef = useRef<any>(null);
+
+  // Update map pin when external location prop changes (e.g., Use Current Location)
+  useEffect(() => {
+    if (location && webviewRef.current) {
+      webviewRef.current.injectJavaScript(`
+        if (window.updateMapLocation) {
+          window.updateMapLocation(${location.latitude}, ${location.longitude});
+        }
+        true;
+      `);
+    }
+  }, [location?.latitude, location?.longitude]);
+
+  if (Platform.OS !== 'web' && RNWebView) {
+    const WebViewComp = RNWebView.default || RNWebView.WebView;
+
+    const html = useMemo(() => `<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map { height: 100%; margin: 0; padding: 0; }
+    .leaflet-container { height: 100%; width: 100%; }
+    .custom-marker {
+      background-color: ${primaryColorHex};
+      width: 30px;
+      height: 30px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .custom-marker::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(45deg);
+      width: 8px;
+      height: 8px;
+      background-color: white;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    var mapboxToken = '${MAPBOX_TOKEN}';
+    const map = L.map('map', { zoomControl: false }).setView([${initialLat}, ${initialLng}], 14);
+    
+    L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
+      attribution: '© Mapbox © OpenStreetMap',
+      maxZoom: 19,
+      tileSize: 512,
+      zoomOffset: -1
+    }).addTo(map);
+
+    var customIcon = L.divIcon({
+      className: 'custom-marker-container',
+      html: '<div class="custom-marker"></div>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 30]
+    });
+    
+    var marker = L.marker([${initialLat}, ${initialLng}], { icon: customIcon, draggable: true }).addTo(map);
+    
+    marker.on('dragend', function() {
+      var pos = marker.getLatLng();
+      map.panTo(pos);
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        latitude: pos.lat,
+        longitude: pos.lng
+      }));
+    });
+
+    map.on('click', function(e) {
+      marker.setLatLng(e.latlng);
+      map.panTo(e.latlng);
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        latitude: e.latlng.lat,
+        longitude: e.latlng.lng
+      }));
+    });
+
+    window.updateMapLocation = function(newLat, newLng) {
+      var newPos = L.latLng(newLat, newLng);
+      var currentPos = marker.getLatLng();
+      // Only move if significantly different to avoid feedback loop
+      if (currentPos.distanceTo(newPos) > 1) {
+        marker.setLatLng(newPos);
+        map.panTo(newPos);
+      }
+    };
+  </script>
+</body>
+</html>`, [colorScheme]); // Recreate if theme changes
+
+    return (
+      <View
+        className="w-full rounded-xl overflow-hidden mt-4 mb-2"
+        style={{
+          height: 300,
+          borderWidth: 1,
+          borderColor: isDark ? '#3a3a3a' : '#E5E7EB',
+        }}
+      >
+        <WebViewComp
+          ref={webviewRef}
+          originWhitelist={["*"]}
+          source={{ html }}
+          style={{ flex: 1 }}
+          onMessage={(event: any) => {
+            try {
+              const data = JSON.parse(event.nativeEvent.data);
+              if (data.latitude && data.longitude) {
+                onLocationChange({ latitude: data.latitude, longitude: data.longitude });
+              }
+            } catch (e) {}
+          }}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View
+      className="w-full rounded-xl overflow-hidden mt-4 mb-2"
+      style={{
+        height: 300,
+        backgroundColor: colors.background,
+        borderWidth: 1,
+        borderColor: isDark ? '#3a3a3a' : '#E5E7EB',
+      }}
+    >
+      <View className="flex-1 items-center justify-center">
+        <Ionicons name="map-outline" size={48} color={colors.icon} />
+        <Text className="text-sm mt-2" style={{ color: colors.icon }}>
+          Map View (Web not supported)
+        </Text>
+      </View>
+    </View>
+  );
+};
+
 export default function BookAppointmentScreen({
   salonDetails,
   onBack,
@@ -65,7 +248,7 @@ export default function BookAppointmentScreen({
   const insets = useSafeAreaInsets();
   const isDark = colorScheme === 'dark';
 
-  const TOTAL_STEPS = isAdmin ? 6 : 5;
+  const TOTAL_STEPS = isAdmin ? 7 : 6;
 
   // Step state
   const [currentStep, setCurrentStep] = useState(1);
@@ -84,10 +267,16 @@ export default function BookAppointmentScreen({
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [instructions, setInstructions] = useState('');
 
-  // Step 3: Therapist preference
+  // Step 3: Options
+  const [isPWD, setIsPWD] = useState(false);
+  const [pwdIdImage, setPwdIdImage] = useState<string | null>(null);
+  const [isHomeService, setIsHomeService] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  // Step 4: Therapist preference
   const [selectedTherapist, setSelectedTherapist] = useState<string | null>(null); // null means "Any Therapist"
 
-  // Step 4: Date & Time & Promo Code
+  // Step 5: Date & Time & Promo Code
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<Date>(new Date());
   const [promoCode, setPromoCode] = useState('');
@@ -214,9 +403,9 @@ export default function BookAppointmentScreen({
     }
   }, [selectedService, selectedDuration]);
 
-  // Handle keyboard show/hide for steps 2 and 4
+  // Handle keyboard show/hide for steps 2 and 5
   useEffect(() => {
-    if (currentStep !== 2 && currentStep !== 4) {
+    if (currentStep !== 2 && currentStep !== 5) {
       setKeyboardHeight(0);
       return;
     }
@@ -245,9 +434,9 @@ export default function BookAppointmentScreen({
     };
   }, [currentStep]);
 
-  // Auto-scroll to selected date when step 4 is shown
+  // Auto-scroll to selected date when step 5 is shown
   useEffect(() => {
-    if (currentStep === 4) {
+    if (currentStep === 5) {
       const selectedDateIndex = monthDates.findIndex(date => isSameDay(date, selectedDate));
       if (selectedDateIndex >= 0 && dateScrollViewRef.current) {
         setTimeout(() => {
@@ -259,9 +448,9 @@ export default function BookAppointmentScreen({
     }
   }, [currentStep, selectedDate, monthDates]);
 
-  // Auto-scroll to selected time when step 4 is shown
+  // Auto-scroll to selected time when step 5 is shown
   useEffect(() => {
-    if (currentStep === 4) {
+    if (currentStep === 5) {
       const selectedTimeIndex = timeSlots.findIndex(slot => 
         selectedTime.getHours() === slot.getHours() &&
         selectedTime.getMinutes() === slot.getMinutes()
@@ -334,6 +523,10 @@ export default function BookAppointmentScreen({
         promoCode: promoCode,
         salonDetails: salonDetails,
         totalPrice: calculatePrice(),
+        isPWD: isPWD,
+        pwdIdImage: pwdIdImage,
+        isHomeService: isHomeService,
+        userLocation: userLocation,
         ...(isAdmin ? { customerDetails } : {}),
       };
 
@@ -531,8 +724,147 @@ export default function BookAppointmentScreen({
     );
   };
 
-  // Render Step 3: Therapist Preference
+  const pickPwdImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      alert('Permission Required: Please allow access to your photo library.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true, // Freeform cropping
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setPwdIdImage(result.assets[0].uri);
+    }
+  };
+
+  const fetchCurrentLocation = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Permission to access location was denied');
+      return;
+    }
+    const loc = await Location.getCurrentPositionAsync({});
+    setUserLocation({
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+    });
+  };
+
+  // Render Step 3: Options (PWD & Home Service)
   const renderStep3 = () => {
+    return (
+      <View className="px-5 py-4">
+        <Text className="text-lg font-semibold mb-6" style={{ color: colors.text }}>
+          Additional Options
+        </Text>
+
+        {/* PWD Toggle */}
+        <View className="flex-row items-center justify-between mb-4">
+          <View className="flex-1 mr-4">
+            <Text className="text-base font-semibold" style={{ color: colors.text }}>
+              Person with Disability (PWD)
+            </Text>
+            <Text className="text-sm mt-1" style={{ color: colors.icon }}>
+              Enable this if you are a PWD. You will need to upload your PWD ID.
+            </Text>
+          </View>
+          <Switch
+            value={isPWD}
+            onValueChange={setIsPWD}
+            trackColor={{ false: isDark ? '#3a3a3a' : '#E5E7EB', true: primaryColor + '80' }}
+            thumbColor={isPWD ? primaryColor : '#f4f3f4'}
+          />
+        </View>
+
+        {/* PWD ID Image Picker */}
+        {isPWD && (
+          <View className="mb-6">
+            <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
+              PWD ID Image *
+            </Text>
+            <TouchableOpacity
+              onPress={pickPwdImage}
+              style={{
+                height: 160,
+                borderRadius: 16,
+                overflow: 'hidden',
+                backgroundColor: isDark ? '#1F1F1F' : '#F3F4F6',
+                borderWidth: 2,
+                borderStyle: 'dashed',
+                borderColor: isDark ? '#3a3a3a' : '#D1D5DB',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {pwdIdImage ? (
+                <Image source={{ uri: pwdIdImage }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+              ) : (
+                <View style={{ alignItems: 'center' }}>
+                  <Ionicons name="camera-outline" size={36} color={colors.icon} />
+                  <Text style={{ color: colors.icon, marginTop: 8, fontSize: 13 }}>
+                    Tap to upload your PWD ID
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={{ height: 1, backgroundColor: isDark ? '#3a3a3a' : '#E5E7EB', marginBottom: 20 }} />
+
+        {/* Home Service Toggle */}
+        <View className="flex-row items-center justify-between mb-4">
+          <View className="flex-1 mr-4">
+            <Text className="text-base font-semibold" style={{ color: colors.text }}>
+              Home Service
+            </Text>
+            <Text className="text-sm mt-1" style={{ color: colors.icon }}>
+              Our therapists will come to your location.
+            </Text>
+          </View>
+          <Switch
+            value={isHomeService}
+            onValueChange={setIsHomeService}
+            trackColor={{ false: isDark ? '#3a3a3a' : '#E5E7EB', true: primaryColor + '80' }}
+            thumbColor={isHomeService ? primaryColor : '#f4f3f4'}
+          />
+        </View>
+
+        {/* Home Service Map */}
+        {isHomeService && (
+          <View className="mb-4">
+            <Text className="text-sm font-semibold mb-2" style={{ color: colors.text }}>
+              Your Location *
+            </Text>
+            
+            <TouchableOpacity
+              className="flex-row items-center justify-center p-3 rounded-xl border mb-2"
+              style={{ borderColor: primaryColor, backgroundColor: primaryColor + '10' }}
+              onPress={fetchCurrentLocation}
+            >
+              <Ionicons name="navigate-outline" size={18} color={primaryColor} />
+              <Text className="text-sm font-semibold ml-2" style={{ color: primaryColor }}>
+                Use Current Location
+              </Text>
+            </TouchableOpacity>
+            
+            <MovableMapView location={userLocation} onLocationChange={setUserLocation} />
+            {userLocation && (
+              <Text className="text-xs text-center mt-2" style={{ color: colors.icon }}>
+                Selected: {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
+              </Text>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Render Step 4: Therapist Preference
+  const renderStep4 = () => {
     return (
       <View className="px-5 py-4">
         <Text className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
@@ -621,8 +953,8 @@ export default function BookAppointmentScreen({
     );
   };
 
-  // Render Step 4: Date & Time & Promo Code
-  const renderStep4 = () => {
+  // Render Step 5: Date & Time & Promo Code
+  const renderStep5 = () => {
     const monthNames = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
@@ -761,8 +1093,8 @@ export default function BookAppointmentScreen({
     );
   };
 
-  // Render Step 5: Booking Summary
-  const renderStep5 = () => {
+  // Render Step 6: Booking Summary
+  const renderStep6 = () => {
     const totalPrice = calculatePrice();
     const selectedTherapistData = selectedTherapist
       ? salonDetails.therapists.find(t => t.id === selectedTherapist)
@@ -1153,6 +1485,8 @@ export default function BookAppointmentScreen({
         return renderStep4();
       case 5:
         return renderStep5();
+      case 6:
+        return renderStep6();
       default:
         return null;
     }
@@ -1174,10 +1508,12 @@ export default function BookAppointmentScreen({
       case 2:
         return selectedDuration !== '';
       case 3:
-        return true; // Therapist selection is optional (can be "Any Therapist")
+        return (!isPWD || pwdIdImage !== null) && (!isHomeService || userLocation !== null);
       case 4:
-        return true; // Date and time are always selected, promo code is optional
+        return true; // Therapist selection is optional (can be "Any Therapist")
       case 5:
+        return true; // Date and time are always selected, promo code is optional
+      case 6:
         return true; // Summary step
       default:
         return false;
@@ -1237,7 +1573,7 @@ export default function BookAppointmentScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ 
-          paddingBottom: (currentStep === 2 || currentStep === 4) && keyboardHeight > 0 
+          paddingBottom: (currentStep === 2 || currentStep === 5) && keyboardHeight > 0 
             ? keyboardHeight + (80 + Math.max(insets.bottom, 16))
             : undefined
         }}
@@ -1247,12 +1583,12 @@ export default function BookAppointmentScreen({
 
       {/* Footer */}
       <View
-        className={`px-5 py-4 border-t ${(currentStep === 2 || currentStep === 4) && keyboardHeight > 0 ? 'absolute left-0 right-0' : ''}`}
+        className={`px-5 py-4 border-t ${(currentStep === 2 || currentStep === 5) && keyboardHeight > 0 ? 'absolute left-0 right-0' : ''}`}
         style={{
           borderTopColor: isDark ? '#3a3a3a' : '#E5E7EB',
           paddingBottom: insets.bottom || 16,
           backgroundColor: 'white',
-          ...((currentStep === 2 || currentStep === 4) && keyboardHeight > 0 ? {
+          ...((currentStep === 2 || currentStep === 5) && keyboardHeight > 0 ? {
             bottom: keyboardHeight,
           } : {}),
         }}
