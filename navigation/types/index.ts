@@ -6,6 +6,7 @@ export type TabId = 'home' | 'bookings' | 'messaging' | 'profile';
 export type ProfileOverlayId =
     | 'edit'
     | 'password'
+    | 'schedule'
     | 'notifications'
     | 'help'
     | 'staff'

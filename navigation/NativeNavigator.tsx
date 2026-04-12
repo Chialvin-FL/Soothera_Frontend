@@ -162,6 +162,7 @@ export default function NativeNavigator() {
                   isActive={activeTab === 'profile'}
                   onNavigateToProfileEdit={() => profile.openProfileOverlay('edit')}
                   onNavigateToPasswordChange={() => profile.openProfileOverlay('password')}
+                  onNavigateToSchedule={() => profile.openProfileOverlay('schedule')}
                   onNavigateToNotifications={() => profile.openProfileOverlay('notifications')}
                   onNavigateToHelp={() => profile.openProfileOverlay('help')}
                   onNavigateToFavorites={() => profile.setProfileFavoritesVisible(true)}

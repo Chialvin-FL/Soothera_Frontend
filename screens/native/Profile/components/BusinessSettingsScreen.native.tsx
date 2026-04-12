@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     ScrollView,
@@ -168,6 +168,21 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
         startTime: '9:00 AM',
         endTime: '5:00 PM'
     });
+
+    const startScrollRef = useRef<ScrollView>(null);
+    const endScrollRef = useRef<ScrollView>(null);
+
+    useEffect(() => {
+        if (showHoursModal && !tempHours.is24Hours) {
+            setTimeout(() => {
+                const sIndex = TIMES.indexOf(tempHours.startTime);
+                if (sIndex !== -1) startScrollRef.current?.scrollTo({ x: sIndex * 90, animated: true });
+                const validEndTimes = TIMES.filter(t => t !== tempHours.startTime);
+                const eIndex = validEndTimes.indexOf(tempHours.endTime);
+                if (eIndex !== -1) endScrollRef.current?.scrollTo({ x: eIndex * 90, animated: true });
+            }, 300);
+        }
+    }, [showHoursModal, tempHours.is24Hours]);
 
     const handleOpenHours = () => {
         if (form.businessHours) {
@@ -811,17 +826,20 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                             {!tempHours.is24Hours && (
                                 <>
                                     <Text style={{ color: colors.text, fontWeight: '600', marginBottom: 8 }}>Start Time</Text>
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                                    <ScrollView ref={startScrollRef} horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
                                         {TIMES.map(time => (
-                                            <TouchableOpacity key={`start-time-${time}`} onPress={() => setTempHours({ ...tempHours, startTime: time })} style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: tempHours.startTime === time ? primaryColor : (isDark ? '#2a2a2a' : '#F3F4F6'), marginRight: 8 }}>
+                                            <TouchableOpacity key={`start-time-${time}`} onPress={() => {
+                                                const nextEnd = tempHours.endTime === time ? (TIMES.find(t => t !== time) || '5:00 PM') : tempHours.endTime;
+                                                setTempHours({ ...tempHours, startTime: time, endTime: nextEnd });
+                                            }} style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: tempHours.startTime === time ? primaryColor : (isDark ? '#2a2a2a' : '#F3F4F6'), marginRight: 8 }}>
                                                 <Text style={{ color: tempHours.startTime === time ? '#fff' : colors.text }}>{time}</Text>
                                             </TouchableOpacity>
                                         ))}
                                     </ScrollView>
 
                                     <Text style={{ color: colors.text, fontWeight: '600', marginBottom: 8 }}>End Time</Text>
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
-                                        {TIMES.map(time => (
+                                    <ScrollView ref={endScrollRef} horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
+                                        {TIMES.filter(t => t !== tempHours.startTime).map(time => (
                                             <TouchableOpacity key={`end-time-${time}`} onPress={() => setTempHours({ ...tempHours, endTime: time })} style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: tempHours.endTime === time ? primaryColor : (isDark ? '#2a2a2a' : '#F3F4F6'), marginRight: 8 }}>
                                                 <Text style={{ color: tempHours.endTime === time ? '#fff' : colors.text }}>{time}</Text>
                                             </TouchableOpacity>

@@ -41,6 +41,7 @@ interface ProfileScreenProps {
   isActive?: boolean;
   onNavigateToProfileEdit?: () => void;
   onNavigateToPasswordChange?: () => void;
+  onNavigateToSchedule?: () => void;
   onNavigateToNotifications?: () => void;
   onNavigateToHelp?: () => void;
   onNavigateToFavorites?: () => void;
@@ -62,6 +63,7 @@ export default function ProfileScreen({
   isActive,
   onNavigateToProfileEdit,
   onNavigateToPasswordChange,
+  onNavigateToSchedule,
   onNavigateToNotifications,
   onNavigateToHelp,
   onNavigateToFavorites,
@@ -167,6 +169,9 @@ export default function ProfileScreen({
               <View className="border-t border-gray-200 dark:border-[#2a2a2a]">
                 <SettingItem icon="person-outline" label="Profile" colors={colors} onPress={onNavigateToProfileEdit} />
                 <SettingItem icon="lock-closed-outline" label="Password" colors={colors} onPress={onNavigateToPasswordChange} />
+                {userRole === 'therapist' && (
+                  <SettingItem icon="calendar-outline" label="Schedule" colors={colors} onPress={onNavigateToSchedule} />
+                )}
                 <SettingItem icon="notifications-outline" label="Notifications" colors={colors} onPress={onNavigateToNotifications} />
               </View>
             </View>

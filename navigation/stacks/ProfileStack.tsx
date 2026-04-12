@@ -9,6 +9,7 @@ import FavoritesScreen from '../../screens/native/Profile/components/FavoritesSc
 import TermsOfServiceScreen from '../../screens/native/Profile/components/TermsOfServiceScreen.native';
 import PrivacyPolicyScreen from '../../screens/native/Profile/components/PrivacyPolicyScreen.native';
 import StaffManagementScreen from '../../screens/native/Profile/components/StaffManagementScreen.native';
+import ScheduleScreenTherapist from '../../screens/native/Profile/components/ScheduleScreenTherapist.native';
 import BusinessSettingsScreen from '../../screens/native/Profile/components/BusinessSettingsScreen.native';
 import SubscriptionScreen from '../../screens/native/Profile/components/SubscriptionScreen.native';
 import SalonRatingsScreen from '../../screens/native/Profile/components/SalonRatingsScreen.native';
@@ -59,6 +60,7 @@ export function ProfileStack({ profile, session, onOpenChat, onSalonPress }: Pro
                 <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 16 }, profileOverlayStyle]}>
                     {profileOverlay === 'edit' && <ProfileEditScreen onBack={closeProfileOverlay} session={session} />}
                     {profileOverlay === 'password' && <PasswordChangeScreen onBack={closeProfileOverlay} />}
+                    {profileOverlay === 'schedule' && <ScheduleScreenTherapist onBack={closeProfileOverlay} />}
                     {profileOverlay === 'notifications' && (
                         <NotificationPreferencesScreen onBack={closeProfileOverlay} />
                     )}
