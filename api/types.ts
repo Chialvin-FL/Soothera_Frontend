@@ -353,3 +353,106 @@ export interface UserData {
     profilePicture: string | null;
     createdAt: number;
 }
+
+// ─── Staff Availability ───────────────────────────────────────
+
+/**
+ * Mirrors AvailabilityType enum from the backend.
+ * 0 = OneTime, 1 = Recurring
+ */
+export enum AvailabilityType {
+    OneTime = 0,
+    Recurring = 1,
+}
+
+/**
+ * Mirrors DayOfWeekEnum from the backend.
+ * Sunday = 0 … Saturday = 6
+ */
+export enum DayOfWeekEnum {
+    Sunday = 0,
+    Monday = 1,
+    Tuesday = 2,
+    Wednesday = 3,
+    Thursday = 4,
+    Friday = 5,
+    Saturday = 6,
+}
+
+/**
+ * POST /api/Staff — request body (CreateStaffDTO).
+ * StartTime / EndTime must be "HH:mm:00" (24h with seconds).
+ * For Recurring: supply daysOfWeek array (multi-day supported).
+ * For OneTime:   supply specificDate in "M-dd-yyyy" format.
+ */
+export interface CreateStaffRequest {
+    establishmentId: string;
+    availabilityType: AvailabilityType;
+    /** Required when availabilityType === Recurring */
+    daysOfWeek?: DayOfWeekEnum[];
+    /** Required when availabilityType === OneTime — format: "M-dd-yyyy" */
+    specificDate?: string;
+    /** Format: "HH:mm:00" */
+    startTime: string;
+    /** Format: "HH:mm:00" */
+    endTime: string;
+    isAvailable?: boolean;
+}
+
+/**
+ * PUT /api/Staff/:id — request body (UpdateStaffDTO).
+ * All fields optional — only provided fields are patched.
+ */
+export interface UpdateStaffRequest {
+    availabilityType?: AvailabilityType;
+    dayOfWeek?: DayOfWeekEnum;
+    specificDate?: string;
+    startTime?: string;
+    endTime?: string;
+    isAvailable?: boolean;
+}
+
+/** Single staff availability record (StaffResponseDTO). */
+export interface StaffAvailability {
+    id: string;
+    establishmentId: string;
+    establishmentName: string;
+    staffId: string;
+    staffName: string;
+    /** "OneTime" | "Recurring" */
+    availabilityType: string;
+    /** Day name e.g. "Monday" — null for OneTime */
+    dayOfWeek: string | null;
+    /** Date string e.g. "4-15-2026" — null for Recurring */
+    specificDate: string | null;
+    /** "HH:mm:00" */
+    startTime: string;
+    /** "HH:mm:00" */
+    endTime: string;
+    isAvailable: boolean;
+    createdDate: string;
+    updatedDate: string;
+}
+
+/** Response shape from POST /api/Staff (CreateStaffResponseDTO). */
+export interface CreateStaffResponse {
+    success: boolean;
+    statusCode: number;
+    message: string;
+    /** Last created ID (backward compat) */
+    id: string | null;
+    /** All created IDs when multiple days were submitted */
+    ids: string[];
+}
+
+/** Query params for GET /api/Staff. */
+export interface GetStaffParams extends PaginationParams {
+    id?: string;
+    establishmentId?: string;
+    staffId?: string;
+    /** "OneTime" | "Recurring" */
+    availabilityType?: string;
+    /** Day name e.g. "Monday" */
+    dayOfWeek?: string;
+    isAvailable?: boolean;
+}
