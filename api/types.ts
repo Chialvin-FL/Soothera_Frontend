@@ -72,6 +72,8 @@ export interface MUser {
     role: number;
     profilePicture: string | null;
     createdAt: number;
+    /** Populated for therapists (role 2) — the establishment they belong to */
+    establishmentId?: string | null;
 }
 
 /** GET /api/User/get-user etc response body (using standard envelope) */

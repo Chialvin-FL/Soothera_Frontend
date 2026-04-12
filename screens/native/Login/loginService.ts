@@ -22,6 +22,8 @@ export interface StoredUserData {
     role: number;
     profilePicture: string | null;
     createdAt: string;
+    /** Only populated for therapists (role 2) */
+    establishmentId?: string | null;
 }
 
 export interface LoginResult {
@@ -64,6 +66,7 @@ export interface LoginError {
             role: user.role ?? 3,
             profilePicture: user.profilePicture ?? null,
             createdAt: user.createdAt?.toString() ?? '',
+            establishmentId: user.establishmentId ?? null,
         };
 
         // Persist user data

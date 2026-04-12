@@ -14,7 +14,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { RisingItem } from '@/components/native/RisingItem';
 import { SuccessModal } from '@/components/native/SuccessModal';
 import { useScheduleSlice } from '../scheduleSlice';
-import { fetchMyEstablishment } from '../businessSettingsService';
+import { loadStoredSession } from '@/screens/native/Login/loginService';
 import { AvailabilityType, DayOfWeekEnum } from '@/api/types';
 import type { StaffAvailability } from '@/api/types';
 
@@ -97,21 +97,18 @@ export default function ScheduleScreenTherapist({ onBack }: ScheduleScreenTherap
     const insets = useSafeAreaInsets();
     const isDark = colorScheme === 'dark';
 
-    // ── Establishment (needed by the slice) ──────────────────
+    // ── Establishment (read from session — set at login for therapists) ───
     const [establishmentId, setEstablishmentId] = useState<string | null>(null);
     const [estLoading, setEstLoading] = useState(true);
 
     useEffect(() => {
         (async () => {
-            console.log('[ScheduleScreen] resolving establishment on mount...');
+            console.log('[ScheduleScreen] loading establishmentId from stored session...');
             setEstLoading(true);
-            const result = await fetchMyEstablishment();
-            console.log('[ScheduleScreen] fetchMyEstablishment result =', JSON.stringify({
-                success: result.success,
-                message: result.message,
-                id: result.data?.id ?? null,
-            }));
-            setEstablishmentId(result.data?.id ?? null);
+            const session = await loadStoredSession();
+            const estId = session?.establishmentId ?? null;
+            console.log('[ScheduleScreen] establishmentId from session =', estId);
+            setEstablishmentId(estId);
             setEstLoading(false);
         })();
     }, []);
