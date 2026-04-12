@@ -3,9 +3,10 @@ import {
     fetchMySchedule,
     postSchedule,
     removeScheduleEntry,
+    patchScheduleEntry,
     type PostSchedulePayload,
 } from './scheduleService';
-import type { StaffAvailability } from '@/api/types';
+import type { StaffAvailability, UpdateStaffRequest } from '@/api/types';
 
 // ─────────────────────────────────────────────────────────────
 // Schedule Slice
@@ -47,8 +48,15 @@ export interface ScheduleSliceState {
         payload: PostSchedulePayload,
         onSuccess?: () => void,
     ) => Promise<void>;
+    handleUpdate: (
+        id: string,
+        establishmentId: string,
+        payload: UpdateStaffRequest,
+        onSuccess?: () => void,
+    ) => Promise<void>;
     handleDelete: (
         id: string,
+        establishmentId: string,
         onSuccess?: () => void,
     ) => Promise<void>;
 }
@@ -88,9 +96,9 @@ export function useScheduleSlice(
 
     // ── Load schedule ──────────────────────────────────────────
 
-    const loadSchedule = useCallback(async (estId: string) => {
+    const loadSchedule = useCallback(async (estId: string, showLoader: boolean = true) => {
         console.log('[ScheduleSlice] loadSchedule: starting... establishmentId =', estId);
-        setIsLoading(true);
+        if (showLoader) setIsLoading(true);
 
         const result = await fetchMySchedule(estId);
 
@@ -108,7 +116,7 @@ export function useScheduleSlice(
             showError('Failed to Load Schedule', result.message);
         }
 
-        setIsLoading(false);
+        if (showLoader) setIsLoading(false);
     }, []);
 
     // Auto-load when establishmentId becomes available
@@ -158,10 +166,43 @@ export function useScheduleSlice(
             showSuccess('Schedule Saved', result.message || 'Your schedule has been saved successfully.');
             // Reload to reflect the server-side REPLACE logic
             console.log('[ScheduleSlice] handlePost: reloading schedule after save...');
-            await loadSchedule(payload.establishmentId);
+            await loadSchedule(payload.establishmentId, false);
             if (onSuccess) onSuccess();
         } else {
             showError('Save Failed', result.message || 'Failed to save schedule. Please try again.');
+        }
+
+        setIsPosting(false);
+    };
+
+    // ── Update a single schedule entry ─────────────────────────
+
+    const handleUpdate = async (
+        id: string,
+        establishmentId: string,
+        payload: UpdateStaffRequest,
+        onSuccess?: () => void,
+    ) => {
+        console.log('[ScheduleSlice] handleUpdate: called for id =', id, '| payload =', JSON.stringify(payload));
+        
+        if (!id) {
+            console.warn('[ScheduleSlice] handleUpdate: no id provided.');
+            showError('Validation Error', 'Invalid schedule record ID.');
+            return;
+        }
+
+        setIsPosting(true);
+
+        const result = await patchScheduleEntry(id, payload);
+        console.log('[ScheduleSlice] handleUpdate: result =', JSON.stringify(result));
+
+        if (result.success) {
+            showSuccess('Schedule Updated', result.message || 'Your schedule has been updated successfully.');
+            console.log('[ScheduleSlice] handleUpdate: reloading schedule after update...');
+            await loadSchedule(establishmentId, false);
+            if (onSuccess) onSuccess();
+        } else {
+            showError('Update Failed', result.message || 'Failed to update schedule. Please try again.');
         }
 
         setIsPosting(false);
@@ -171,6 +212,7 @@ export function useScheduleSlice(
 
     const handleDelete = async (
         id: string,
+        establishmentId: string,
         onSuccess?: () => void,
     ) => {
         console.log('[ScheduleSlice] handleDelete: called for id =', id);
@@ -188,12 +230,7 @@ export function useScheduleSlice(
 
         if (result.success) {
             showSuccess('Entry Removed', result.message || 'Schedule entry deleted successfully.');
-            // Optimistic UI: remove from local state immediately
-            setScheduleItems((prev) => {
-                const updated = prev.filter((item) => item.id !== id);
-                console.log('[ScheduleSlice] handleDelete: removed from local state. remaining =', updated.length);
-                return updated;
-            });
+            await loadSchedule(establishmentId, false);
             if (onSuccess) onSuccess();
         } else {
             showError('Delete Failed', result.message || 'Failed to delete schedule entry. Please try again.');
@@ -213,6 +250,7 @@ export function useScheduleSlice(
         closeModal,
         loadSchedule,
         handlePost,
+        handleUpdate,
         handleDelete,
     };
 }

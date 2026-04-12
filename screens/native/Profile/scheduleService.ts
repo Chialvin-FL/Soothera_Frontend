@@ -2,11 +2,13 @@ import {
     createStaffAvailability,
     getStaffAvailability,
     deleteStaffAvailability,
+    updateStaffAvailability,
 } from '@/api/endpoints/apiStaff';
 import { loadStoredSession } from '@/screens/native/Login/loginService';
 import type {
     StaffAvailability,
     CreateStaffRequest,
+    UpdateStaffRequest,
     ApiError,
     AvailabilityType,
     DayOfWeekEnum,
@@ -174,6 +176,32 @@ export async function removeScheduleEntry(
         return {
             success: false,
             message: apiErr?.message ?? 'Failed to delete schedule entry.',
+        };
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Update a single schedule entry
+// ─────────────────────────────────────────────────────────────
+
+export async function patchScheduleEntry(
+    id: string,
+    payload: UpdateStaffRequest,
+): Promise<ScheduleActionResponse> {
+    console.log('[ScheduleService] patchScheduleEntry: id =', id, '| payload =', JSON.stringify(payload));
+    try {
+        const response = await updateStaffAvailability(id, payload);
+        console.log('[ScheduleService] patchScheduleEntry: API response =', JSON.stringify(response));
+        return {
+            success: response.success,
+            message: response.message,
+        };
+    } catch (err: any) {
+        console.error('[ScheduleService] patchScheduleEntry: caught error =', err);
+        const apiErr = err as ApiError;
+        return {
+            success: false,
+            message: apiErr?.message ?? 'Failed to update schedule entry.',
         };
     }
 }
