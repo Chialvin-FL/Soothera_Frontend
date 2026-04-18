@@ -20,6 +20,7 @@ export interface SessionState {
     userRole: UIRole | null;
     userName: string;
     userEmail: string;
+    uid: string;
     userProfilePic: string | null;
     authScreen: 'login' | 'register' | 'role-selection';
     pendingUserData: { email: string; password: string } | null;
@@ -39,6 +40,7 @@ export function useSessionLoader(): SessionState {
     const [userRole, setUserRole] = useState<UIRole | null>(null);
     const [userName, setUserName] = useState<string>('');
     const [userEmail, setUserEmail] = useState<string>('');
+    const [uid, setUid] = useState<string>('');
     const [userProfilePic, setUserProfilePic] = useState<string | null>(null);
     const [isLoadingSession, setIsLoadingSession] = useState(true);
     const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'role-selection'>('login');
@@ -59,6 +61,7 @@ export function useSessionLoader(): SessionState {
         setUserRole(null);
         setUserName('');
         setUserEmail('');
+        setUid('');
         setUserProfilePic(null);
         setAuthScreen('login');
     }, []);
@@ -117,6 +120,7 @@ export function useSessionLoader(): SessionState {
             .join(' ') || user.email;
         setUserName(displayName);
         setUserEmail(user.email);
+        setUid(user.uid);
         setUserProfilePic(user.profilePicture);
         setUserRole(getRoleLabel(user.role) as UIRole);
     };
@@ -126,7 +130,7 @@ export function useSessionLoader(): SessionState {
         setUserRole(getRoleLabel(role) as UIRole);
         setUserName(name);
         setUserEmail(email);
-        setUserProfilePic(profilePic ?? null);
+        // UID will be re-synced on next load since it's already in storage
         setIsLoggedIn(true);
         await scheduleAutoLogout();
     };
@@ -148,6 +152,7 @@ export function useSessionLoader(): SessionState {
         userRole,
         userName,
         userEmail,
+        uid,
         userProfilePic,
         authScreen,
         pendingUserData,
