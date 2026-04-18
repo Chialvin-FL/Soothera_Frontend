@@ -3,13 +3,19 @@ import { View, Pressable } from 'react-native';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 
-type Screen = 'users-management' | 'profile';
+type Screen = 'users-management' | 'profile' | 'user-verification';
+
+const menuItems = [
+    { id: 'users-management', label: 'Users', icon: 'people-outline' },
+    { id: 'user-verification', label: 'Verifications', icon: 'shield-checkmark-outline' },
+    { id: 'profile', label: 'My Profile', icon: 'person-outline' },
+];
 
 interface SidebarProps {
-  activeScreen: Screen;
-  onNavigate: (screen: 'profile' | 'users-management' | 'login') => void;
-  onLogout: () => Promise<void>;
-  userRole?: string;
+    activeScreen: Screen;
+    onNavigate: (screen: 'profile' | 'users-management' | 'user-verification' | 'login') => void;
+    onLogout: () => Promise<void>;
+    userRole?: string;
 }
 
 interface NavItemProps {
@@ -57,18 +63,15 @@ export default function Sidebar({ activeScreen, onNavigate, onLogout, userRole }
 
       {/* Navigation Items */}
       <View className="flex-1 py-4">
-        <NavItem
-          icon="people"
-          label="Users Management"
-          isActive={activeScreen === 'users-management'}
-          onPress={() => onNavigate('users-management')}
-        />
-        <NavItem
-          icon="person"
-          label="My Profile"
-          isActive={activeScreen === 'profile'}
-          onPress={() => onNavigate('profile')}
-        />
+        {menuItems.map((item) => (
+          <NavItem
+            key={item.id}
+            icon={item.icon as keyof typeof Ionicons.glyphMap}
+            label={item.label}
+            isActive={activeScreen === item.id}
+            onPress={() => onNavigate(item.id as any)}
+          />
+        ))}
       </View>
 
       {/* Footer */}

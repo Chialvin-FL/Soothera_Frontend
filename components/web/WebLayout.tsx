@@ -5,9 +5,10 @@ import ProfileScreenWeb from '../../screens/web/ProfileScreen.web';
 import LandingScreenWeb from '../../screens/web/LandingScreen.web';
 import LoginScreenWeb from '../../screens/web/LoginScreen.web';
 import UsersManagementWeb from '../../screens/web/UsersManagement.web';
+import UserVerificationWeb from '../../screens/web/UserVerification.web';
 import { useSessionLoader } from '../../navigation/hooks/useSessionLoader';
 
-type Screen = 'landing' | 'login' | 'profile' | 'users-management';
+type Screen = 'landing' | 'login' | 'profile' | 'users-management' | 'user-verification';
 
 export default function WebLayout() {
   const session = useSessionLoader();
@@ -49,6 +50,8 @@ export default function WebLayout() {
         );
       case 'users-management':
         return <UsersManagementWeb />;
+      case 'user-verification':
+        return <UserVerificationWeb />;
       case 'profile':
         return <ProfileScreenWeb />;
       default:
@@ -56,7 +59,7 @@ export default function WebLayout() {
     }
   };
 
-  const showSidebar = isLoggedIn && (activeScreen === 'profile' || activeScreen === 'users-management');
+  const showSidebar = isLoggedIn && (activeScreen === 'profile' || activeScreen === 'users-management' || activeScreen === 'user-verification');
 
   return (
     <View className="flex-1 flex-row bg-gray-50 min-h-screen">
