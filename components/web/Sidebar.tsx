@@ -24,8 +24,8 @@ const NavItem = ({ icon, label, isActive, onPress }: NavItemProps) => {
     <Pressable
       onPress={onPress}
       className={`flex-row items-center px-6 py-4 mb-2 mx-3 rounded-xl transition-colors ${isActive
-          ? 'bg-primary shadow-lg shadow-primary/20'
-          : 'hover:bg-slate-50'
+        ? 'bg-primary shadow-lg shadow-primary/20'
+        : 'hover:bg-slate-50'
         }`}
     >
       <Ionicons
@@ -34,7 +34,7 @@ const NavItem = ({ icon, label, isActive, onPress }: NavItemProps) => {
         color={isActive ? '#ffffff' : '#64748b'}
       />
       <Text
-        className={`ml-4 text-base font-semibold ${isActive ? 'text-white' : 'text-slate-600'
+        className={`ml-4 text-base ${isActive ? 'text-white' : 'text-slate-600'
           }`}
       >
         {label}
@@ -50,8 +50,8 @@ export default function Sidebar({ activeScreen, onNavigate, onLogout, userRole }
       <View className="px-8 py-10">
         <Text className="text-3xl font-bold text-slate-900">Soothera</Text>
         <View className="flex-row items-center mt-2">
-            <View className="w-2 h-2 rounded-full bg-green-500 mr-2" />
-            <Text className="text-xs text-slate-400 font-bold uppercase tracking-widest">{userRole || 'Admin'} Portal</Text>
+          <View className="w-2 h-2 rounded-full bg-green-500 mr-2" />
+          <Text className="text-xs text-slate-400 font-bold uppercase tracking-widest">{userRole || 'Admin'} Portal</Text>
         </View>
       </View>
 
@@ -73,7 +73,7 @@ export default function Sidebar({ activeScreen, onNavigate, onLogout, userRole }
 
       {/* Footer */}
       <View className="p-6 border-t border-slate-100">
-        <Pressable 
+        <Pressable
           onPress={onLogout}
           className="flex-row items-center px-4 py-3 rounded-xl hover:bg-red-50 group transition-colors"
         >
