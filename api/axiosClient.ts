@@ -21,7 +21,9 @@ function resolveBaseUrl(): string {
   // On web dev via Metro, relative /api paths fail. 
   // We use direct BACKEND_URL since CORS is enabled.
   if (Platform.OS === 'web') {
-    // return '/api'; // Use this ONLY if using Vite Proxy or reverse proxy
+    if (API_CONFIG.USE_WEB_PROXY) {
+      return '/api';
+    }
     return BACKEND_URL;
   }
   // React Native (iOS / Android) — call backend directly

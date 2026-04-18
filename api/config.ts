@@ -8,12 +8,14 @@
  */
 
 const IS_LOCAL = false; // <--- TOGGLE THIS
+const USE_WEB_PROXY = false; // <--- TOGGLE THIS for Web Proxy (Vite/Vercel)
 
 const LOCAL_URL = 'https://localhost:7043';
 const DEPLOYED_URL = 'http://fl-soothera-api.somee.com';
 
 export const API_CONFIG = {
   IS_LOCAL,
+  USE_WEB_PROXY,
   // The absolute base URL (used by Vite Proxy and Vercel)
   BASE_URL: IS_LOCAL ? LOCAL_URL : DEPLOYED_URL,
   // The full API endpoint path
