@@ -3,17 +3,18 @@ import { View, Pressable } from 'react-native';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 
-type Screen = 'home' | 'explore' | 'profile';
+type Screen = 'users-management' | 'profile';
 
 interface SidebarProps {
   activeScreen: Screen;
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: 'profile' | 'users-management' | 'login') => void;
+  onLogout: () => Promise<void>;
+  userRole?: string;
 }
 
 interface NavItemProps {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  screen: Screen;
   isActive: boolean;
   onPress: () => void;
 }
@@ -22,18 +23,18 @@ const NavItem = ({ icon, label, isActive, onPress }: NavItemProps) => {
   return (
     <Pressable
       onPress={onPress}
-      className={`flex-row items-center px-6 py-4 mb-2 mx-3 rounded-lg transition-colors ${isActive
-          ? 'bg-primary'
-          : 'hover:bg-gray-100'
+      className={`flex-row items-center px-6 py-4 mb-2 mx-3 rounded-xl transition-colors ${isActive
+          ? 'bg-primary shadow-lg shadow-primary/20'
+          : 'hover:bg-slate-50'
         }`}
     >
       <Ionicons
         name={icon}
-        size={24}
-        color={isActive ? '#ffffff' : '#6b7280'}
+        size={22}
+        color={isActive ? '#ffffff' : '#64748b'}
       />
       <Text
-        className={`ml-4 text-base font-medium ${isActive ? 'text-white' : 'text-gray-700'
+        className={`ml-4 text-base font-semibold ${isActive ? 'text-white' : 'text-slate-600'
           }`}
       >
         {label}
@@ -42,43 +43,44 @@ const NavItem = ({ icon, label, isActive, onPress }: NavItemProps) => {
   );
 };
 
-export default function Sidebar({ activeScreen, onNavigate }: SidebarProps) {
+export default function Sidebar({ activeScreen, onNavigate, onLogout, userRole }: SidebarProps) {
   return (
-    <View className="w-64 bg-white border-r border-gray-200 min-h-screen">
+    <View className="w-72 bg-white border-r border-slate-200 min-h-screen">
       {/* Header */}
-      <View className="px-6 py-6 border-b border-gray-200">
-        <Text className="text-2xl font-bold text-gray-900">Soothera</Text>
-        <Text className="text-sm text-gray-500 mt-1">Web Application</Text>
+      <View className="px-8 py-10">
+        <Text className="text-3xl font-bold text-slate-900">Soothera</Text>
+        <View className="flex-row items-center mt-2">
+            <View className="w-2 h-2 rounded-full bg-green-500 mr-2" />
+            <Text className="text-xs text-slate-400 font-bold uppercase tracking-widest">{userRole || 'Admin'} Portal</Text>
+        </View>
       </View>
 
       {/* Navigation Items */}
-      <View className="py-4">
+      <View className="flex-1 py-4">
         <NavItem
-          icon="home"
-          label="Home"
-          screen="home"
-          isActive={activeScreen === 'home'}
-          onPress={() => onNavigate('home')}
-        />
-        <NavItem
-          icon="compass"
-          label="Explore"
-          screen="explore"
-          isActive={activeScreen === 'explore'}
-          onPress={() => onNavigate('explore')}
+          icon="people"
+          label="Users Management"
+          isActive={activeScreen === 'users-management'}
+          onPress={() => onNavigate('users-management')}
         />
         <NavItem
           icon="person"
-          label="Profile"
-          screen="profile"
+          label="My Profile"
           isActive={activeScreen === 'profile'}
           onPress={() => onNavigate('profile')}
         />
       </View>
 
       {/* Footer */}
-      <View className="absolute bottom-0 left-0 right-0 px-6 py-4 border-t border-gray-200">
-        <Text className="text-xs text-gray-400">© 2024 Soothera</Text>
+      <View className="p-6 border-t border-slate-100">
+        <Pressable 
+          onPress={onLogout}
+          className="flex-row items-center px-4 py-3 rounded-xl hover:bg-red-50 group transition-colors"
+        >
+          <Ionicons name="log-out-outline" size={22} color="#94a3b8" />
+          <Text className="ml-4 text-slate-500 font-semibold group-hover:text-red-600 transition-colors">Sign Out</Text>
+        </Pressable>
+        <Text className="text-[10px] text-slate-300 mt-6 text-center font-bold uppercase tracking-widest">© 2026 Soothera Admin</Text>
       </View>
     </View>
   );

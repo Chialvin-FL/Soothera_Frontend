@@ -1,38 +1,73 @@
-import React, { useState } from 'react';
-import { View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import Sidebar from './Sidebar';
-import HomeScreenWeb from '../../screens/web/HomeScreen.web';
-import ExploreScreenWeb from '../../screens/web/ExploreScreen.web';
 import ProfileScreenWeb from '../../screens/web/ProfileScreen.web';
 import LandingScreenWeb from '../../screens/web/LandingScreen.web';
+import LoginScreenWeb from '../../screens/web/LoginScreen.web';
+import UsersManagementWeb from '../../screens/web/UsersManagement.web';
+import { useSessionLoader } from '../../navigation/hooks/useSessionLoader';
 
-type Screen = 'landing' | 'home' | 'explore' | 'profile';
+type Screen = 'landing' | 'login' | 'profile' | 'users-management';
 
 export default function WebLayout() {
+  const session = useSessionLoader();
+  const { isLoggedIn, isLoadingSession, userRole, logout } = session;
   const [activeScreen, setActiveScreen] = useState<Screen>('landing');
+
+  // Sync activeScreen with login status
+  useEffect(() => {
+    if (isLoggedIn) {
+      if (userRole === 'superadmin') {
+        setActiveScreen('users-management');
+      } else {
+        setActiveScreen('profile');
+      }
+    } else if (activeScreen !== 'login') {
+      setActiveScreen('landing');
+    }
+  }, [isLoggedIn, userRole]);
+
+  if (isLoadingSession) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#4C7A6C" />
+      </View>
+    );
+  }
 
   const renderScreen = () => {
     switch (activeScreen) {
       case 'landing':
-        return <LandingScreenWeb onAdminLogin={() => setActiveScreen('home')} />;
-      case 'home':
-        return <HomeScreenWeb />;
-      case 'explore':
-        return <ExploreScreenWeb />;
+        return <LandingScreenWeb onAdminLogin={() => setActiveScreen('login')} />;
+      case 'login':
+        return (
+          <LoginScreenWeb
+            onLoginSuccess={() => setActiveScreen('users-management')}
+            onBack={() => setActiveScreen('landing')}
+            session={session}
+          />
+        );
+      case 'users-management':
+        return <UsersManagementWeb />;
       case 'profile':
         return <ProfileScreenWeb />;
       default:
-        return <LandingScreenWeb onAdminLogin={() => setActiveScreen('home')} />;
+        return <LandingScreenWeb onAdminLogin={() => setActiveScreen('login')} />;
     }
   };
 
-  const showSidebar = activeScreen !== 'landing';
+  const showSidebar = isLoggedIn && (activeScreen === 'profile' || activeScreen === 'users-management');
 
   return (
     <View className="flex-1 flex-row bg-gray-50 min-h-screen">
       {/* Sidebar Navigation */}
       {showSidebar && (
-        <Sidebar activeScreen={activeScreen as any} onNavigate={setActiveScreen} />
+        <Sidebar 
+          activeScreen={activeScreen as any} 
+          onNavigate={setActiveScreen} 
+          onLogout={logout}
+          userRole={userRole as string}
+        />
       )}
 
       {/* Main Content Area */}

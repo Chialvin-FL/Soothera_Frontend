@@ -18,9 +18,11 @@ import { API_CONFIG } from './config';
 const BACKEND_URL = API_CONFIG.API_URL;
 
 function resolveBaseUrl(): string {
+  // On web dev via Metro, relative /api paths fail. 
+  // We use direct BACKEND_URL since CORS is enabled.
   if (Platform.OS === 'web') {
-    // On web, /api is proxied (Vite in dev, Vercel rewrites in prod)
-    return '/api';
+    // return '/api'; // Use this ONLY if using Vite Proxy or reverse proxy
+    return BACKEND_URL;
   }
   // React Native (iOS / Android) — call backend directly
   return BACKEND_URL;

@@ -56,10 +56,6 @@ export default function LandingScreen({ onAdminLogin }: LandingScreenProps) {
                                 <Ionicons name="logo-android" size={24} color="white" />
                                 <Text className="text-white text-lg ml-3">Download APK</Text>
                             </Pressable>
-
-                            <Pressable className="bg-white border border-gray-200 px-8 py-4 rounded-2xl flex-row items-center active:bg-gray-50">
-                                <Text className="text-gray-900 text-lg">Learn More</Text>
-                            </Pressable>
                         </View>
                     </View>
 
@@ -90,14 +86,9 @@ export default function LandingScreen({ onAdminLogin }: LandingScreenProps) {
                             <Text className="text-white text-2xl font-bold mb-2">Soothera</Text>
                             <Text className="text-gray-400">Making wellness accessible to everyone.</Text>
                         </View>
-                        <View className="flex-row gap-6">
-                            <Ionicons name="logo-instagram" size={24} color="#9ca3af" />
-                            <Ionicons name="logo-twitter" size={24} color="#9ca3af" />
-                            <Ionicons name="logo-facebook" size={24} color="#9ca3af" />
-                        </View>
                     </View>
                     <View className="max-w-6xl mx-auto mt-12 pt-8 border-t border-gray-800">
-                        <Text className="text-gray-500 text-center">© 2024 Soothera. All rights reserved.</Text>
+                        <Text className="text-gray-500 text-center">© 2026 Soothera. All rights reserved.</Text>
                     </View>
                 </View>
             </ScrollView>
