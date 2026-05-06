@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, ScrollView, Image, TouchableOpacity, TextInput, BackHandler, Platform, Keyboard, Switch } from 'react-native';
+import { View, ScrollView, Image, TouchableOpacity, TextInput, BackHandler, Platform, Keyboard, Switch, Alert, ActivityIndicator } from 'react-native';
 import { Text } from '@/components/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,9 @@ import { Therapist } from './types/SalonDetails';
 import { services } from './configs/mockData';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { useBookAppointmentSlice } from './bookAppointmentSlice';
+import { buildOptionsString } from './bookAppointmentService';
+import { TherapistPref } from '@/api/types';
 
 let RNWebView: any = null;
 try {
@@ -243,6 +246,12 @@ export default function BookAppointmentScreen({
   onPaymentSuccess,
   isAdmin = false,
 }: BookAppointmentScreenProps) {
+  const {
+    creating,
+    createError,
+    submitBooking,
+    resetCreateState,
+  } = useBookAppointmentSlice();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
@@ -499,17 +508,61 @@ export default function BookAppointmentScreen({
   };
 
   // Handle continue/next step
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep(currentStep + 1);
-    } else {
-      // Prepare booking data
+      return;
+    }
+
+    // ── Final step: submit booking to the API ──────────────────
+    if (!selectedService) return;
+
+    // Determine the duration index within the service's duration array
+    const durationIndex = selectedService.duration.indexOf(selectedDuration);
+    const resolvedDurationIndex = durationIndex >= 0 ? durationIndex : 0;
+
+    // Map add-on local IDs to their indices within the service's add-on list
+    // (The screen uses global mock add-ons; we pass their 0-based positions)
+    const selectedAddOnIndices = selectedAddOns
+      .map((id) => addOns.findIndex((a) => a.id === id))
+      .filter((idx) => idx >= 0);
+
+    // Build options string from toggles
+    const options = buildOptionsString({ isPWD, isHomeService });
+
+    // Build IdImage asset if PWD ID was picked
+    let idImageAsset: { uri: string; name: string; type: string } | undefined;
+    if (isPWD && pwdIdImage) {
+      idImageAsset = {
+        uri: pwdIdImage,
+        name: 'pwd_id.jpg',
+        type: 'image/jpeg',
+      };
+    }
+
+    const result = await submitBooking({
+        establishmentId: salonDetails.id,
+        salonServiceId: selectedService.id,
+        selectedDurationIndex: resolvedDurationIndex,
+        selectedAddOnIndices,
+        therapistPref: TherapistPref.AnyTherapist,
+        staffId: selectedTherapist ?? undefined,
+        date: selectedDate,
+        time: selectedTime,
+        options,
+        idImage: idImageAsset,
+        latitude: userLocation?.latitude ?? undefined,
+        longitude: userLocation?.longitude ?? undefined,
+      });
+
+    if (result) {
+      // Build local booking data for the downstream screen
       const selectedTherapistData = selectedTherapist
-        ? salonDetails.therapists.find(t => t.id === selectedTherapist)
+        ? salonDetails.therapists.find((t) => t.id === selectedTherapist)
         : null;
-      
+
       const selectedAddOnsData = selectedAddOns
-        .map(addOnId => addOns.find(a => a.id === addOnId))
+        .map((addOnId) => addOns.find((a) => a.id === addOnId))
         .filter((addOn): addOn is AddOn => addOn !== undefined);
 
       const bookingData: BookingData = {
@@ -519,24 +572,29 @@ export default function BookAppointmentScreen({
         therapist: selectedTherapistData || null,
         date: selectedDate,
         time: selectedTime,
-        instructions: instructions,
-        promoCode: promoCode,
-        salonDetails: salonDetails,
+        instructions,
+        promoCode,
+        salonDetails,
         totalPrice: calculatePrice(),
-        isPWD: isPWD,
-        pwdIdImage: pwdIdImage,
-        isHomeService: isHomeService,
-        userLocation: userLocation,
+        isPWD,
+        pwdIdImage,
+        isHomeService,
+        userLocation,
         ...(isAdmin ? { customerDetails } : {}),
       };
 
-      // Navigate to payment success screen
+      resetCreateState();
+
       if (onPaymentSuccess) {
         onPaymentSuccess(bookingData);
       } else {
-        // Fallback to onComplete if onPaymentSuccess is not provided
         onComplete?.();
       }
+    } else {
+      // submitBooking returned null → show createError or fallback
+      const errMsg =
+        createError ?? 'Failed to create booking. Please try again.';
+      Alert.alert('Booking Failed', errMsg);
     }
   };
 
@@ -1596,20 +1654,43 @@ export default function BookAppointmentScreen({
         <TouchableOpacity
           className="w-full flex-row items-center justify-center px-4 py-4 rounded-xl"
           style={{
-            backgroundColor: canProceed() ? primaryColor : (isDark ? '#3a3a3a' : '#E5E7EB'),
+            backgroundColor:
+              canProceed() && !creating
+                ? primaryColor
+                : isDark
+                ? '#3a3a3a'
+                : '#E5E7EB',
           }}
           onPress={handleContinue}
-          disabled={!canProceed()}
+          disabled={!canProceed() || creating}
           activeOpacity={0.7}
         >
-          <Text
-            className="text-base font-semibold"
-            style={{
-              color: canProceed() ? 'white' : (isDark ? '#666' : '#999'),
-            }}
-          >
-            {currentStep === TOTAL_STEPS ? 'Proceed to Payment' : 'Continue'}
-          </Text>
+          {creating && currentStep === TOTAL_STEPS ? (
+            <>
+              <ActivityIndicator
+                size="small"
+                color="white"
+                style={{ marginRight: 8 }}
+              />
+              <Text className="text-base font-semibold" style={{ color: 'white' }}>
+                Booking...
+              </Text>
+            </>
+          ) : (
+            <Text
+              className="text-base font-semibold"
+              style={{
+                color:
+                  canProceed() && !creating
+                    ? 'white'
+                    : isDark
+                    ? '#666'
+                    : '#999',
+              }}
+            >
+              {currentStep === TOTAL_STEPS ? 'Proceed to Payment' : 'Continue'}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>

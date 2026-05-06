@@ -458,3 +458,120 @@ export interface GetStaffParams extends PaginationParams {
     dayOfWeek?: string;
     isAvailable?: boolean;
 }
+
+// ─── Booking ──────────────────────────────────────────────────
+
+/**
+ * Mirrors TherapistPref.TherapistPrefs enum from the backend.
+ * 0 = AnyTherapist, 1 = MaleTherapist, 2 = FemaleTherapist
+ */
+export enum TherapistPref {
+    AnyTherapist = 0,
+    MaleTherapist = 1,
+    FemaleTherapist = 2,
+}
+
+/**
+ * POST /api/Booking/create-booking — request body.
+ * Sent as FormData because it may include an IFormFile (IdImage).
+ */
+export interface CreateBookingRequest {
+    establishmentId: string;
+    salonServiceId: string;
+    /** Index into the service's duration options array */
+    selectedDurationIndex: number;
+    /** Indices of selected add-ons in the service's add-on list */
+    selectedAddOnIndices?: number[];
+    therapistPref: TherapistPref;
+    /** Specific staff UID — omit for "any therapist" */
+    staffId?: string;
+    /** Format: "M-dd-yyyy:HH:mm" */
+    startTime: string;
+    /** Comma-separated option names e.g. "PWD,HomeService" */
+    options?: string;
+    /** React Native ImagePicker asset for PWD/Senior ID image */
+    idImage?: { uri: string; name: string; type: string } | File;
+    latitude?: number;
+    longitude?: number;
+}
+
+/**
+ * PUT /api/Booking/update-booking/:id — request body.
+ * Sent as JSON. All fields optional.
+ */
+export interface UpdateBookingRequest {
+    /** Booking status string e.g. "Confirmed", "Cancelled", "Completed", "NoShow" */
+    status?: string;
+    /** Payment status string e.g. "Pending", "Paid", "Refunded" */
+    paymentStatus?: string;
+    /** Format: "M-dd-yyyy:HH:mm" */
+    startTime?: string;
+}
+
+/** Query params for GET /api/Booking/get-booking. */
+export interface GetBookingsParams extends PaginationParams {
+    bookingId?: string;
+    establishmentId?: string;
+    customerId?: string;
+    staffId?: string;
+    /** e.g. "Pending", "Confirmed", "Cancelled", "Completed", "NoShow" */
+    status?: string;
+}
+
+/**
+ * Query params for GET /api/Booking/available-slots.
+ * Either `date` OR both `startDate` + `endDate` must be provided.
+ */
+export interface GetAvailableSlotsParams {
+    establishmentId: string;
+    salonServiceId?: string;
+    /** Single day — format: "M-dd-yyyy" */
+    date?: string;
+    /** Range start — format: "M-dd-yyyy" */
+    startDate?: string;
+    /** Range end   — format: "M-dd-yyyy" */
+    endDate?: string;
+    /** Override duration (0 = use service default) */
+    durationMinutes?: number;
+    staffId?: string;
+}
+
+/** Booking response data matching BookingResponseDTO. */
+export interface BookingResponse {
+    bookingId: string;
+    establishmentName: string;
+    establishmentAddress: string;
+    salonServiceName: string;
+    customerId: string;
+    staffName: string | null;
+    selectedPrice: number;
+    selectedDurationMinutes: number;
+    selectedAddOns: string[];
+    selectedAddOnPrices: number[];
+    totalPrice: number;
+    bookingDate: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+    paymentStatus: string;
+    createdDate: string;
+    updatedDate: string;
+    /** Option names applied e.g. ["PWD", "HomeService"] */
+    options: string[];
+    idImageUrl: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    readableAddress: string | null;
+}
+
+/** Response from POST /api/Booking/create-booking (CreateBookingResponseDTO). */
+export interface CreateBookingResponse {
+    success: boolean;
+    statusCode: number;
+    message: string;
+    /** Newly created booking document ID */
+    id: string | null;
+}
+
+/** Available slots response — key is "M-dd-yyyy", value is list of "HH:mm" strings. */
+export type AvailableSlotsData = Record<string, string[]>;
