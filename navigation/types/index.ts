@@ -11,6 +11,7 @@ export type ProfileOverlayId =
     | 'help'
     | 'staff'
     | 'business'
+    | 'services'
     | 'subscription'
     | 'ratings'
     | 'logs';

@@ -120,9 +120,10 @@ const TIMES = [
 
 interface BusinessSettingsScreenProps {
     onBack: () => void;
+    onNavigateToServices?: () => void;
 }
 
-export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScreenProps) {
+export default function BusinessSettingsScreen({ onBack, onNavigateToServices }: BusinessSettingsScreenProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
     const insets = useSafeAreaInsets();
@@ -618,13 +619,14 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                             marginTop: 4,
                         }}
                     />
-                    {[
-                        { label: 'Services & Prices' },
-                        { label: 'Vouchers & Promos' },
-                        { label: 'Refund Rules' },
-                    ].map((item) => (
+                    {([
+                        { label: 'Services & Prices', onPress: onNavigateToServices },
+                        { label: 'Vouchers & Promos',  onPress: undefined },
+                        { label: 'Refund Rules',       onPress: undefined },
+                    ] as const).map((item) => (
                         <TouchableOpacity
                             key={item.label}
+                            onPress={item.onPress}
                             style={{
                                 flexDirection: 'row',
                                 alignItems: 'center',
@@ -632,6 +634,7 @@ export default function BusinessSettingsScreen({ onBack }: BusinessSettingsScree
                                 paddingVertical: 14,
                                 borderBottomWidth: 1,
                                 borderBottomColor: isDark ? '#2a2a2a' : '#F3F4F6',
+                                opacity: item.onPress ? 1 : 0.45,
                             }}
                         >
                             <Text className="text-base font-semibold" style={{ color: colors.text }}>

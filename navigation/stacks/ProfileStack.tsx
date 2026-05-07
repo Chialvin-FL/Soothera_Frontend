@@ -14,6 +14,7 @@ import BusinessSettingsScreen from '../../screens/native/Profile/components/Busi
 import SubscriptionScreen from '../../screens/native/Profile/components/SubscriptionScreen.native';
 import SalonRatingsScreen from '../../screens/native/Profile/components/SalonRatingsScreen.native';
 import AccessLogsScreen from '../../screens/native/Profile/components/AccessLogsScreen.native';
+import ServicesScreen from '../../screens/native/Profile/components/ServicesScreen.native';
 import type { ProfileStackState } from '../hooks/useProfileStack';
 import type { SessionState } from '../hooks/useSessionLoader';
 import type { Conversation } from '../../screens/native/Messaging/InboxScreen.native';
@@ -45,6 +46,7 @@ export function ProfileStack({ profile, session, onOpenChat, onSalonPress }: Pro
         faqDetailStyle,
         helpLegalStyle,
         profileFavoritesStyle,
+        openProfileOverlay,
         closeProfileOverlay,
         closeFaqDetail,
         closeHelpLegal,
@@ -74,7 +76,13 @@ export function ProfileStack({ profile, session, onOpenChat, onSalonPress }: Pro
                         />
                     )}
                     {profileOverlay === 'staff' && <StaffManagementScreen onBack={closeProfileOverlay} />}
-                    {profileOverlay === 'business' && <BusinessSettingsScreen onBack={closeProfileOverlay} />}
+                    {profileOverlay === 'business' && (
+                        <BusinessSettingsScreen
+                            onBack={closeProfileOverlay}
+                            onNavigateToServices={() => openProfileOverlay('services')}
+                        />
+                    )}
+                    {profileOverlay === 'services' && <ServicesScreen onBack={closeProfileOverlay} />}
                     {profileOverlay === 'subscription' && <SubscriptionScreen onBack={closeProfileOverlay} />}
                     {profileOverlay === 'ratings' && <SalonRatingsScreen onBack={closeProfileOverlay} />}
                     {profileOverlay === 'logs' && <AccessLogsScreen onBack={closeProfileOverlay} />}

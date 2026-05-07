@@ -292,15 +292,25 @@ export interface FaceVerifyResultData {
 
 // ─── Salon Service ───────────────────────────────────────────
 
+/**
+ * Mirrors SalonServiceResponseDTO from the backend.
+ * Price / DurationMinutes are arrays — each index is one pricing tier.
+ * AddOns / AddOnPrices are parallel arrays of the same length.
+ */
 export interface SalonServiceResponse {
     salonServiceId: string;
     uid: string;
-    establishmentId: string;
+    establishmentName: string;
     serviceName: string;
     description: string;
+    /** String representation of MassageCategory enum */
     category: string;
-    price: number;
-    durationMinutes: number;
+    /** One price per duration tier */
+    price: number[];
+    /** Duration in minutes for each tier */
+    durationMinutes: number[];
+    addOns: string[];
+    addOnPrices: number[];
     imageUrl: string;
     isActive: boolean;
     createdDate: string;
@@ -308,27 +318,50 @@ export interface SalonServiceResponse {
     updatedBy: string;
 }
 
+/**
+ * POST /api/SalonService/add-service — request body.
+ * Sent as FormData ([FromForm]) because it includes an optional IFormFile.
+ * Price / DurationMinutes are arrays (one entry per tier).
+ * Optional TemplateServiceId skips Name/Description/Category if provided.
+ */
 export interface CreateSalonServiceRequest {
-    uid?: string;
-    establishmentId: string;
-    serviceName: string;
-    description: string;
-    category: number;
-    price: number;
-    durationMinutes: number;
-    imageFile?: File;
+    templateServiceId?: string;
+    serviceName?: string;
+    description?: string;
+    /** MassageCategory enum value (int) */
+    category?: number;
+    price: number[];
+    durationMinutes: number[];
+    addOns?: string[];
+    addOnPrices?: number[];
+    imageFile?: { uri: string; name: string; type: string } | File;
     isActive?: boolean;
 }
 
+/**
+ * PUT /api/SalonService/update-service/:id — request body.
+ * Sent as FormData. All fields optional.
+ */
 export interface UpdateSalonServiceRequest {
     serviceName?: string;
     description?: string;
+    /** MassageCategory enum value (int) */
     category?: number;
-    price?: number;
-    durationMinutes?: number;
-    imageFile?: File;
+    price?: number[];
+    durationMinutes?: number[];
+    addOns?: string[];
+    addOnPrices?: number[];
+    imageFile?: { uri: string; name: string; type: string } | File;
     isActive?: boolean;
     updatedBy?: string;
+}
+
+/** Query params for GET /api/SalonService/get-service. */
+export interface GetSalonServicesParams extends PaginationParams {
+    salonServiceId?: string;
+    establishmentId?: string;
+    category?: string;
+    isActive?: boolean;
 }
 
 // ─── Error Handling ──────────────────────────────────────────
