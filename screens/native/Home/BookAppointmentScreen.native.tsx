@@ -6,14 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SalonDetails } from './types/SalonDetails';
-import { Service } from './types/Home';
-import { Therapist } from './types/SalonDetails';
-import { services } from './configs/mockData';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useBookAppointmentSlice } from './bookAppointmentSlice';
-import { buildOptionsString } from './bookAppointmentService';
-import { TherapistPref } from '@/api/types';
+import { buildOptionsString, buildAvailableSlotsRangeParams, formatDurationLabel, formatDateOnly } from './bookAppointmentService';
+import { TherapistPref, SalonServiceResponse } from '@/api/types';
 
 let RNWebView: any = null;
 try {
@@ -63,13 +60,7 @@ interface AddOn {
 
 
 
-// Mock add-ons data
-const addOns: AddOn[] = [
-  { id: '1', name: 'Aromatherapy Oil', price: 50 },
-  { id: '2', name: 'Hot Towel', price: 30 },
-  { id: '3', name: 'Foot Scrub', price: 100 },
-  { id: '4', name: 'Face Mask', price: 150 },
-];
+// Add-ons are loaded dynamically from the selected service (SalonServiceResponse)
 
 // Map component for generic select location
 const MovableMapView = ({
@@ -251,6 +242,15 @@ export default function BookAppointmentScreen({
     createError,
     submitBooking,
     resetCreateState,
+    services,
+    servicesLoading,
+    loadEstablishmentServices,
+    therapists,
+    therapistsLoading,
+    loadEstablishmentTherapists,
+    availableSlots,
+    slotsLoading,
+    loadAvailableSlots,
   } = useBookAppointmentSlice();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -268,12 +268,12 @@ export default function BookAppointmentScreen({
     email: ''
   });
 
-  // Step 1: Service selection
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  // Step 1: Service selection (real API data)
+  const [selectedService, setSelectedService] = useState<SalonServiceResponse | null>(null);
 
-  // Step 2: Duration, Add-ons, Instructions
-  const [selectedDuration, setSelectedDuration] = useState<string>('');
-  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  // Step 2: Duration index (-1 = none selected), Add-on indices, Instructions
+  const [selectedDurationIndex, setSelectedDurationIndex] = useState<number>(-1);
+  const [selectedAddOnIndices, setSelectedAddOnIndices] = useState<number[]>([]);
   const [instructions, setInstructions] = useState('');
 
   // Step 3: Options
@@ -282,8 +282,8 @@ export default function BookAppointmentScreen({
   const [isHomeService, setIsHomeService] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // Step 4: Therapist preference
-  const [selectedTherapist, setSelectedTherapist] = useState<string | null>(null); // null means "Any Therapist"
+  // Step 4: Therapist preference (null = "Any Therapist", string = staffId)
+  const [selectedTherapist, setSelectedTherapist] = useState<string | null>(null);
 
   // Step 5: Date & Time & Promo Code
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -314,25 +314,13 @@ export default function BookAppointmentScreen({
     return () => backHandler.remove();
   }, [currentStep, onBack]);
 
-  // Calculate price based on duration
+  // Calculate price using real tier prices from the selected service
   const calculatePrice = (): number => {
-    if (!selectedService || !selectedDuration) return 0;
-    
-    const basePrice = selectedService.price;
-    const durationMinutes = parseInt(selectedDuration.replace(' mins', ''));
-    const baseDurationMinutes = 60; // Assume base price is for 60 mins
-    
-    // Calculate price based on duration (proportional)
-    let price = (basePrice / baseDurationMinutes) * durationMinutes;
-    
-    // Add add-ons
-    selectedAddOns.forEach(addOnId => {
-      const addOn = addOns.find(a => a.id === addOnId);
-      if (addOn) {
-        price += addOn.price;
-      }
+    if (!selectedService || selectedDurationIndex < 0) return 0;
+    let price = selectedService.price[selectedDurationIndex] ?? 0;
+    selectedAddOnIndices.forEach((idx) => {
+      price += selectedService.addOnPrices[idx] ?? 0;
     });
-    
     return Math.round(price);
   };
 
@@ -405,12 +393,41 @@ export default function BookAppointmentScreen({
     setSelectedTime(roundToNearest15Minutes(new Date()));
   }, []);
 
-  // Reset duration when service changes
+  // Load services and therapists for the establishment on mount
   useEffect(() => {
-    if (selectedService && !selectedService.duration.includes(selectedDuration)) {
-      setSelectedDuration('');
+    if (salonDetails?.id) {
+      loadEstablishmentServices(salonDetails.id);
+      loadEstablishmentTherapists(salonDetails.id);
     }
-  }, [selectedService, selectedDuration]);
+  }, [salonDetails?.id]);
+
+  // Reset duration index and add-on indices when service changes
+  useEffect(() => {
+    setSelectedDurationIndex(-1);
+    setSelectedAddOnIndices([]);
+  }, [selectedService?.salonServiceId]);
+
+  // Load available slots when entering the date/time step
+  useEffect(() => {
+    const actualStep = isAdmin ? currentStep - 1 : currentStep;
+    if (actualStep !== 5) return;
+    if (!salonDetails?.id) return;
+    const today = new Date();
+    const endDate = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+    loadAvailableSlots(
+      buildAvailableSlotsRangeParams({
+        establishmentId: salonDetails.id,
+        salonServiceId: selectedService?.salonServiceId,
+        startDate: today,
+        endDate,
+        durationMinutes:
+          selectedDurationIndex >= 0 && selectedService
+            ? selectedService.durationMinutes[selectedDurationIndex]
+            : undefined,
+        staffId: selectedTherapist ?? undefined,
+      }),
+    );
+  }, [currentStep, selectedTherapist, selectedDurationIndex]);
 
   // Handle keyboard show/hide for steps 2 and 5
   useEffect(() => {
@@ -517,15 +534,7 @@ export default function BookAppointmentScreen({
     // ── Final step: submit booking to the API ──────────────────
     if (!selectedService) return;
 
-    // Determine the duration index within the service's duration array
-    const durationIndex = selectedService.duration.indexOf(selectedDuration);
-    const resolvedDurationIndex = durationIndex >= 0 ? durationIndex : 0;
-
-    // Map add-on local IDs to their indices within the service's add-on list
-    // (The screen uses global mock add-ons; we pass their 0-based positions)
-    const selectedAddOnIndices = selectedAddOns
-      .map((id) => addOns.findIndex((a) => a.id === id))
-      .filter((idx) => idx >= 0);
+    const resolvedDurationIndex = selectedDurationIndex >= 0 ? selectedDurationIndex : 0;
 
     // Build options string from toggles
     const options = buildOptionsString({ isPWD, isHomeService });
@@ -542,7 +551,7 @@ export default function BookAppointmentScreen({
 
     const result = await submitBooking({
         establishmentId: salonDetails.id,
-        salonServiceId: selectedService.id,
+        salonServiceId: selectedService.salonServiceId,
         selectedDurationIndex: resolvedDurationIndex,
         selectedAddOnIndices,
         therapistPref: TherapistPref.AnyTherapist,
@@ -556,20 +565,39 @@ export default function BookAppointmentScreen({
       });
 
     if (result) {
-      // Build local booking data for the downstream screen
-      const selectedTherapistData = selectedTherapist
-        ? salonDetails.therapists.find((t) => t.id === selectedTherapist)
+      // Find therapist from API therapists list
+      const selectedTherapistObj = selectedTherapist
+        ? therapists.find((t) => t.staffId === selectedTherapist)
         : null;
 
-      const selectedAddOnsData = selectedAddOns
-        .map((addOnId) => addOns.find((a) => a.id === addOnId))
-        .filter((addOn): addOn is AddOn => addOn !== undefined);
+      // Build add-on objects from service's real add-on data
+      const selectedAddOnsData: AddOn[] = selectedAddOnIndices
+        .map((idx) => ({
+          id: String(idx),
+          name: selectedService.addOns[idx] ?? '',
+          price: selectedService.addOnPrices[idx] ?? 0,
+        }))
+        .filter((a) => a.name !== '');
+
+      const selectedDurationLabel =
+        selectedDurationIndex >= 0
+          ? formatDurationLabel(selectedService.durationMinutes[selectedDurationIndex])
+          : '';
 
       const bookingData: BookingData = {
-        service: selectedService,
-        duration: selectedDuration,
+        service: {
+          id: selectedService.salonServiceId,
+          name: selectedService.serviceName,
+          image: { uri: selectedService.imageUrl ?? '' },
+          price: selectedService.price[resolvedDurationIndex] ?? 0,
+          description: selectedService.description,
+          duration: selectedService.durationMinutes.map((m) => formatDurationLabel(m)),
+        },
+        duration: selectedDurationLabel,
         addOns: selectedAddOnsData,
-        therapist: selectedTherapistData || null,
+        therapist: selectedTherapistObj
+          ? { id: selectedTherapistObj.staffId, name: selectedTherapistObj.staffName, title: 'Therapist', image: { uri: '' }, rating: 0 }
+          : null,
         date: selectedDate,
         time: selectedTime,
         instructions,
@@ -607,13 +635,30 @@ export default function BookAppointmentScreen({
     }
   };
 
-  // Toggle add-on
-  const toggleAddOn = (addOnId: string) => {
-    setSelectedAddOns(prev => 
-      prev.includes(addOnId) 
-        ? prev.filter(id => id !== addOnId)
-        : [...prev, addOnId]
+  // Toggle add-on by index
+  const toggleAddOn = (idx: number) => {
+    setSelectedAddOnIndices((prev) =>
+      prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx],
     );
+  };
+
+  // Availability helpers for date/time step
+  const isDateAvailable = (date: Date): boolean => {
+    const keys = Object.keys(availableSlots);
+    if (keys.length === 0) return true; // not loaded yet — allow all
+    const key = formatDateOnly(date);
+    return !!(availableSlots[key] && availableSlots[key].length > 0);
+  };
+
+  const isTimeAvailable = (slot: Date): boolean => {
+    const keys = Object.keys(availableSlots);
+    if (keys.length === 0) return true; // not loaded yet — allow all
+    const dateKey = formatDateOnly(selectedDate);
+    const slotList = availableSlots[dateKey];
+    if (!slotList || slotList.length === 0) return false;
+    const hh = String(slot.getHours()).padStart(2, '0');
+    const mm = String(slot.getMinutes()).padStart(2, '0');
+    return slotList.some((s) => s.startsWith(`${hh}:${mm}`));
   };
 
   // Format price
@@ -621,8 +666,24 @@ export default function BookAppointmentScreen({
     return `₱${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  // Render Step 1: Choose Service
+  // Render Step 1: Choose Service (real API data)
   const renderStep1 = () => {
+    if (servicesLoading) {
+      return (
+        <View className="px-5 py-4 flex-1 items-center justify-center" style={{ minHeight: 200 }}>
+          <ActivityIndicator size="large" color={primaryColor} />
+          <Text className="text-sm mt-3" style={{ color: colors.icon }}>Loading services...</Text>
+        </View>
+      );
+    }
+    if (services.length === 0) {
+      return (
+        <View className="px-5 py-4 items-center justify-center" style={{ minHeight: 200 }}>
+          <Ionicons name="cube-outline" size={48} color={colors.icon} />
+          <Text className="text-sm mt-3 text-center" style={{ color: colors.icon }}>No services available for this salon.</Text>
+        </View>
+      );
+    }
     return (
       <View className="px-5 py-4">
         <Text className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
@@ -631,7 +692,7 @@ export default function BookAppointmentScreen({
         <View className="flex-row flex-wrap" style={{ gap: 12 }}>
           {services.map((service) => (
             <TouchableOpacity
-              key={service.id}
+              key={service.salonServiceId}
               className="w-[48%]"
               onPress={() => setSelectedService(service)}
               activeOpacity={0.7}
@@ -639,17 +700,17 @@ export default function BookAppointmentScreen({
               <View
                 className="rounded-xl overflow-hidden bg-white"
                 style={{
-                  elevation: selectedService?.id === service.id ? 5 : 3,
+                  elevation: selectedService?.salonServiceId === service.salonServiceId ? 5 : 3,
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: selectedService?.id === service.id ? 0.2 : 0.1,
+                  shadowOpacity: selectedService?.salonServiceId === service.salonServiceId ? 0.2 : 0.1,
                   shadowRadius: 4,
-                  borderWidth: selectedService?.id === service.id ? 2 : 0,
+                  borderWidth: selectedService?.salonServiceId === service.salonServiceId ? 2 : 0,
                   borderColor: primaryColor,
                 }}
               >
                 <Image
-                  source={service.image}
+                  source={service.imageUrl ? { uri: service.imageUrl } : require('../../../assets/home-massage-spain.jpg')}
                   className="w-full h-40"
                   resizeMode="cover"
                 />
@@ -659,14 +720,17 @@ export default function BookAppointmentScreen({
                     style={{ color: colors.text }}
                     numberOfLines={2}
                   >
-                    {service.name}
+                    {service.serviceName}
                   </Text>
                   <Text
-                    className="text-xs mb-2"
+                    className="text-xs mb-1"
                     style={{ color: colors.icon }}
                     numberOfLines={2}
                   >
                     {service.description}
+                  </Text>
+                  <Text className="text-xs font-semibold" style={{ color: primaryColor }}>
+                    From {formatPrice(Math.min(...service.price))}
                   </Text>
                 </View>
               </View>
@@ -677,7 +741,7 @@ export default function BookAppointmentScreen({
     );
   };
 
-  // Render Step 2: Session Duration, Add-ons, Instructions
+  // Render Step 2: Session Duration, Add-ons, Instructions (real API data)
   const renderStep2 = () => {
     if (!selectedService) return null;
 
@@ -686,70 +750,75 @@ export default function BookAppointmentScreen({
         <Text className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
           Session Duration
         </Text>
-        
-        {/* Duration Selection */}
+
+        {/* Duration tiers from API */}
         <View className="flex-row flex-wrap mb-6" style={{ gap: 8 }}>
-          {selectedService.duration.map((duration, index) => (
-            <TouchableOpacity
-              key={index}
-              className="px-4 py-3 rounded-full border"
-              style={{
-                borderColor: selectedDuration === duration ? primaryColor : (isDark ? '#3a3a3a' : '#E5E7EB'),
-                backgroundColor: selectedDuration === duration ? primaryColor : 'transparent',
-              }}
-              onPress={() => setSelectedDuration(duration)}
-              activeOpacity={0.7}
-            >
-              <Text
-                className="text-sm font-medium"
+          {selectedService.durationMinutes.map((mins, index) => {
+            const label = formatDurationLabel(mins);
+            const price = selectedService.price[index] ?? 0;
+            const isSelected = selectedDurationIndex === index;
+            return (
+              <TouchableOpacity
+                key={index}
+                className="px-4 py-3 rounded-xl border"
                 style={{
-                  color: selectedDuration === duration ? 'white' : colors.text,
+                  borderColor: isSelected ? primaryColor : (isDark ? '#3a3a3a' : '#E5E7EB'),
+                  backgroundColor: isSelected ? primaryColor : 'transparent',
                 }}
+                onPress={() => setSelectedDurationIndex(index)}
+                activeOpacity={0.7}
               >
-                {duration}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text className="text-sm font-semibold" style={{ color: isSelected ? 'white' : colors.text }}>
+                  {label}
+                </Text>
+                <Text className="text-xs mt-0.5" style={{ color: isSelected ? 'rgba(255,255,255,0.8)' : colors.icon }}>
+                  {formatPrice(price)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        {/* Add-ons */}
-        <Text className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
-          Add-ons (Extras)
-        </Text>
-        <View className="mb-6" style={{ gap: 12 }}>
-          {addOns.map((addOn) => (
-            <TouchableOpacity
-              key={addOn.id}
-              className="flex-row items-center justify-between p-4 rounded-xl border"
-              style={{
-                borderColor: selectedAddOns.includes(addOn.id) ? primaryColor : (isDark ? '#3a3a3a' : '#E5E7EB'),
-                backgroundColor: selectedAddOns.includes(addOn.id) ? primaryColor + '20' : 'transparent',
-              }}
-              onPress={() => toggleAddOn(addOn.id)}
-              activeOpacity={0.7}
-            >
-              <View className="flex-1">
-                <Text className="text-base font-medium" style={{ color: colors.text }}>
-                  {addOn.name}
-                </Text>
-                <Text className="text-sm mt-1" style={{ color: colors.icon }}>
-                  {formatPrice(addOn.price)}
-                </Text>
-              </View>
-              <View
-                className="w-6 h-6 rounded-full border-2 items-center justify-center"
-                style={{
-                  borderColor: selectedAddOns.includes(addOn.id) ? primaryColor : (isDark ? '#3a3a3a' : '#E5E7EB'),
-                  backgroundColor: selectedAddOns.includes(addOn.id) ? primaryColor : 'transparent',
-                }}
-              >
-                {selectedAddOns.includes(addOn.id) && (
-                  <Ionicons name="checkmark" size={16} color="white" />
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* Add-ons from API service */}
+        {selectedService.addOns.length > 0 && (
+          <>
+            <Text className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
+              Add-ons (Extras)
+            </Text>
+            <View className="mb-6" style={{ gap: 12 }}>
+              {selectedService.addOns.map((addOnName, idx) => {
+                const addOnPrice = selectedService.addOnPrices[idx] ?? 0;
+                const isChosen = selectedAddOnIndices.includes(idx);
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    className="flex-row items-center justify-between p-4 rounded-xl border"
+                    style={{
+                      borderColor: isChosen ? primaryColor : (isDark ? '#3a3a3a' : '#E5E7EB'),
+                      backgroundColor: isChosen ? primaryColor + '20' : 'transparent',
+                    }}
+                    onPress={() => toggleAddOn(idx)}
+                    activeOpacity={0.7}
+                  >
+                    <View className="flex-1">
+                      <Text className="text-base font-medium" style={{ color: colors.text }}>{addOnName}</Text>
+                      <Text className="text-sm mt-1" style={{ color: colors.icon }}>{formatPrice(addOnPrice)}</Text>
+                    </View>
+                    <View
+                      className="w-6 h-6 rounded-full border-2 items-center justify-center"
+                      style={{
+                        borderColor: isChosen ? primaryColor : (isDark ? '#3a3a3a' : '#E5E7EB'),
+                        backgroundColor: isChosen ? primaryColor : 'transparent',
+                      }}
+                    >
+                      {isChosen && <Ionicons name="checkmark" size={16} color="white" />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
 
         {/* Instructions */}
         <Text className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
@@ -772,10 +841,7 @@ export default function BookAppointmentScreen({
           multiline
           numberOfLines={4}
           onFocus={() => {
-            // Scroll to input when focused
-            setTimeout(() => {
-              mainScrollViewRef.current?.scrollToEnd({ animated: true });
-            }, 300);
+            setTimeout(() => { mainScrollViewRef.current?.scrollToEnd({ animated: true }); }, 300);
           }}
         />
       </View>
@@ -921,14 +987,14 @@ export default function BookAppointmentScreen({
     );
   };
 
-  // Render Step 4: Therapist Preference
+  // Render Step 4: Therapist Preference (real API staff)
   const renderStep4 = () => {
     return (
       <View className="px-5 py-4">
         <Text className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
           Therapist Preference
         </Text>
-        
+
         {/* Any Therapist Option */}
         <TouchableOpacity
           className="flex-row items-center justify-between p-4 rounded-xl border mb-4"
@@ -939,9 +1005,7 @@ export default function BookAppointmentScreen({
           onPress={() => setSelectedTherapist(null)}
           activeOpacity={0.7}
         >
-          <Text className="text-base font-medium" style={{ color: colors.text }}>
-            Any Therapist
-          </Text>
+          <Text className="text-base font-medium" style={{ color: colors.text }}>Any Therapist</Text>
           <View
             className="w-6 h-6 rounded-full border-2 items-center justify-center"
             style={{
@@ -949,64 +1013,76 @@ export default function BookAppointmentScreen({
               backgroundColor: selectedTherapist === null ? primaryColor : 'transparent',
             }}
           >
-            {selectedTherapist === null && (
-              <Ionicons name="checkmark" size={16} color="white" />
-            )}
+            {selectedTherapist === null && <Ionicons name="checkmark" size={16} color="white" />}
           </View>
         </TouchableOpacity>
 
-        {/* Therapist List */}
-        <View className="flex-row flex-wrap" style={{ gap: 12 }}>
-          {salonDetails.therapists.map((therapist) => (
-            <TouchableOpacity
-              key={therapist.id}
-              className="w-[48%]"
-              onPress={() => setSelectedTherapist(therapist.id)}
-              activeOpacity={0.7}
-            >
-              <View
-                className="rounded-xl overflow-hidden bg-white"
-                style={{
-                  elevation: selectedTherapist === therapist.id ? 5 : 3,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: selectedTherapist === therapist.id ? 0.2 : 0.1,
-                  shadowRadius: 4,
-                  borderWidth: selectedTherapist === therapist.id ? 2 : 0,
-                  borderColor: primaryColor,
-                }}
-              >
-                <View className="relative">
-                  <Image
-                    source={therapist.image}
-                    className="w-full h-40 rounded-t-xl"
-                    resizeMode="cover"
-                  />
-                  <View 
-                    className="absolute bottom-2 right-2 flex-row items-center px-2 py-1 rounded-full"
-                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+        {therapistsLoading ? (
+          <View className="items-center py-6">
+            <ActivityIndicator size="small" color={primaryColor} />
+            <Text className="text-sm mt-2" style={{ color: colors.icon }}>Loading therapists...</Text>
+          </View>
+        ) : therapists.length === 0 ? (
+          <View className="items-center py-6">
+            <Text className="text-sm" style={{ color: colors.icon }}>No specific therapists available.</Text>
+          </View>
+        ) : (
+          <View className="flex-row flex-wrap" style={{ gap: 12 }}>
+            {therapists.map((therapist) => {
+              const isSelected = selectedTherapist === therapist.staffId;
+              const initials = therapist.staffName
+                .split(' ')
+                .map((n) => n[0])
+                .join('')
+                .toUpperCase()
+                .slice(0, 2);
+              return (
+                <TouchableOpacity
+                  key={therapist.staffId}
+                  className="w-[48%]"
+                  onPress={() => setSelectedTherapist(therapist.staffId)}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    className="rounded-xl overflow-hidden"
+                    style={{
+                      backgroundColor: isDark ? '#1f1f1f' : '#fff',
+                      elevation: isSelected ? 5 : 3,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: isSelected ? 0.2 : 0.1,
+                      shadowRadius: 4,
+                      borderWidth: isSelected ? 2 : 0,
+                      borderColor: primaryColor,
+                    }}
                   >
-                    <Ionicons name="star" size={12} color="#FFD700" />
-                    <Text className="text-white text-xs font-semibold ml-1">
-                      {therapist.rating}
-                    </Text>
+                    {/* Initials Avatar */}
+                    <View
+                      className="w-full h-28 items-center justify-center"
+                      style={{ backgroundColor: primaryColor + (isSelected ? 'ff' : '22') }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 36,
+                          fontWeight: 'bold',
+                          color: isSelected ? 'white' : primaryColor,
+                        }}
+                      >
+                        {initials}
+                      </Text>
+                    </View>
+                    <View className="p-3">
+                      <Text className="text-base font-semibold" style={{ color: colors.text }} numberOfLines={1}>
+                        {therapist.staffName}
+                      </Text>
+                      <Text className="text-sm mt-0.5" style={{ color: colors.icon }}>Therapist</Text>
+                    </View>
                   </View>
-                </View>
-                <View className="p-3">
-                  <Text
-                    className="text-base font-semibold mb-1"
-                    style={{ color: colors.text }}
-                  >
-                    {therapist.name}
-                  </Text>
-                  <Text className="text-sm" style={{ color: colors.icon }}>
-                    {therapist.title}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </View>
     );
   };
@@ -1048,33 +1124,25 @@ export default function BookAppointmentScreen({
           >
             {monthDates.map((date, index) => {
               const isSelected = isSameDay(date, selectedDate);
-
+              const available = isDateAvailable(date);
               return (
                 <TouchableOpacity
                   key={index}
                   className="px-4 py-3 rounded-full border mr-2 items-center justify-center"
                   style={{
-                    borderColor: isSelected ? primaryColor : (isDark ? '#3a3a3a' : '#E5E7EB'),
+                    borderColor: isSelected ? primaryColor : available ? (isDark ? '#3a3a3a' : '#E5E7EB') : (isDark ? '#2a2a2a' : '#F3F4F6'),
                     backgroundColor: isSelected ? primaryColor : 'transparent',
                     minWidth: 60,
+                    opacity: available ? 1 : 0.4,
                   }}
-                  onPress={() => setSelectedDate(new Date(date))}
-                  activeOpacity={0.7}
+                  onPress={() => available && setSelectedDate(new Date(date))}
+                  activeOpacity={available ? 0.7 : 1}
+                  disabled={!available}
                 >
-                  <Text
-                    className="text-xs font-medium mb-0.5"
-                    style={{
-                      color: isSelected ? 'white' : colors.text,
-                    }}
-                  >
+                  <Text className="text-xs font-medium mb-0.5" style={{ color: isSelected ? 'white' : available ? colors.text : colors.icon }}>
                     {getDayName(date)}
                   </Text>
-                  <Text
-                    className="text-sm font-semibold"
-                    style={{
-                      color: isSelected ? 'white' : colors.text,
-                    }}
-                  >
+                  <Text className="text-sm font-semibold" style={{ color: isSelected ? 'white' : available ? colors.text : colors.icon }}>
                     {date.getDate()}
                   </Text>
                 </TouchableOpacity>
@@ -1097,23 +1165,21 @@ export default function BookAppointmentScreen({
           >
             {timeSlots.map((slot, index) => {
               const isSelected = isTimeSlotSelected(slot);
+              const available = isTimeAvailable(slot);
               return (
                 <TouchableOpacity
                   key={index}
                   className="px-3 py-2 rounded-full border mr-2"
                   style={{
-                    borderColor: isSelected ? primaryColor : (isDark ? '#3a3a3a' : '#E5E7EB'),
+                    borderColor: isSelected ? primaryColor : available ? (isDark ? '#3a3a3a' : '#E5E7EB') : (isDark ? '#2a2a2a' : '#F3F4F6'),
                     backgroundColor: isSelected ? primaryColor : 'transparent',
+                    opacity: available ? 1 : 0.35,
                   }}
-                  onPress={() => setSelectedTime(new Date(slot))}
-                  activeOpacity={0.7}
+                  onPress={() => available && setSelectedTime(new Date(slot))}
+                  activeOpacity={available ? 0.7 : 1}
+                  disabled={!available}
                 >
-                  <Text
-                    className="text-sm font-medium"
-                    style={{
-                      color: isSelected ? 'white' : colors.text,
-                    }}
-                  >
+                  <Text className="text-sm font-medium" style={{ color: isSelected ? 'white' : available ? colors.text : colors.icon }}>
                     {formatTime(slot)}
                   </Text>
                 </TouchableOpacity>
@@ -1154,9 +1220,17 @@ export default function BookAppointmentScreen({
   // Render Step 6: Booking Summary
   const renderStep6 = () => {
     const totalPrice = calculatePrice();
-    const selectedTherapistData = selectedTherapist
-      ? salonDetails.therapists.find(t => t.id === selectedTherapist)
+    const selectedTherapistObj = selectedTherapist
+      ? therapists.find((t) => t.staffId === selectedTherapist)
       : null;
+    const selectedDurationLabel =
+      selectedDurationIndex >= 0 && selectedService
+        ? formatDurationLabel(selectedService.durationMinutes[selectedDurationIndex])
+        : 'N/A';
+    const selectedServicePrice =
+      selectedService && selectedDurationIndex >= 0
+        ? selectedService.price[selectedDurationIndex] ?? 0
+        : 0;
 
     return (
       <View className="px-5 py-4 pb-8">
@@ -1178,44 +1252,25 @@ export default function BookAppointmentScreen({
                   height: 96,
                 }}
               >
-                {/* Image on Left */}
                 <Image
-                  source={selectedService.image}
+                  source={selectedService.imageUrl ? { uri: selectedService.imageUrl } : require('../../../assets/home-massage-spain.jpg')}
                   className="w-24 rounded-l-xl"
                   style={{ height: '100%' }}
                   resizeMode="cover"
                 />
-                {/* Details on Right */}
                 <View className="flex-1 p-3 justify-between" style={{ minWidth: 0 }}>
                   <View>
-                    <Text
-                      className="text-base font-bold mb-1"
-                      style={{ color: colors.text }}
-                      numberOfLines={1}
-                    >
-                      {selectedService.name}
+                    <Text className="text-base font-bold mb-1" style={{ color: colors.text }} numberOfLines={1}>
+                      {selectedService.serviceName}
                     </Text>
-                    <Text
-                      className="text-sm"
-                      style={{ color: colors.icon }}
-                      numberOfLines={1}
-                    >
+                    <Text className="text-sm" style={{ color: colors.icon }} numberOfLines={1}>
                       {selectedService.description}
                     </Text>
                   </View>
                   <View className="flex-row items-center justify-between mt-2">
-                    <Text className="text-sm" style={{ color: colors.text }}>
-                      {selectedDuration || 'N/A'}
-                    </Text>
+                    <Text className="text-sm" style={{ color: colors.text }}>{selectedDurationLabel}</Text>
                     <Text className="text-base font-bold" style={{ color: colors.primary }}>
-                      {(() => {
-                        if (!selectedService || !selectedDuration) return formatPrice(0);
-                        const basePrice = selectedService.price;
-                        const durationMinutes = parseInt(selectedDuration.replace(' mins', ''));
-                        const baseDurationMinutes = 60;
-                        const servicePrice = Math.round((basePrice / baseDurationMinutes) * durationMinutes);
-                        return formatPrice(servicePrice);
-                      })()}
+                      {formatPrice(selectedServicePrice)}
                     </Text>
                   </View>
                 </View>
@@ -1234,15 +1289,15 @@ export default function BookAppointmentScreen({
             </>
           )}
 
-          {selectedAddOns.length > 0 && (
+          {selectedAddOnIndices.length > 0 && selectedService && (
             <>
-              {selectedAddOns.map(addOnId => {
-                const addOn = addOns.find(a => a.id === addOnId);
-                if (!addOn) return null;
-                
+              {selectedAddOnIndices.map((idx) => {
+                const name = selectedService.addOns[idx];
+                const price = selectedService.addOnPrices[idx] ?? 0;
+                if (!name) return null;
                 return (
                   <View
-                    key={addOnId}
+                    key={idx}
                     className="flex-row items-center rounded-xl overflow-hidden bg-white mb-3"
                     style={{
                       elevation: 3,
@@ -1253,30 +1308,16 @@ export default function BookAppointmentScreen({
                       height: 60,
                     }}
                   >
-                    {/* Check Icon on Left */}
                     <View className="w-12 items-center justify-center">
-                      <View
-                        className="w-6 h-6 rounded-full items-center justify-center"
-                        style={{ backgroundColor: primaryColor }}
-                      >
+                      <View className="w-6 h-6 rounded-full items-center justify-center" style={{ backgroundColor: primaryColor }}>
                         <Ionicons name="checkmark" size={16} color="white" />
                       </View>
                     </View>
-                    {/* Details in Middle */}
                     <View className="flex-1 px-3" style={{ minWidth: 0 }}>
-                      <Text
-                        className="text-base font-semibold"
-                        style={{ color: colors.text }}
-                        numberOfLines={1}
-                      >
-                        {addOn.name}
-                      </Text>
+                      <Text className="text-base font-semibold" style={{ color: colors.text }} numberOfLines={1}>{name}</Text>
                     </View>
-                    {/* Price on Right */}
                     <View className="px-4">
-                      <Text className="text-base font-bold" style={{ color: colors.primary }}>
-                        {formatPrice(addOn.price)}
-                      </Text>
+                      <Text className="text-base font-bold" style={{ color: colors.primary }}>{formatPrice(price)}</Text>
                     </View>
                   </View>
                 );
@@ -1297,52 +1338,29 @@ export default function BookAppointmentScreen({
           </View>
 
           {/* Therapist Card */}
-          {selectedTherapistData ? (
+          {selectedTherapistObj ? (
             <View
-              className="flex-row items-start rounded-xl overflow-hidden bg-white mb-4 mt-2"
+              className="flex-row items-center rounded-xl overflow-hidden mb-4 mt-2"
               style={{
                 elevation: 3,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
-                height: 96,
+                height: 72,
+                backgroundColor: isDark ? '#1f1f1f' : '#fff',
               }}
             >
-              {/* Image on Left */}
-              <View className="relative w-24" style={{ height: 96 }}>
-                <Image
-                  source={selectedTherapistData.image}
-                  className="w-full rounded-l-xl"
-                  style={{ height: 96 }}
-                  resizeMode="cover"
-                />
-                <View 
-                  className="absolute bottom-1 right-1 flex-row items-center px-1.5 py-0.5 rounded-full"
-                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
-                >
-                  <Ionicons name="star" size={10} color="#FFD700" />
-                  <Text className="text-white text-xs font-semibold ml-0.5">
-                    {selectedTherapistData.rating}
-                  </Text>
-                </View>
+              <View className="w-16 h-full items-center justify-center" style={{ backgroundColor: primaryColor + '22' }}>
+                <Text style={{ fontSize: 22, fontWeight: 'bold', color: primaryColor }}>
+                  {selectedTherapistObj.staffName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+                </Text>
               </View>
-              {/* Details on Right */}
               <View className="flex-1 p-3" style={{ minWidth: 0 }}>
-                <Text
-                  className="text-base font-bold mb-1"
-                  style={{ color: colors.text }}
-                  numberOfLines={1}
-                >
-                  {selectedTherapistData.name}
+                <Text className="text-base font-bold mb-1" style={{ color: colors.text }} numberOfLines={1}>
+                  {selectedTherapistObj.staffName}
                 </Text>
-                <Text
-                  className="text-sm"
-                  style={{ color: colors.icon }}
-                  numberOfLines={1}
-                >
-                  {selectedTherapistData.title}
-                </Text>
+                <Text className="text-sm" style={{ color: colors.icon }} numberOfLines={1}>Therapist</Text>
               </View>
             </View>
           ) : (
@@ -1564,7 +1582,7 @@ export default function BookAppointmentScreen({
       case 1:
         return selectedService !== null;
       case 2:
-        return selectedDuration !== '';
+        return selectedDurationIndex >= 0;
       case 3:
         return (!isPWD || pwdIdImage !== null) && (!isHomeService || userLocation !== null);
       case 4:

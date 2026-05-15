@@ -19,6 +19,8 @@ import {
   deleteBooking,
   getAvailableSlots,
 } from '@/api/endpoints/apiBooking';
+import { getSalonServices } from '@/api/endpoints/apiService';
+import { getStaffAvailability } from '@/api/endpoints/apiStaff';
 import type {
   CreateBookingRequest,
   UpdateBookingRequest,
@@ -35,7 +37,19 @@ export {
   updateBooking,
   deleteBooking,
   getAvailableSlots,
+  getSalonServices,
+  getStaffAvailability,
 };
+
+// ─── Duration Label Helper ────────────────────────────────────
+
+/**
+ * Converts a duration in minutes to a human-readable label.
+ * e.g. 60 → "60 mins", 90 → "90 mins"
+ */
+export function formatDurationLabel(minutes: number): string {
+  return `${minutes} mins`;
+}
 
 // ─── Date Helpers ────────────────────────────────────────────
 

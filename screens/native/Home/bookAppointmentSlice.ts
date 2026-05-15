@@ -21,6 +21,8 @@ import {
   updateBooking,
   deleteBooking,
 } from '@/api/endpoints/apiBooking';
+import { getSalonServices } from '@/api/endpoints/apiService';
+import { getStaffAvailability } from '@/api/endpoints/apiStaff';
 import type {
   BookingResponse,
   CreateBookingResponse,
@@ -28,9 +30,15 @@ import type {
   GetBookingsParams,
   GetAvailableSlotsParams,
   UpdateBookingRequest,
+  SalonServiceResponse,
 } from '@/api/types';
 import type { BookAppointmentParams } from './bookAppointmentService';
 import { buildCreateBookingRequest } from './bookAppointmentService';
+
+export interface StaffMember {
+  staffId: string;
+  staffName: string;
+}
 
 // ─────────────────────────────────────────────────────────────
 
@@ -65,6 +73,16 @@ export function useBookAppointmentSlice() {
   // ── Delete ────────────────────────────────────────────────
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // ── Establishment Services ────────────────────────────────
+  const [services, setServices] = useState<SalonServiceResponse[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [servicesError, setServicesError] = useState<string | null>(null);
+
+  // ── Establishment Therapists ──────────────────────────────
+  const [therapists, setTherapists] = useState<StaffMember[]>([]);
+  const [therapistsLoading, setTherapistsLoading] = useState(false);
+  const [therapistsError, setTherapistsError] = useState<string | null>(null);
 
   // ─── Actions ──────────────────────────────────────────────
 
@@ -224,6 +242,79 @@ export function useBookAppointmentSlice() {
     [],
   );
 
+  // ─── Establishment Services ───────────────────────────────
+
+  /**
+   * Loads all active salon services for the given establishment.
+   * GET /api/SalonService/get-service?establishmentId=...
+   */
+  const loadEstablishmentServices = useCallback(
+    async (establishmentId: string): Promise<boolean> => {
+      setServicesLoading(true);
+      setServicesError(null);
+      try {
+        const response = await getSalonServices({
+          establishmentId,
+          isActive: true,
+          pageSize: 100,
+        });
+        if (response.success && response.data) {
+          setServices(response.data.items);
+          return true;
+        } else {
+          setServicesError(response.message);
+          return false;
+        }
+      } catch (e: any) {
+        setServicesError(e?.message ?? 'Failed to load services.');
+        return false;
+      } finally {
+        setServicesLoading(false);
+      }
+    },
+    [],
+  );
+
+  // ─── Establishment Therapists ─────────────────────────────
+
+  /**
+   * Loads unique therapists that have availability records for the given establishment.
+   * GET /api/Staff?establishmentId=... — deduplicates by staffId.
+   */
+  const loadEstablishmentTherapists = useCallback(
+    async (establishmentId: string): Promise<boolean> => {
+      setTherapistsLoading(true);
+      setTherapistsError(null);
+      try {
+        const response = await getStaffAvailability({
+          establishmentId,
+          pageSize: 200,
+        });
+        if (response.success && response.data) {
+          const seen = new Set<string>();
+          const unique: StaffMember[] = [];
+          for (const item of response.data.items) {
+            if (!seen.has(item.staffId)) {
+              seen.add(item.staffId);
+              unique.push({ staffId: item.staffId, staffName: item.staffName });
+            }
+          }
+          setTherapists(unique);
+          return true;
+        } else {
+          setTherapistsError(response.message);
+          return false;
+        }
+      } catch (e: any) {
+        setTherapistsError(e?.message ?? 'Failed to load therapists.');
+        return false;
+      } finally {
+        setTherapistsLoading(false);
+      }
+    },
+    [],
+  );
+
   // ─── Convenience wrappers ─────────────────────────────────
 
   /** Cancel a booking (sets status → "Cancelled"). */
@@ -315,6 +406,18 @@ export function useBookAppointmentSlice() {
     deleting,
     deleteError,
     removeBooking,
+
+    // ── Establishment Services ──
+    services,
+    servicesLoading,
+    servicesError,
+    loadEstablishmentServices,
+
+    // ── Establishment Therapists ──
+    therapists,
+    therapistsLoading,
+    therapistsError,
+    loadEstablishmentTherapists,
 
     // ── Misc ──
     clearErrors,
