@@ -608,3 +608,132 @@ export interface CreateBookingResponse {
 
 /** Available slots response — key is "M-dd-yyyy", value is list of "HH:mm" strings. */
 export type AvailableSlotsData = Record<string, string[]>;
+
+// --- Payment ---------------------------------------------------------------
+
+/**
+ * Mirrors the backend PaymentStatus enum when used as CreatePaymentDTO.PaymentType.
+ * 1 = Full payment, 2 = Partial payment.
+ */
+export enum PaymentType {
+    Full = 1,
+    Partial = 2,
+}
+
+/** Payment processing status stored on mPayment.Status. */
+export enum PaymentProcessingStatus {
+    Pending = 'Pending',
+    Success = 'Success',
+    Failed = 'Failed',
+}
+
+/** POST /api/Payment/create-payment - request body. */
+export interface CreatePaymentRequest {
+    bookingId: string;
+    paymentType: PaymentType;
+    /** 16 digits */
+    cardNumber: string;
+    /** 3 digits */
+    cvv: string;
+    /** MM/YY */
+    expiryDate: string;
+    billingName: string;
+}
+
+/**
+ * PUT /api/Payment/update-payment/:id - request body.
+ * Used by the backend to retry an existing failed payment with updated card info.
+ */
+export interface UpdatePaymentRequest {
+    cardNumber?: string;
+    cvv?: string;
+    expiryDate?: string;
+    billingName?: string;
+}
+
+/** Query params for GET /api/Payment/get-payments. */
+export interface GetPaymentsParams extends PaginationParams {
+    paymentId?: string;
+    bookingId?: string;
+    customerId?: string;
+    /** "Pending" | "Success" | "Failed" */
+    status?: PaymentProcessingStatus | string;
+}
+
+/** PaymentResponseDTO returned by the backend. */
+export interface PaymentResponse {
+    paymentId: string;
+    bookingId: string;
+    customerId: string;
+    amount: number;
+    paymentType: PaymentType;
+    maskedCardNumber: string;
+    billingName: string;
+    status: PaymentProcessingStatus | string;
+    createdDate: string;
+    updatedDate: string;
+}
+
+export interface InvoiceEstablishmentInfo {
+    name: string;
+    address: string;
+    phone: string;
+    email: string;
+    tin: string;
+}
+
+export interface InvoiceCustomerInfo {
+    name: string;
+    address: string;
+}
+
+export interface InvoiceServiceDetails {
+    serviceName: string;
+    spaName: string;
+    therapistName: string;
+    date: string;
+    time: string;
+}
+
+export interface InvoiceItem {
+    description: string;
+    qty: number;
+    unitPrice: number;
+    total: number;
+}
+
+export interface InvoiceFinancials {
+    totalSales: number;
+    vatableSales: number;
+    vatAmount: number;
+    totalAmountDue: number;
+    paidAmount: number;
+    balance: number;
+}
+
+/** InvoiceDTO returned on successful create/retry payment calls. */
+export interface InvoiceDTO {
+    invoiceNumber: string;
+    date: string;
+    bookingId: string;
+    establishmentInfo: InvoiceEstablishmentInfo;
+    customerInfo: InvoiceCustomerInfo;
+    serviceDetails: InvoiceServiceDetails;
+    lineItems: InvoiceItem[];
+    financials: InvoiceFinancials;
+}
+
+/** GetAllPaymentsResponseDTO returned by GET /api/Payment/get-payments. */
+export type GetPaymentsResponse = ApiResponse<PaginatedResponse<PaymentResponse>>;
+
+/** SinglePaymentResponseDTO shape available in the backend DTO module. */
+export type SinglePaymentResponse = ApiResponse<PaymentResponse>;
+
+/** GenericPaymentResponseDTO returned by create/update/delete payment calls. */
+export interface PaymentMutationResponse {
+    success: boolean;
+    statusCode: number;
+    message: string;
+    id?: string | null;
+    invoice?: InvoiceDTO | null;
+}

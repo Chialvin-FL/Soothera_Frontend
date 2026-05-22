@@ -66,7 +66,19 @@ function SalonDetailsLoader({ salonId, onBack, onBook }: { salonId: string; onBa
 }
 
 // Loader for BookAppointmentScreen
-function BookAppointmentLoader({ salonId, onBack, onComplete, onPaymentSuccess }: { salonId: string; onBack: () => void; onComplete: () => void; onPaymentSuccess: (data: any) => void }) {
+function BookAppointmentLoader({
+    salonId,
+    onBack,
+    onComplete,
+    onPaymentSuccess,
+    onPaymentFailed,
+}: {
+    salonId: string;
+    onBack: () => void;
+    onComplete: () => void;
+    onPaymentSuccess: (data: any) => void;
+    onPaymentFailed: (data: any) => void;
+}) {
     const [loading, setLoading] = useState(true);
     const [details, setDetails] = useState<any | null>(null);
 
@@ -105,6 +117,7 @@ function BookAppointmentLoader({ salonId, onBack, onComplete, onPaymentSuccess }
             onBack={onBack}
             onComplete={onComplete}
             onPaymentSuccess={onPaymentSuccess}
+            onPaymentFailed={onPaymentFailed}
         />
     );
 }
@@ -140,6 +153,7 @@ export function HomeStack({ home }: HomeStackProps) {
         setHomeTopRatedAutoFocus,
         setHomeBookVisible,
         handleHomePaymentSuccess,
+        handleHomePaymentFailed,
         handleHomePaymentSuccessBack,
         handleHomePaymentSuccessHome,
         handleHomePaymentFailedBack,
@@ -193,6 +207,7 @@ export function HomeStack({ home }: HomeStackProps) {
                             onBack={closeHomeBook}
                             onComplete={closeHomeBook}
                             onPaymentSuccess={handleHomePaymentSuccess}
+                            onPaymentFailed={handleHomePaymentFailed}
                         />
                     </Animated.View>
                 );
@@ -220,6 +235,7 @@ export function HomeStack({ home }: HomeStackProps) {
                         bookingData={homePaymentFailed}
                         onBack={handleHomePaymentFailedBack}
                         onTryAgain={handleHomePaymentFailedTryAgain}
+                        onRetrySuccess={handleHomePaymentSuccess}
                     />
                 </View>
             )}

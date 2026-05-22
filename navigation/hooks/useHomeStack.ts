@@ -39,6 +39,7 @@ export interface HomeStackState {
     setHomeBookVisible: (visible: boolean) => void;
 
     handleHomePaymentSuccess: (data: BookingData) => void;
+    handleHomePaymentFailed: (data: BookingData) => void;
     handleHomePaymentSuccessBack: () => void;
     handleHomePaymentSuccessHome: () => void;
     handleHomePaymentFailedBack: () => void;
@@ -150,11 +151,16 @@ export function useHomeStack(): HomeStackState {
 
     const handleHomePaymentSuccess = (data: BookingData) => {
         setHomePaymentSuccess(data);
+        setHomePaymentFailed(null);
+        setHomeBookVisible(false);
+    };
+    const handleHomePaymentFailed = (data: BookingData) => {
+        setHomePaymentFailed(data);
+        setHomePaymentSuccess(null);
         setHomeBookVisible(false);
     };
     const handleHomePaymentSuccessBack = () => setHomePaymentSuccess(null);
     const handleHomePaymentSuccessHome = () => {
-        if (homePaymentSuccess) setHomePaymentFailed(homePaymentSuccess);
         setHomePaymentSuccess(null);
     };
     const handleHomePaymentFailedBack = () => setHomePaymentFailed(null);
@@ -194,6 +200,7 @@ export function useHomeStack(): HomeStackState {
         setHomeTopRatedAutoFilter,
         setHomeTopRatedAutoFocus,
         handleHomePaymentSuccess,
+        handleHomePaymentFailed,
         handleHomePaymentSuccessBack,
         handleHomePaymentSuccessHome,
         handleHomePaymentFailedBack,

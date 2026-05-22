@@ -11,6 +11,10 @@ import * as Location from 'expo-location';
 import { useBookAppointmentSlice } from './bookAppointmentSlice';
 import { buildOptionsString, buildAvailableSlotsRangeParams, formatDurationLabel, formatDateOnly } from './bookAppointmentService';
 import { TherapistPref, SalonServiceResponse } from '@/api/types';
+import type { PaymentMutationResponse, UpdatePaymentRequest } from '@/api/types';
+import type { Service } from './types/Home';
+import type { Therapist } from './types/SalonDetails';
+import PaymentDetailsScreen from './PaymentDetailsScreen.native';
 
 let RNWebView: any = null;
 try {
@@ -22,6 +26,7 @@ try {
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
 interface BookingData {
+  bookingId?: string | null;
   service: Service | null;
   duration: string;
   addOns: AddOn[];
@@ -42,6 +47,10 @@ interface BookingData {
     phone: string;
     email: string;
   };
+  paymentId?: string | null;
+  paymentMessage?: string;
+  paymentRequest?: UpdatePaymentRequest;
+  paymentResponse?: PaymentMutationResponse;
 }
 
 interface BookAppointmentScreenProps {
@@ -49,6 +58,7 @@ interface BookAppointmentScreenProps {
   onBack: () => void;
   onComplete?: () => void;
   onPaymentSuccess?: (bookingData: BookingData) => void;
+  onPaymentFailed?: (bookingData: BookingData) => void;
   isAdmin?: boolean;
 }
 
@@ -235,6 +245,7 @@ export default function BookAppointmentScreen({
   onBack,
   onComplete,
   onPaymentSuccess,
+  onPaymentFailed,
   isAdmin = false,
 }: BookAppointmentScreenProps) {
   const {
@@ -289,6 +300,7 @@ export default function BookAppointmentScreen({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<Date>(new Date());
   const [promoCode, setPromoCode] = useState('');
+  const [pendingPaymentBooking, setPendingPaymentBooking] = useState<BookingData | null>(null);
 
   // Refs for ScrollViews
   const timeScrollViewRef = useRef<ScrollView>(null);
@@ -585,6 +597,7 @@ export default function BookAppointmentScreen({
           : '';
 
       const bookingData: BookingData = {
+        bookingId: result.id ?? null,
         service: {
           id: selectedService.salonServiceId,
           name: selectedService.serviceName,
@@ -613,16 +626,40 @@ export default function BookAppointmentScreen({
 
       resetCreateState();
 
-      if (onPaymentSuccess) {
-        onPaymentSuccess(bookingData);
-      } else {
+      if (!result.id) {
+        Alert.alert('Booking Created', 'Payment cannot continue because the booking reference is missing.');
         onComplete?.();
+        return;
       }
+
+      setPendingPaymentBooking(bookingData);
     } else {
       // submitBooking returned null → show createError or fallback
       const errMsg =
         createError ?? 'Failed to create booking. Please try again.';
       Alert.alert('Booking Failed', errMsg);
+    }
+  };
+
+  const handlePaymentDetailsBack = () => {
+    setPendingPaymentBooking(null);
+  };
+
+  const handlePaymentSuccess = (data: BookingData) => {
+    setPendingPaymentBooking(null);
+    if (onPaymentSuccess) {
+      onPaymentSuccess(data);
+    } else {
+      onComplete?.();
+    }
+  };
+
+  const handlePaymentFailed = (data: BookingData) => {
+    setPendingPaymentBooking(null);
+    if (onPaymentFailed) {
+      onPaymentFailed(data);
+    } else {
+      Alert.alert('Payment Failed', data.paymentMessage ?? 'Please try again.');
     }
   };
 
@@ -1284,7 +1321,7 @@ export default function BookAppointmentScreen({
                 Duration
               </Text>
               <Text className="text-base font-semibold mb-4" style={{ color: colors.text }}>
-                {selectedDuration || 'N/A'}
+                {selectedDurationLabel || 'N/A'}
               </Text>
             </>
           )}
@@ -1595,6 +1632,17 @@ export default function BookAppointmentScreen({
         return false;
     }
   };
+
+  if (pendingPaymentBooking) {
+    return (
+      <PaymentDetailsScreen
+        bookingData={pendingPaymentBooking}
+        onBack={handlePaymentDetailsBack}
+        onPaymentSuccess={handlePaymentSuccess}
+        onPaymentFailed={handlePaymentFailed}
+      />
+    );
+  }
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>

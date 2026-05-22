@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, Animated } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { View, ScrollView, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import { Text } from '@/components/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,8 @@ import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Service } from './types/Home';
 import { SalonDetails, Therapist } from './types/SalonDetails';
+import { updatePayment } from '@/api/endpoints/apiPayment';
+import type { PaymentMutationResponse, UpdatePaymentRequest } from '@/api/types';
 
 interface AddOn {
   id: string;
@@ -15,6 +17,7 @@ interface AddOn {
 }
 
 interface BookingData {
+  bookingId?: string | null;
   service: Service | null;
   duration: string;
   addOns: AddOn[];
@@ -25,12 +28,17 @@ interface BookingData {
   promoCode: string;
   salonDetails: SalonDetails;
   totalPrice: number;
+  paymentId?: string | null;
+  paymentMessage?: string;
+  paymentRequest?: UpdatePaymentRequest;
+  paymentResponse?: PaymentMutationResponse;
 }
 
 interface PaymentFailedScreenProps {
   bookingData: BookingData;
   onBack: () => void;
   onTryAgain?: () => void;
+  onRetrySuccess?: (bookingData: BookingData) => void;
 }
 
 const errorColor = '#EF4444'; // Red color for error state
@@ -39,11 +47,14 @@ export default function PaymentFailedScreen({
   bookingData,
   onBack,
   onTryAgain,
+  onRetrySuccess,
 }: PaymentFailedScreenProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
   const isDark = colorScheme === 'dark';
+  const [retrying, setRetrying] = useState(false);
+  const [retryMessage, setRetryMessage] = useState(bookingData.paymentMessage);
 
   // Format price
   const formatPrice = (price: number) => {
@@ -94,6 +105,38 @@ export default function PaymentFailedScreen({
     return () => pulse.stop();
   }, []);
 
+  useEffect(() => {
+    setRetryMessage(bookingData.paymentMessage);
+  }, [bookingData.paymentMessage]);
+
+  const handleRetryPayment = async () => {
+    if (!bookingData.paymentId || !bookingData.paymentRequest) {
+      onTryAgain?.();
+      return;
+    }
+
+    setRetrying(true);
+    try {
+      const response = await updatePayment(bookingData.paymentId, bookingData.paymentRequest);
+      const nextBookingData: BookingData = {
+        ...bookingData,
+        paymentMessage: response.message,
+        paymentResponse: response,
+      };
+
+      if (response.success) {
+        onRetrySuccess?.(nextBookingData);
+        return;
+      }
+
+      setRetryMessage(response.message);
+    } catch (error: any) {
+      setRetryMessage(error?.message ?? 'Payment retry failed. Please try again.');
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       {/* Header */}
@@ -140,7 +183,7 @@ export default function PaymentFailedScreen({
             className="text-base text-center px-4" 
             style={{ color: colors.icon }}
           >
-            We couldn't process your payment. Please check your payment details and try again.
+            {retryMessage ?? "We couldn't process your payment. Please check your payment details and try again."}
           </Text>
         </View>
 
@@ -330,24 +373,34 @@ export default function PaymentFailedScreen({
           backgroundColor: colors.background,
         }}
       >
-        {onTryAgain ? (
+        {onTryAgain || (bookingData.paymentId && bookingData.paymentRequest) ? (
           <View style={{ gap: 12 }}>
             <TouchableOpacity
               className="w-full flex-row items-center justify-center px-4 py-4 rounded-xl"
               style={{
                 backgroundColor: errorColor,
               }}
-              onPress={onTryAgain}
+              onPress={handleRetryPayment}
+              disabled={retrying}
               activeOpacity={0.7}
             >
-              <Text
-                className="text-base font-semibold"
-                style={{
-                  color: 'white',
-                }}
-              >
-                Try Again
-              </Text>
+              {retrying ? (
+                <>
+                  <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+                  <Text className="text-base font-semibold" style={{ color: 'white' }}>
+                    Retrying...
+                  </Text>
+                </>
+              ) : (
+                <Text
+                  className="text-base font-semibold"
+                  style={{
+                    color: 'white',
+                  }}
+                >
+                  Try Again
+                </Text>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               className="w-full flex-row items-center justify-center px-4 py-4 rounded-xl border"

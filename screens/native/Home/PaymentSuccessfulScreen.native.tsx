@@ -15,6 +15,7 @@ interface AddOn {
 }
 
 interface BookingData {
+  bookingId?: string | null;
   service: Service | null;
   duration: string;
   addOns: AddOn[];
@@ -25,6 +26,8 @@ interface BookingData {
   promoCode: string;
   salonDetails: SalonDetails;
   totalPrice: number;
+  paymentId?: string | null;
+  paymentMessage?: string;
 }
 
 interface PaymentSuccessfulScreenProps {
@@ -327,7 +330,7 @@ export default function PaymentSuccessfulScreen({
               </Text>
               <View className="flex-1 ml-4 items-end">
                 <Text className="text-sm font-semibold text-right" style={{ color: primaryColor }}>
-                  #{Date.now().toString().slice(-8).toUpperCase()}
+                  #{(bookingData.bookingId ?? Date.now().toString()).slice(-8).toUpperCase()}
                 </Text>
               </View>
             </View>

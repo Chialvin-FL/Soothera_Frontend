@@ -29,6 +29,7 @@ import { getSalonDetails, topRatedSalons } from '../Home/configs/mockData';
 import type { SalonDetails } from '../Home/types/SalonDetails';
 import type { Service } from '../Home/types/Home';
 import type { Therapist } from '../Home/types/SalonDetails';
+import type { PaymentMutationResponse, UpdatePaymentRequest } from '@/api/types';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -43,6 +44,7 @@ interface AddOn {
 }
 
 interface BookingData {
+  bookingId?: string | null;
   service: Service | null;
   duration: string;
   addOns: AddOn[];
@@ -53,6 +55,10 @@ interface BookingData {
   promoCode: string;
   salonDetails: SalonDetails;
   totalPrice: number;
+  paymentId?: string | null;
+  paymentMessage?: string;
+  paymentRequest?: UpdatePaymentRequest;
+  paymentResponse?: PaymentMutationResponse;
 }
 
 interface BookingsScreenProps {
@@ -340,8 +346,16 @@ export default function BookingsScreen({
   // Handle payment success from BookAppointmentScreen
   const handlePaymentSuccess = (data: BookingData) => {
     setBookingData(data);
+    setShowPaymentFailedScreen(false);
     setShowBookAppointmentScreen(false);
     setShowPaymentSuccessfulScreen(true);
+  };
+
+  const handlePaymentFailed = (data: BookingData) => {
+    setBookingData(data);
+    setShowPaymentSuccessfulScreen(false);
+    setShowBookAppointmentScreen(false);
+    setShowPaymentFailedScreen(true);
   };
 
   // Handle back from payment successful screen
@@ -350,11 +364,10 @@ export default function BookingsScreen({
     setBookingData(null);
   };
 
-  // Handle home from payment successful screen - temporarily navigate to payment failed screen
+  // Handle home from payment successful screen
   const handleHomeFromPaymentSuccessful = () => {
     setShowPaymentSuccessfulScreen(false);
-    setShowPaymentFailedScreen(true);
-    // Keep bookingData for the failed screen
+    setBookingData(null);
   };
 
   // Handle back from payment failed screen
@@ -502,6 +515,7 @@ export default function BookingsScreen({
         bookingData={bookingData}
         onBack={handleBackFromPaymentFailed}
         onTryAgain={handleTryAgainFromPaymentFailed}
+        onRetrySuccess={handlePaymentSuccess}
       />
     );
   }
@@ -528,6 +542,7 @@ export default function BookingsScreen({
         }}
         onComplete={handleBookAppointmentComplete}
         onPaymentSuccess={handlePaymentSuccess}
+        onPaymentFailed={handlePaymentFailed}
       />
     );
   }
