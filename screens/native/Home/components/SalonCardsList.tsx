@@ -32,8 +32,9 @@ export function MassageSpaCardsList({ salons, contentContainerStyle, onSalonPres
     const delay = baseDelay + (rowIndex * perRowDelay);
 
     return (
-      <RisingItem key={salon.id} delay={delay} fadeIn={false} offset={28}>
+      <RisingItem key={`${salon.id ?? 'salon'}-${index}`} delay={delay} fadeIn={false} offset={28}>
         <TouchableOpacity
+          key={`${salon.id ?? 'salon'}-${index}-touchable`}
           className="mb-4"
           activeOpacity={0.7}
           onPress={() => onSalonPress?.(salon.id)}
@@ -127,9 +128,9 @@ export function MassageSpaCardsList({ salons, contentContainerStyle, onSalonPres
 
               {/* Services Tags */}
               <View className="flex-row flex-wrap" style={{ gap: 4 }}>
-                {salon.services.map((service, index) => (
+                {salon.services.map((service, serviceIndex) => (
                   <View
-                    key={index}
+                    key={`${salon.id ?? 'salon'}-service-${serviceIndex}-${service}`}
                     className="px-2 py-1 rounded-full mb-1"
                     style={{ 
                       backgroundColor: colors.primary + '20',

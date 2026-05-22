@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, ScrollView, Image, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { View, ScrollView, Image, TouchableOpacity, Animated, Dimensions, ActivityIndicator } from 'react-native';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
-import { topRatedSalons } from '../configs/mockData';
+import { useEstablishments } from '../hooks/useEstablishments';
 
 interface TopRatedMassageSpasProps {
   onSeeAll?: () => void;
@@ -17,9 +17,10 @@ export function TopRatedMassageSpas({ onSeeAll, onSalonPress }: TopRatedMassageS
   const colors = Colors[colorScheme ?? 'light'];
   const [isAtEnd, setIsAtEnd] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
-  const slideAnim = useRef(new Animated.Value(200)).current; // Start off-screen to the right
+  const slideAnim = useRef(new Animated.Value(200)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const screenWidth = Dimensions.get('window').width;
+  const { salons, loading } = useEstablishments();
 
   const handleScroll = (event: any) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
@@ -88,37 +89,48 @@ export function TopRatedMassageSpas({ onSeeAll, onSalonPress }: TopRatedMassageS
           onScroll={handleScroll}
           scrollEventThrottle={16}
         >
-          {topRatedSalons.slice(0, 4).map((salon) => (
-            <TouchableOpacity 
-              key={salon.id} 
-              className="w-56 mr-4"
-              activeOpacity={0.7}
-              onPress={() => onSalonPress?.(salon.id)}
-            >
-              <View className="relative rounded-2xl overflow-hidden mb-2">
-                <Image
-                  source={salon.image}
-                  className="w-full h-40"
-                  resizeMode="cover"
-                />
-                <View className="absolute bottom-2 right-2 flex-row items-center bg-black/60 px-2 py-1 rounded-full">
-                  <Ionicons name="star" size={14} color="#FFD700" />
-                  <Text className="text-white text-sm font-semibold ml-1">{salon.rating}</Text>
+          {loading ? (
+            <View className="px-5" style={{ minHeight: 180, justifyContent: 'center', alignItems: 'center' }}>
+              <ActivityIndicator size="small" color={primaryColor} />
+            </View>
+          ) : (
+            salons.slice(0, 4).map((salon) => (
+              <TouchableOpacity
+                key={salon.id}
+                className="w-56 mr-4"
+                activeOpacity={0.7}
+                onPress={() => onSalonPress?.(salon.id)}
+              >
+                <View className="relative rounded-2xl overflow-hidden mb-2">
+                  <Image
+                    source={salon.image}
+                    className="w-full h-40"
+                    resizeMode="cover"
+                  />
+                  <View className="absolute bottom-2 right-2 flex-row items-center bg-black/60 px-2 py-1 rounded-full">
+                    <Ionicons name="star" size={14} color="#FFD700" />
+                    <Text className="text-white text-sm font-semibold ml-1">{salon.rating || '–'}</Text>
+                  </View>
                 </View>
-              </View>
-              <View>
-                <Text className="text-base font-semibold mb-1" style={{ color: colors.text }}>
-                  {salon.name}
-                </Text>
-                <View className="flex-row items-center">
-                  <Ionicons name="location" size={14} color={colors.icon} />
-                  <Text className="text-sm ml-1" style={{ color: colors.icon }}>
-                    {salon.location}
+                <View>
+                  <Text className="text-base font-semibold mb-1" style={{ color: colors.text }}>
+                    {salon.name}
                   </Text>
+                  <View className="flex-row items-center mb-1">
+                    <Ionicons name="location" size={14} color={colors.icon} />
+                    <Text className="text-sm ml-1" style={{ color: colors.icon }} numberOfLines={1}>
+                      {salon.location}
+                    </Text>
+                  </View>
+                  {(salon.businessHours || salon.contactNumber) && (
+                    <Text className="text-xs" style={{ color: colors.icon }} numberOfLines={2}>
+                      {salon.businessHours ?? salon.contactNumber}
+                    </Text>
+                  )}
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))
+          )}
         </ScrollView>
 
         {/* Animated Arrow Button - Centered within image */}

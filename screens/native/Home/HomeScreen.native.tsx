@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Dimensions } from 'react-native';
+import { View, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '@/components/native/Header';
 import { RisingItem } from '@/components/native/RisingItem';
@@ -14,9 +14,9 @@ import BookAppointmentScreen from './BookAppointmentScreen.native';
 import PaymentSuccessfulScreen from './PaymentSuccessfulScreen.native';
 import PaymentFailedScreen from './PaymentFailedScreen.native';
 import NotificationsScreen from '../Notifications/NotificationsScreen.native';
-import { getSalonDetails } from './configs/mockData';
-import { Service } from './types/Home';
-import { SalonDetails, Therapist } from './types/SalonDetails';
+import { getSalonById } from '@/api/endpoints/apiSalonEstablishment';
+import type { SalonEstablishment } from '@/api/types';
+import { SalonDetails } from './types/SalonDetails';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -80,6 +80,8 @@ export default function HomeScreen({
   const [topRatedReturnToServices, setTopRatedReturnToServices] = useState(false);
   const [autoOpenFilterModal, setAutoOpenFilterModal] = useState(false);
   const [selectedSalonId, setSelectedSalonId] = useState<string | null>(null);
+  const [selectedSalonDetails, setSelectedSalonDetails] = useState<SalonDetails | null>(null);
+  const [loadingSalonDetails, setLoadingSalonDetails] = useState(false);
   const [showBookAppointmentScreen, setShowBookAppointmentScreen] = useState(false);
   const [showPaymentSuccessfulScreen, setShowPaymentSuccessfulScreen] = useState(false);
   const [showPaymentFailedScreen, setShowPaymentFailedScreen] = useState(false);
@@ -172,13 +174,45 @@ export default function HomeScreen({
     transform: [{ translateX: bookAppointmentTranslateX.value }],
   }));
 
-  // Handle salon press
-  const handleSalonPress = (salonId: string) => {
+  // Handle salon press — fetch real establishment from API and map to SalonDetails
+  const handleSalonPress = async (salonId: string) => {
     if (useNavigatorOverlays) {
       onNavigateMassageSpaDetails?.(salonId);
       return;
     }
     setSelectedSalonId(salonId);
+    setSelectedSalonDetails(null);
+    setLoadingSalonDetails(true);
+    try {
+      const res = await getSalonById(salonId);
+      if (res.success && res.data) {
+        const est = res.data as SalonEstablishment;
+        const mapped: SalonDetails = {
+          id: est.id,
+          name: est.name,
+          rating: 0,
+          location: est.address,
+          image: est.salonPicture ? { uri: est.salonPicture } : require('../../../assets/spas/grand.png'),
+          services: [],
+          description: est.description ?? '',
+          address: est.address,
+          latitude: 10.3157,   // default Cebu lat
+          longitude: 123.8854, // default Cebu lng
+          operatingHours: est.businessHours ?? 'Hours not available',
+          distance: '',
+          reviewCount: 0,
+          therapists: [],
+          reviews: [],
+          phoneNumber: est.contactNumber ?? undefined,
+          facebookUrl: est.socials?.[0] ?? undefined,
+        };
+        setSelectedSalonDetails(mapped);
+      }
+    } catch (e) {
+      console.error('[HomeScreen] Failed to load salon details:', e);
+    } finally {
+      setLoadingSalonDetails(false);
+    }
   };
 
   // Handle back from salon details
@@ -453,24 +487,24 @@ export default function HomeScreen({
                 salonDetailsAnimatedStyle,
               ]}
             >
-              {(() => {
-                const salonDetails = getSalonDetails(selectedSalonId);
-                if (!salonDetails) return null;
-                return (
-                  <MassageSpaDetailsScreen
-                    salonDetails={salonDetails}
-                    onBack={handleBackFromSalonDetails}
-                    onBookAppointment={() => {
-                      setShowBookAppointmentScreen(true);
-                    }}
-                  />
-                );
-              })()}
+              {loadingSalonDetails ? (
+                <View style={{ flex: 1, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityIndicator size="large" color="#0d9488" />
+                </View>
+              ) : selectedSalonDetails ? (
+                <MassageSpaDetailsScreen
+                  salonDetails={selectedSalonDetails}
+                  onBack={handleBackFromSalonDetails}
+                  onBookAppointment={() => {
+                    setShowBookAppointmentScreen(true);
+                  }}
+                />
+              ) : null}
             </Animated.View>
           )}
 
           {/* Book Appointment Screen */}
-          {showBookAppointmentScreen && selectedSalonId && (
+          {showBookAppointmentScreen && selectedSalonDetails && (
             <Animated.View
               style={[
                 {
@@ -484,18 +518,12 @@ export default function HomeScreen({
                 bookAppointmentAnimatedStyle,
               ]}
             >
-              {(() => {
-                const salonDetails = getSalonDetails(selectedSalonId);
-                if (!salonDetails) return null;
-                return (
-                  <BookAppointmentScreen
-                    salonDetails={salonDetails}
-                    onBack={handleBackFromBookAppointment}
-                    onComplete={handleBookAppointmentComplete}
-                    onPaymentSuccess={handlePaymentSuccess}
-                  />
-                );
-              })()}
+              <BookAppointmentScreen
+                salonDetails={selectedSalonDetails}
+                onBack={handleBackFromBookAppointment}
+                onComplete={handleBookAppointmentComplete}
+                onPaymentSuccess={handlePaymentSuccess}
+              />
             </Animated.View>
           )}
 
