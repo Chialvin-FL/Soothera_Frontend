@@ -1,5 +1,6 @@
 import React from 'react';
 import Animated from 'react-native-reanimated';
+import { ActivityIndicator } from 'react-native';
 import BookingDetailsScreen from '../../screens/native/Bookings/BookingDetailsScreen.native';
 import BookingDetailsAdminScreen from '../../screens/native/Bookings/BookingDetailsAdminScreen.native';
 import RatingSpaScreen from '../../screens/native/Bookings/RatingSpaScreen.native';
@@ -79,8 +80,8 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
                                 onRebook={() => {
                                     const matchingSalon = topRatedSalons.find((s) => s.name === details.spaName);
                                     if (matchingSalon) {
-                                        const salonDetails = getSalonDetails(matchingSalon.id);
-                                        if (salonDetails) onRebook(matchingSalon.id);
+                                        // We no longer require synchronous salon details here — pass id through
+                                        onRebook(matchingSalon.id);
                                     }
                                 }}
                                 onReschedule={() => { }}
@@ -145,17 +146,40 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
 
             {walkInBookingVisible && (
                 <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 16 }, walkInBookingStyle]}>
-                    <BookAppointmentScreen
-                        salonDetails={getSalonDetails('1')!}
-                        onBack={closeWalkInBooking}
-                        onComplete={() => {
-                            console.log('Walk-in booking completed');
-                            closeWalkInBooking();
-                        }}
-                        isAdmin={userRole === 'admin'}
-                    />
+                    <WalkInBookLoader onBack={closeWalkInBooking} isAdmin={userRole === 'admin'} onComplete={() => { console.log('Walk-in booking completed'); closeWalkInBooking(); }} />
                 </Animated.View>
             )}
         </>
+    );
+}
+
+// Loader component for walk-in booking (fetches salon id '1')
+function WalkInBookLoader({ onBack, isAdmin, onComplete }: { onBack: () => void; isAdmin: boolean; onComplete: () => void }) {
+    const [loading, setLoading] = React.useState(true);
+    const [details, setDetails] = React.useState<any | null>(null);
+    React.useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const d = await getSalonDetails('1');
+                if (mounted) setDetails(d);
+            } catch (err) {
+                console.warn('[WalkInBookLoader] failed to load details', err);
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        })();
+        return () => { mounted = false; };
+    }, []);
+
+    if (loading) return <Animated.View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator /></Animated.View>;
+    if (!details) return null;
+    return (
+        <BookAppointmentScreen
+            salonDetails={details}
+            onBack={onBack}
+            onComplete={onComplete}
+            isAdmin={isAdmin}
+        />
     );
 }

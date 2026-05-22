@@ -305,14 +305,19 @@ export default function BookingsScreen({
       return;
     }
 
-    const salonDetails = getSalonDetails(matchingSalon.id);
-    if (!salonDetails) {
-      console.warn('No salon details found for salon id:', matchingSalon.id);
-      return;
-    }
-
-    setRebookSalonDetails(salonDetails);
-    setShowBookAppointmentScreen(true);
+    (async () => {
+      try {
+        const salonDetails = await getSalonDetails(matchingSalon.id);
+        if (!salonDetails) {
+          console.warn('No salon details found for salon id:', matchingSalon.id);
+          return;
+        }
+        setRebookSalonDetails(salonDetails);
+        setShowBookAppointmentScreen(true);
+      } catch (err) {
+        console.warn('[openRebookForSpaName] error fetching salon details', err);
+      }
+    })();
   };
 
   // Handle rebook from booking details footer button

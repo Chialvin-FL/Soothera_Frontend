@@ -1,5 +1,5 @@
-import React from 'react';
-import { View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import Animated from 'react-native-reanimated';
 import ServicesScreen from '../../screens/native/Home/ServicesScreen.native';
 import TopRatedSalonsScreen from '../../screens/native/Home/TopRatedSalonsScreen.native';
@@ -18,6 +18,96 @@ const OVERLAY_BASE = {
     right: 0,
     bottom: 0,
 };
+
+// Loader component: fetches salon details asynchronously and renders SalonDetailsScreen
+function SalonDetailsLoader({ salonId, onBack, onBook }: { salonId: string; onBack: () => void; onBook: () => void }) {
+    const [loading, setLoading] = useState(true);
+    const [details, setDetails] = useState<any | null>(null);
+
+    useEffect(() => {
+        let mounted = true;
+        setLoading(true);
+        setDetails(null);
+        (async () => {
+            try {
+                const d = await getSalonDetails(salonId);
+                if (mounted) setDetails(d);
+            } catch (err) {
+                console.warn('[SalonDetailsLoader] failed to load details', err);
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        })();
+        return () => {
+            mounted = false;
+        };
+    }, [salonId]);
+
+    if (loading) {
+        return (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator />
+            </View>
+        );
+    }
+
+    if (!details) {
+        // If not found, show nothing (parent overlay can handle closing)
+        return null;
+    }
+
+    return (
+        <SalonDetailsScreen
+            salonDetails={details}
+            onBack={onBack}
+            onBookAppointment={onBook}
+        />
+    );
+}
+
+// Loader for BookAppointmentScreen
+function BookAppointmentLoader({ salonId, onBack, onComplete, onPaymentSuccess }: { salonId: string; onBack: () => void; onComplete: () => void; onPaymentSuccess: (data: any) => void }) {
+    const [loading, setLoading] = useState(true);
+    const [details, setDetails] = useState<any | null>(null);
+
+    useEffect(() => {
+        let mounted = true;
+        setLoading(true);
+        setDetails(null);
+        (async () => {
+            try {
+                const d = await getSalonDetails(salonId);
+                if (mounted) setDetails(d);
+            } catch (err) {
+                console.warn('[BookAppointmentLoader] failed to load details', err);
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        })();
+        return () => {
+            mounted = false;
+        };
+    }, [salonId]);
+
+    if (loading) {
+        return (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator />
+            </View>
+        );
+    }
+
+    if (!details) return null;
+
+    return (
+        <BookAppointmentScreen
+            salonDetails={details}
+            onBack={onBack}
+            onComplete={onComplete}
+            onPaymentSuccess={onPaymentSuccess}
+        />
+    );
+}
 
 interface HomeStackProps {
     home: HomeStackState;
@@ -83,26 +173,23 @@ export function HomeStack({ home }: HomeStackProps) {
             )}
 
             {homeSelectedSalonId && (() => {
-                const salonDetails = getSalonDetails(homeSelectedSalonId);
-                if (!salonDetails) return null;
+                // Render async loader which fetches salon details from API
                 return (
                     <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 7 }, homeSalonStyle]}>
-                        <SalonDetailsScreen
-                            salonDetails={salonDetails}
+                        <SalonDetailsLoader
+                            salonId={homeSelectedSalonId}
                             onBack={closeHomeSalon}
-                            onBookAppointment={() => setHomeBookVisible(true)}
+                            onBook={() => setHomeBookVisible(true)}
                         />
                     </Animated.View>
                 );
             })()}
 
             {homeBookVisible && homeSelectedSalonId && (() => {
-                const salonDetails = getSalonDetails(homeSelectedSalonId);
-                if (!salonDetails) return null;
                 return (
                     <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 8 }, homeBookStyle]}>
-                        <BookAppointmentScreen
-                            salonDetails={salonDetails}
+                        <BookAppointmentLoader
+                            salonId={homeSelectedSalonId}
                             onBack={closeHomeBook}
                             onComplete={closeHomeBook}
                             onPaymentSuccess={handleHomePaymentSuccess}
