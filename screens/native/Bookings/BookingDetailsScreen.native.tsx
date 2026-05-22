@@ -412,7 +412,7 @@ export default function BookingDetailsScreen({
             {/* Price */}
             <View className="flex-row items-center">
               <Text className="text-2xl font-bold ml-2" style={{ color: primaryColor }}>
-                ₱{bookingDetails.price.toFixed(2)}
+                {bookingDetails.priceDisplay ?? `₱${bookingDetails.price.toFixed(2)}`}
               </Text>
             </View>
           </View>
@@ -463,7 +463,7 @@ export default function BookingDetailsScreen({
             <View className="mb-3 flex-row items-center">
               <Ionicons name="wallet-outline" size={18} color={colors.text} />
               <Text className="text-base font-semibold ml-2" style={{ color: colors.text }}>
-                Paid Downpayment: ₱{bookingDetails.paidAmount.toFixed(2)}
+                Paid Downpayment: {bookingDetails.paidAmountDisplay ?? `₱${bookingDetails.paidAmount.toFixed(2)}`}
               </Text>
             </View>
 
@@ -473,7 +473,7 @@ export default function BookingDetailsScreen({
                 <View className="mb-3 flex-row items-center">
                   <Ionicons name="cash-outline" size={18} color={colors.text} />
                   <Text className="text-base font-semibold ml-2" style={{ color: colors.text }}>
-                    Paid at Cashier: ₱{(bookingDetails.price - bookingDetails.paidAmount).toFixed(2)}
+                    Paid at Cashier: {bookingDetails.priceDisplay || bookingDetails.paidAmountDisplay ? 'N/A' : `₱${(bookingDetails.price - bookingDetails.paidAmount).toFixed(2)}`}
                   </Text>
                 </View>
                 <View className="mb-4 flex-row items-center">

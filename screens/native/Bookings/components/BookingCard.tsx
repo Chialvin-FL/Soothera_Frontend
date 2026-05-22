@@ -84,12 +84,12 @@ export default function BookingCard({ booking, tabType, onPress, onReview, onReb
           <View className="flex-row items-center mb-1">
             <Ionicons name="calendar-outline" size={14} color={colors.icon} />
             <Text className="text-xs ml-1 mr-2" style={{ color: colors.icon }}>
-              {booking.date}
+              {booking.date || 'N/A'}
             </Text>
             <Text className="text-xs mr-2" style={{ color: colors.icon }}>•</Text>
             <Ionicons name="business-outline" size={14} color={colors.icon} />
             <Text className="text-xs ml-1" style={{ color: colors.icon }}>
-              {booking.spaName}
+              {booking.spaName || 'N/A'}
             </Text>
           </View>
 
@@ -97,7 +97,7 @@ export default function BookingCard({ booking, tabType, onPress, onReview, onReb
           <View className="flex-row items-center mb-1">
             <Ionicons name="time-outline" size={14} color={colors.icon} />
             <Text className="text-xs ml-1" style={{ color: colors.icon }}>
-              {booking.time}
+              {booking.time || 'N/A'}
             </Text>
           </View>
 
@@ -107,7 +107,7 @@ export default function BookingCard({ booking, tabType, onPress, onReview, onReb
       {/* Price Row */}
       <View className="mb-3 flex-row justify-end">
         <Text className="text-l" style={{ color: colors.primary }}>
-          ₱{booking.price.toFixed(2)}
+          {booking.priceDisplay ?? `₱${booking.price.toFixed(2)}`}
         </Text>
       </View>
 

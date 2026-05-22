@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { View, ScrollView, Dimensions } from 'react-native';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import { View, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,9 +8,12 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Header } from '@/components/native/Header';
 import { useConfirmation } from '@/components/native/ConfirmationModalContext';
 import { RisingItem } from '@/components/native/RisingItem';
-import { 
-  Booking,
-  allBookings,
+import { getBookings } from '@/api/endpoints/apiBooking';
+import { loadStoredSession } from '@/screens/native/Login/loginService';
+import type { Booking } from './types/Booking';
+import type { BookingDetails } from './types/BookingDetails';
+import { mapApiBookingToCard, mapApiBookingToDetails } from './utils/apiBookingMappers';
+import {
   getUpcomingBookings,
   getCompletedBookings,
   getCancelledBookings
@@ -26,10 +29,9 @@ import BookAppointmentScreen from '../Home/BookAppointmentScreen.native';
 import PaymentSuccessfulScreen from '../Home/PaymentSuccessfulScreen.native';
 import PaymentFailedScreen from '../Home/PaymentFailedScreen.native';
 import { getSalonDetails, topRatedSalons } from '../Home/configs/mockData';
-import type { SalonDetails } from '../Home/types/SalonDetails';
+import type { SalonDetails, Therapist } from '../Home/types/SalonDetails';
 import type { Service } from '../Home/types/Home';
-import type { Therapist } from '../Home/types/SalonDetails';
-import type { PaymentMutationResponse, UpdatePaymentRequest } from '@/api/types';
+import type { BookingResponse, PaymentMutationResponse, UpdatePaymentRequest } from '@/api/types';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -107,6 +109,10 @@ export default function BookingsScreen({
   const [showPaymentSuccessfulScreen, setShowPaymentSuccessfulScreen] = useState(false);
   const [showPaymentFailedScreen, setShowPaymentFailedScreen] = useState(false);
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [apiBookingsById, setApiBookingsById] = useState<Record<string, BookingResponse>>({});
+  const [isLoadingBookings, setIsLoadingBookings] = useState(true);
+  const [bookingsError, setBookingsError] = useState<string | null>(null);
 
   const screenWidth = Dimensions.get('window').width;
 
@@ -121,6 +127,60 @@ export default function BookingsScreen({
   const maxAnimatedItems = 6;
   const baseItemDelay = 140;
   const perItemDelay = 140;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchCurrentUserBookings = async () => {
+      setIsLoadingBookings(true);
+      setBookingsError(null);
+
+      try {
+        const session = await loadStoredSession();
+        if (!session?.uid) {
+          if (isMounted) {
+            setBookings([]);
+            setBookingsError('Not authenticated.');
+          }
+          return;
+        }
+
+        const response = await getBookings({
+          customerId: session.uid,
+          page: 1,
+          pageSize: 100,
+        });
+
+        const items = response.data?.items ?? [];
+        if (isMounted) {
+          setBookings(items.map(mapApiBookingToCard));
+          setApiBookingsById(
+            items.reduce<Record<string, BookingResponse>>((acc, item) => {
+              if (item.bookingId) acc[item.bookingId] = item;
+              return acc;
+            }, {}),
+          );
+        }
+      } catch (error: any) {
+        console.warn('[BookingsScreen] Failed to load current user bookings:', error);
+        if (isMounted) {
+          setBookings([]);
+          setApiBookingsById({});
+          setBookingsError(error?.message ?? 'Failed to load bookings.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingBookings(false);
+        }
+      }
+    };
+
+    fetchCurrentUserBookings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   
   // Handle page scroll to sync active tab
   const handlePageScroll = (event: any) => {
@@ -149,6 +209,7 @@ export default function BookingsScreen({
     // Date format is MM/DD/YYYY
     return [...bookings].sort((a, b) => {
       const parseDate = (dateStr: string): Date => {
+        if (dateStr === 'N/A') return new Date(0);
         const [month, day, year] = dateStr.split('/').map(Number);
         return new Date(year, month - 1, day);
       };
@@ -163,8 +224,13 @@ export default function BookingsScreen({
 
   // Get all bookings sorted by date (most recent first)
   const getAllBookings = (): Booking[] => {
-    return sortBookingsByDate(allBookings);
+    return sortBookingsByDate(bookings);
   };
+
+  const getSelectedBookingDetails = useCallback((bookingId: string): BookingDetails | undefined => {
+    const apiBooking = apiBookingsById[bookingId];
+    return apiBooking ? mapApiBookingToDetails(apiBooking) : getBookingDetails(bookingId);
+  }, [apiBookingsById]);
 
   // Handle booking card press
   const handleBookingPress = (bookingId: string) => {
@@ -329,7 +395,7 @@ export default function BookingsScreen({
   // Handle rebook from booking details footer button
   const handleRebook = () => {
     if (!selectedBookingId) return;
-    const bookingDetails = getBookingDetails(selectedBookingId);
+    const bookingDetails = getSelectedBookingDetails(selectedBookingId);
     if (!bookingDetails) return;
     openRebookForSpaName(bookingDetails.spaName);
   };
@@ -421,12 +487,12 @@ export default function BookingsScreen({
   // If booking details not found, reset selection
   useEffect(() => {
     if (selectedBookingId) {
-      const bookingDetails = getBookingDetails(selectedBookingId);
+      const bookingDetails = getSelectedBookingDetails(selectedBookingId);
       if (!bookingDetails) {
         setSelectedBookingId(null);
       }
     }
-  }, [selectedBookingId]);
+  }, [selectedBookingId, getSelectedBookingDetails]);
 
   // Notify parent when details screen is shown/hidden (skip when navigator owns overlays)
   useEffect(() => {
@@ -576,10 +642,10 @@ export default function BookingsScreen({
       >
         {tabs.map((tab) => {
           const filteredBookings = 
-            tab === 'upcoming' ? getUpcomingBookings(allBookings) :
-            tab === 'completed' ? getCompletedBookings(allBookings) :
-            tab === 'cancelled' ? getCancelledBookings(allBookings) :
-            allBookings;
+            tab === 'upcoming' ? getUpcomingBookings(bookings) :
+            tab === 'completed' ? getCompletedBookings(bookings) :
+            tab === 'cancelled' ? getCancelledBookings(bookings) :
+            getAllBookings();
           
           // Sort all tab bookings by date (recent to old)
           const tabBookings = sortBookingsByDate(filteredBookings);
@@ -592,7 +658,24 @@ export default function BookingsScreen({
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: insets.bottom + 70, paddingTop: 12 }}
             >
-              {tabBookings.length > 0 ? (
+              {isLoadingBookings && tab === activeTab ? (
+                <View className="items-center justify-center py-20">
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text className="text-sm mt-4" style={{ color: colors.icon }}>
+                    Loading bookings...
+                  </Text>
+                </View>
+              ) : bookingsError && tab === activeTab ? (
+                <View className="items-center justify-center py-20">
+                  <Ionicons name="alert-circle-outline" size={64} color={colors.icon} />
+                  <Text className="text-lg font-semibold mt-4" style={{ color: colors.text }}>
+                    Unable to load bookings
+                  </Text>
+                  <Text className="text-sm mt-2" style={{ color: colors.icon }}>
+                    {bookingsError}
+                  </Text>
+                </View>
+              ) : tabBookings.length > 0 ? (
                 tabBookings.map((booking, index) => {
                   const shouldAnimate = tab === activeTab && index < maxAnimatedItems;
                   const delay = baseItemDelay + Math.min(index, maxAnimatedItems) * perItemDelay;
@@ -665,7 +748,7 @@ export default function BookingsScreen({
           ]}
         >
           {(() => {
-            const bookingDetails = getBookingDetails(selectedBookingId);
+            const bookingDetails = getSelectedBookingDetails(selectedBookingId);
             if (!bookingDetails) return null;
             return (
               <BookingDetailsScreen
@@ -699,7 +782,7 @@ export default function BookingsScreen({
           ]}
         >
           {(() => {
-            const bookingDetails = getBookingDetails(ratingBookingId);
+            const bookingDetails = getSelectedBookingDetails(ratingBookingId);
             if (!bookingDetails) return null;
             return (
               <RatingSpaScreen
@@ -728,7 +811,7 @@ export default function BookingsScreen({
           ]}
         >
           {(() => {
-            const bookingDetails = getBookingDetails(therapistRatingBookingId);
+            const bookingDetails = getSelectedBookingDetails(therapistRatingBookingId);
             if (!bookingDetails) return null;
             return (
               <RatingTherapistScreen

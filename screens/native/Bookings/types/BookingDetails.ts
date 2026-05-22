@@ -17,4 +17,5 @@ export interface BookingDetails extends Booking {
   // Payment information
   bookingId: string;
   paidAmount: number; // Downpayment amount (50% of total price)
+  paidAmountDisplay?: string;
 }

@@ -19,6 +19,7 @@ export interface Booking {
   date: string;
   time: string;
   price: number;
+  priceDisplay?: string;
 }
 
 // Convert status number to display text
