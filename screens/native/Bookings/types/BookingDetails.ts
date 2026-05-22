@@ -16,6 +16,11 @@ export interface BookingDetails extends Booking {
   
   // Payment information
   bookingId: string;
-  paidAmount: number; // Downpayment amount (50% of total price)
+  paidAmount: number; // Paid amount for the booking document
   paidAmountDisplay?: string;
+  paymentStatus?: string;
+  salonServiceId?: string;
+  selectedPrice?: number;
+  selectedAddOns?: string[];
+  selectedAddOnPrices?: number[];
 }

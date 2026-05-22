@@ -12,6 +12,7 @@ import GetDirectionsScreen from '../../screens/native/Bookings/GetDirectionsScre
 import BookAppointmentScreen from '../../screens/native/Home/BookAppointmentScreen.native';
 import { getBookingDetails } from '../../screens/native/Bookings/configs/mockBookingDetailsData';
 import { getBookingById } from '../../api/endpoints/apiBooking';
+import { getSalonServices } from '../../api/endpoints/apiService';
 import { mapApiBookingToDetails } from '../../screens/native/Bookings/utils/apiBookingMappers';
 import { topRatedSalons, getSalonDetails } from '../../screens/native/Home/configs/mockData';
 import type { BookingsStackState } from '../hooks/useBookingsStack';
@@ -81,8 +82,21 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
                 const apiBooking = Array.isArray(responseData?.items)
                     ? responseData.items[0]
                     : responseData;
+                const salonServiceId = apiBooking?.salonServiceId ?? apiBooking?.SalonServiceId;
+                let salonService = null;
+                if (salonServiceId) {
+                    try {
+                        const serviceResponse = await getSalonServices({ salonServiceId });
+                        const serviceData = serviceResponse?.data as any;
+                        salonService = Array.isArray(serviceData?.items)
+                            ? serviceData.items[0]
+                            : serviceData;
+                    } catch (serviceError) {
+                        console.warn('[BookingsStack] Failed to load salon service details:', serviceError);
+                    }
+                }
                 if (mounted) {
-                    setApiBookingDetails(apiBooking ? mapApiBookingToDetails(apiBooking) : null);
+                    setApiBookingDetails(apiBooking ? mapApiBookingToDetails(apiBooking, salonService) : null);
                     setBookingDetailsError(apiBooking ? null : 'Booking details not found.');
                 }
             } catch (error: any) {

@@ -25,9 +25,14 @@ export interface InvoiceCalculations {
   isVAT: boolean;
 }
 
+export type InvoiceDocumentType = 'invoice' | 'acknowledgementReceipt';
+
 export interface InvoiceData extends BookingDetails {
   invoiceNumber: string;
   invoiceDate: string;
+  documentType: InvoiceDocumentType;
+  paymentLabel: string;
+  isNonRefundable?: boolean;
   items: InvoiceItem[];
   calculations: InvoiceCalculations;
   customerName?: string;

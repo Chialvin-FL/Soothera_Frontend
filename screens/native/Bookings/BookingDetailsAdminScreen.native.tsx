@@ -194,6 +194,10 @@ export default function BookingDetailsAdminScreen({
     const isConfirmed = bookingDetails.status === BOOKING_STATUS.CONFIRMED;
     const isPending = bookingDetails.status === BOOKING_STATUS.PENDING;
     const isCancelled = bookingDetails.status === BOOKING_STATUS.CANCELLED;
+    const documentActionLabel = isCompleted ? 'Download Invoice' : 'Download Acknowledgement Receipt';
+    const selectedAddOns = bookingDetails.selectedAddOns ?? [];
+    const selectedAddOnPrices = bookingDetails.selectedAddOnPrices ?? [];
+    const transactionTotal = bookingDetails.price + selectedAddOnPrices.reduce((sum, price) => sum + price, 0);
 
     const [showInvoice, setShowInvoice] = useState(false);
 
@@ -309,6 +313,32 @@ export default function BookingDetailsAdminScreen({
                                 ₱{bookingDetails.price.toFixed(2)}
                             </Text>
                         </View>
+
+                        {selectedAddOns.length > 0 && (
+                            <View className="mt-4">
+                                <Text className="text-base font-semibold mb-2" style={{ color: colors.text }}>
+                                    Selected Add-ons
+                                </Text>
+                                {selectedAddOns.map((addOn, index) => (
+                                    <View key={`${addOn}-${index}`} className="flex-row justify-between py-1">
+                                        <Text className="text-sm" style={{ color: colors.icon }}>
+                                            {addOn}
+                                        </Text>
+                                        <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                                            ₱{(selectedAddOnPrices[index] ?? 0).toFixed(2)}
+                                        </Text>
+                                    </View>
+                                ))}
+                                <View className="flex-row justify-between pt-2 mt-2 border-t" style={{ borderTopColor: '#E5E7EB' }}>
+                                    <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                                        Transaction Total
+                                    </Text>
+                                    <Text className="text-sm font-semibold" style={{ color: primaryColor }}>
+                                        ₱{transactionTotal.toFixed(2)}
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
                     </View>
 
                     {/* Booking Information Section */}
@@ -325,11 +355,11 @@ export default function BookingDetailsAdminScreen({
                             </Text>
                         </View>
 
-                        {/* Paid Downpayment */}
+                        {/* Paid Amount */}
                         <View className="mb-3 flex-row items-center">
                             <Ionicons name="wallet-outline" size={18} color={colors.text} />
                             <Text className="text-base font-semibold ml-2" style={{ color: colors.text }}>
-                                Paid Downpayment: ₱{bookingDetails.paidAmount.toFixed(2)}
+                                {isCompleted ? 'Paid Amount' : 'Paid Downpayment'}: ₱{(isCompleted ? transactionTotal : bookingDetails.paidAmount).toFixed(2)}
                             </Text>
                         </View>
 
@@ -339,7 +369,7 @@ export default function BookingDetailsAdminScreen({
                                 <View className="mb-3 flex-row items-center">
                                     <Ionicons name="cash-outline" size={18} color={colors.text} />
                                     <Text className="text-base font-semibold ml-2" style={{ color: colors.text }}>
-                                        Paid at Cashier: ₱{(bookingDetails.price - bookingDetails.paidAmount).toFixed(2)}
+                                        Paid at Cashier: ₱{(transactionTotal - bookingDetails.paidAmount).toFixed(2)}
                                     </Text>
                                 </View>
                                 <View className="mb-4 flex-row items-center">
@@ -375,7 +405,7 @@ export default function BookingDetailsAdminScreen({
                             </View>
                         )}
 
-                        {/* Download Invoice Button */}
+                        {/* Download Document Button */}
                         <TouchableOpacity
                             className="w-full flex-row items-center justify-center px-4 py-3 rounded-xl border"
                             style={{ borderColor: primaryColor, backgroundColor: 'white' }}
@@ -391,7 +421,7 @@ export default function BookingDetailsAdminScreen({
                                     businessPhone: '+63 32 123 4567',
                                     businessEmail: 'info@soothera.com',
                                     businessTIN: '123-456-789-000',
-                                    notes: 'Thank you for your booking!',
+                                    notes: isCompleted ? 'Full payment received. Thank you for your booking!' : 'This acknowledgement receipt confirms the paid booking amount.',
                                 });
                                 if (onNavigateToInvoice) {
                                     onNavigateToInvoice(invoiceData, { isVAT: false, vatRate: 0.12, discounts: 0 });
@@ -402,7 +432,7 @@ export default function BookingDetailsAdminScreen({
                         >
                             <Ionicons name="download-outline" size={18} color={primaryColor} />
                             <Text className="text-sm font-semibold ml-2" style={{ color: primaryColor }}>
-                                Download Invoice
+                                {documentActionLabel}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -463,7 +493,7 @@ export default function BookingDetailsAdminScreen({
                     businessPhone: '+63 32 123 4567',
                     businessEmail: 'info@soothera.com',
                     businessTIN: '123-456-789-000',
-                    notes: 'Thank you for your booking!',
+                    notes: isCompleted ? 'Full payment received. Thank you for your booking!' : 'This acknowledgement receipt confirms the paid booking amount.',
                 });
 
                 return (

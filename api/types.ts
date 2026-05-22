@@ -572,6 +572,7 @@ export interface GetAvailableSlotsParams {
 /** Booking response data matching BookingResponseDTO. */
 export interface BookingResponse {
     bookingId: string;
+    salonServiceId?: string;
     establishmentName: string;
     establishmentAddress: string;
     salonServiceName: string;

@@ -47,6 +47,11 @@ export default function InvoiceScreen({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
+  const isAcknowledgementReceipt = invoiceData.documentType === 'acknowledgementReceipt';
+  const documentTitle = isAcknowledgementReceipt ? 'ACKNOWLEDGEMENT RECEIPT' : 'INVOICE';
+  const documentTitleCase = isAcknowledgementReceipt ? 'Acknowledgement Receipt' : 'Invoice';
+  const documentNumberLabel = isAcknowledgementReceipt ? 'Receipt #' : 'Invoice #';
+  const documentFilePrefix = isAcknowledgementReceipt ? 'Acknowledgement_Receipt' : 'Invoice';
 
   // Calculate invoice based on VAT or Non-VAT
   // Use the gross amount from calculations if available, otherwise calculate from items
@@ -96,7 +101,7 @@ export default function InvoiceScreen({
     }
   };
 
-  // Check if invoice already exists
+  // Check if document already exists
   const checkExistingInvoice = async () => {
     setIsCheckingExisting(true);
     try {
@@ -131,7 +136,7 @@ export default function InvoiceScreen({
           }
         } catch (verifyError) {
           // File doesn't exist or can't be accessed
-          console.log('Invoice file not accessible, will re-download');
+          console.log('Document file not accessible, will re-download');
           delete registry[invoiceNumber];
           await saveInvoiceRegistry(registry);
           setExistingInvoice(null);
@@ -208,7 +213,7 @@ export default function InvoiceScreen({
       }
   };
 
-  // Open existing invoice
+  // Open existing document
   const openExistingInvoice = async () => {
     if (!existingInvoice) return;
 
@@ -225,10 +230,10 @@ export default function InvoiceScreen({
         await Linking.openURL(existingInvoice.uri);
       }
 
-      showSuccessModal('Invoice Opened', `Opened existing invoice:\n\nFile path: Soothera/${existingInvoice.fileName}`);
+      showSuccessModal(`${documentTitleCase} Opened`, `Opened existing ${documentTitleCase.toLowerCase()}:\n\nFile path: Soothera/${existingInvoice.fileName}`);
     } catch (error) {
       console.error('Error opening existing invoice:', error);
-      showSuccessModal('Error', 'Failed to open invoice. The file may have been moved or deleted.', 'error');
+      showSuccessModal('Error', `Failed to open ${documentTitleCase.toLowerCase()}. The file may have been moved or deleted.`, 'error');
       // Remove from registry since it's not accessible
       const registry = await loadInvoiceRegistry();
       delete registry[invoiceData.invoiceNumber];
@@ -256,7 +261,7 @@ export default function InvoiceScreen({
 
       // Create filename with invoice number and timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-      const fileName = `Invoice_${invoiceData.invoiceNumber}_${timestamp}.pdf`;
+      const fileName = `${documentFilePrefix}_${invoiceData.invoiceNumber}_${timestamp}.pdf`;
 
       let savedUri: string = uri;
 
@@ -335,10 +340,10 @@ export default function InvoiceScreen({
           await Linking.openURL(savedUri);
         }
         
-        showSuccessModal('PDF Downloaded', `Invoice saved and opened successfully!\n\nFile path: Soothera/${fileName}`);
+        showSuccessModal('PDF Downloaded', `${documentTitleCase} saved and opened successfully!\n\nFile path: Soothera/${fileName}`);
       } catch (openError) {
         console.error('Error opening PDF:', openError);
-        showSuccessModal('PDF Downloaded', `Invoice saved successfully!\n\nFile path: Soothera/${fileName}\n\nYou can find it in your file manager.`);
+        showSuccessModal('PDF Downloaded', `${documentTitleCase} saved successfully!\n\nFile path: Soothera/${fileName}\n\nYou can find it in your file manager.`);
       }
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -519,11 +524,12 @@ export default function InvoiceScreen({
         ${businessTIN ? `<p>TIN: ${businessTIN}</p>` : ''}
       </div>
       <div>
-        <div class="invoice-title">INVOICE</div>
+        <div class="invoice-title">${documentTitle}</div>
         <div class="invoice-meta">
-          <p><strong>Invoice #:</strong> ${data.invoiceNumber}</p>
+          <p><strong>${documentNumberLabel}:</strong> ${data.invoiceNumber}</p>
           <p><strong>Date:</strong> ${formatDate(data.invoiceDate)}</p>
           <p><strong>Booking ID:</strong> ${data.bookingId}</p>
+          <p><strong>Payment:</strong> ${data.paymentLabel}</p>
         </div>
       </div>
     </div>
@@ -594,18 +600,20 @@ export default function InvoiceScreen({
       ` : ''}
       `}
       <div class="total-row final">
-        <span class="total-label">Total Amount Due:</span>
+        <span class="total-label">${isAcknowledgementReceipt ? 'Total Transaction Amount:' : 'Total Amount Due:'}</span>
         <span>${formatCurrency(calc.totalAmountDue)}</span>
       </div>
       ${data.paidAmount > 0 ? `
       <div class="total-row">
-        <span class="total-label">Paid Amount:</span>
+        <span class="total-label">${isAcknowledgementReceipt ? 'Amount Acknowledged:' : 'Paid Amount:'}</span>
         <span>${formatCurrency(data.paidAmount)}</span>
       </div>
+      ${!isAcknowledgementReceipt ? `
       <div class="total-row">
         <span class="total-label">Balance:</span>
         <span>${formatCurrency(calc.totalAmountDue - data.paidAmount)}</span>
       </div>
+      ` : ''}
       ` : ''}
     </div>
 
@@ -616,9 +624,16 @@ export default function InvoiceScreen({
     </div>
     ` : ''}
 
+    ${data.isNonRefundable ? `
+    <div class="notes-section">
+      <div class="notes-title">Non-refundable</div>
+      <p>This receipt acknowledges the paid amount only. The paid amount is non-refundable.</p>
+    </div>
+    ` : ''}
+
     <div class="footer">
       <p>Thank you for your business!</p>
-      <p>This is a computer-generated invoice.</p>
+      <p>This is a computer-generated ${documentTitleCase.toLowerCase()}.</p>
     </div>
   </div>
 </body>
@@ -646,7 +661,7 @@ export default function InvoiceScreen({
         <Ionicons name="arrow-back" size={24} color={colors.text} />
       </TouchableOpacity>
       <Text className="text-lg font-semibold" style={{ color: colors.text }}>
-        Invoice
+        {documentTitleCase}
       </Text>
     </View>
   );
@@ -692,16 +707,19 @@ export default function InvoiceScreen({
             </View>
             <View className="items-end">
               <Text className="text-3xl font-bold mb-2" style={{ color: primaryColor }}>
-                INVOICE
+                {documentTitle}
               </Text>
               <Text className="text-sm" style={{ color: colors.icon }}>
-                Invoice #: {invoiceData.invoiceNumber}
+                {documentNumberLabel}: {invoiceData.invoiceNumber}
               </Text>
               <Text className="text-sm" style={{ color: colors.icon }}>
                 Date: {formatDate(invoiceData.invoiceDate)}
               </Text>
               <Text className="text-sm" style={{ color: colors.icon }}>
                 Booking ID: {invoiceData.bookingId}
+              </Text>
+              <Text className="text-sm" style={{ color: colors.icon }}>
+                Payment: {invoiceData.paymentLabel}
               </Text>
             </View>
           </View>
@@ -871,7 +889,7 @@ export default function InvoiceScreen({
                 style={{ borderTopColor: primaryColor, borderBottomColor: primaryColor }}
               >
                 <Text className="text-lg font-bold" style={{ color: primaryColor }}>
-                  Total Amount Due:
+                  {isAcknowledgementReceipt ? 'Total Transaction Amount:' : 'Total Amount Due:'}
                 </Text>
                 <Text className="text-lg font-bold" style={{ color: primaryColor }}>
                   {formatCurrency(calculations.totalAmountDue)}
@@ -881,12 +899,13 @@ export default function InvoiceScreen({
                 <>
                   <View className="flex-row justify-between py-2 border-b" style={{ borderBottomColor: '#E5E7EB' }}>
                     <Text className="text-sm font-semibold" style={{ color: colors.text }}>
-                      Paid Amount:
+                      {isAcknowledgementReceipt ? 'Amount Acknowledged:' : 'Paid Amount:'}
                     </Text>
                     <Text className="text-sm" style={{ color: colors.text }}>
                       {formatCurrency(invoiceData.paidAmount)}
                     </Text>
                   </View>
+                  {!isAcknowledgementReceipt && (
                   <View className="flex-row justify-between py-2">
                     <Text className="text-sm font-semibold" style={{ color: colors.text }}>
                       Balance:
@@ -895,6 +914,7 @@ export default function InvoiceScreen({
                       {formatCurrency(calculations.totalAmountDue - invoiceData.paidAmount)}
                     </Text>
                   </View>
+                  )}
                 </>
               )}
             </View>
@@ -915,6 +935,19 @@ export default function InvoiceScreen({
           </View>
         )}
 
+        {invoiceData.isNonRefundable && (
+          <View className="px-5 py-4">
+            <View className="bg-red-50 p-4 rounded-xl">
+              <Text className="text-base font-semibold mb-2" style={{ color: '#EF4444' }}>
+                Non-refundable
+              </Text>
+              <Text className="text-sm" style={{ color: colors.text }}>
+                This receipt acknowledges the paid amount only. The paid amount is non-refundable.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Footer */}
         <View className="px-5 py-4 mt-4">
           <View className="items-center border-t pt-4" style={{ borderTopColor: '#E5E7EB' }}>
@@ -922,7 +955,7 @@ export default function InvoiceScreen({
               Thank you for your business!
             </Text>
             <Text className="text-xs mt-1" style={{ color: colors.icon }}>
-              This is a computer-generated invoice.
+              This is a computer-generated {documentTitleCase.toLowerCase()}.
             </Text>
           </View>
         </View>
@@ -954,8 +987,8 @@ export default function InvoiceScreen({
             {isGeneratingPDF 
               ? (existingInvoice ? 'Opening PDF...' : 'Generating PDF...') 
               : existingInvoice 
-                ? 'Open Invoice as PDF' 
-                : 'Download Invoice as PDF'}
+                ? `Open ${documentTitleCase} as PDF`
+                : `Download ${documentTitleCase} as PDF`}
           </Text>
         </TouchableOpacity>
       </View>

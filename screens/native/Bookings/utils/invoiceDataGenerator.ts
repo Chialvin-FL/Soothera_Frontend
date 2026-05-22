@@ -1,4 +1,5 @@
 import { BookingDetails } from '../types/BookingDetails';
+import { BOOKING_STATUS } from '../types/Booking';
 import { InvoiceData, InvoiceItem } from '../types/Invoice';
 import { calculateVATInclusive, calculateNonVAT } from './invoiceCalculations';
 
@@ -39,30 +40,62 @@ export function generateInvoiceFromBooking(
     notes,
   } = options;
 
-  // Generate invoice number (format: INV-YYYYMMDD-XXX)
-  const now = new Date();
-  const invoiceNumber = `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+  const isCompleted = bookingDetails.status === BOOKING_STATUS.COMPLETED;
+  const isCancelled = bookingDetails.status === BOOKING_STATUS.CANCELLED;
+  const documentType = isCompleted ? 'invoice' : 'acknowledgementReceipt';
+  const selectedPrice = bookingDetails.selectedPrice ?? bookingDetails.price;
+  const selectedAddOns = bookingDetails.selectedAddOns ?? [];
+  const selectedAddOnPrices = bookingDetails.selectedAddOnPrices ?? [];
+  const transactionTotal = selectedPrice + selectedAddOnPrices.reduce((sum, price) => sum + price, 0);
+  const paidAmount = isCompleted ? transactionTotal : bookingDetails.paidAmount;
+  const paymentLabel = isCompleted
+    ? 'Full Payment'
+    : paidAmount >= transactionTotal
+      ? 'Full Payment (100%)'
+      : 'Partial Downpayment (50%)';
+  const documentAmount = transactionTotal;
 
-  // Create invoice items
+  // Generate document number (format: INV/AR-YYYYMMDD-XXX)
+  const now = new Date();
+  const documentPrefix = documentType === 'invoice' ? 'INV' : 'AR';
+  const invoiceNumber = `${documentPrefix}-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+
+  const buildDocumentAmount = (amount: number) => Number(amount.toFixed(2));
+
+  // Create document items from the actual selected service and add-ons.
   const items: InvoiceItem[] = [
     {
       description: bookingDetails.serviceName,
       quantity: 1,
-      unitPrice: bookingDetails.price,
-      total: bookingDetails.price,
+      unitPrice: buildDocumentAmount(selectedPrice),
+      total: buildDocumentAmount(selectedPrice),
     },
+    ...selectedAddOns.map((addOn, index) => {
+      const addOnAmount = selectedAddOnPrices[index] ?? 0;
+      const documentAddOnAmount = buildDocumentAmount(addOnAmount);
+      return {
+        description: addOn,
+        quantity: 1,
+        unitPrice: documentAddOnAmount,
+        total: documentAddOnAmount,
+      };
+    }),
   ];
 
-  // Calculate invoice totals
-  const grossAmount = bookingDetails.price;
+  // Calculate document totals
+  const grossAmount = documentAmount;
   const calculations = isVAT
     ? calculateVATInclusive(grossAmount, vatRate, discounts)
     : calculateNonVAT(grossAmount, discounts);
 
   return {
     ...bookingDetails,
+    paidAmount,
     invoiceNumber,
     invoiceDate: now.toISOString(),
+    documentType,
+    paymentLabel,
+    isNonRefundable: isCancelled,
     items,
     calculations,
     customerName,
