@@ -14,9 +14,10 @@ import BookAppointmentScreen from './BookAppointmentScreen.native';
 import PaymentSuccessfulScreen from './PaymentSuccessfulScreen.native';
 import PaymentFailedScreen from './PaymentFailedScreen.native';
 import NotificationsScreen from '../Notifications/NotificationsScreen.native';
-import { getSalonById } from '@/api/endpoints/apiSalonEstablishment';
-import type { SalonEstablishment } from '@/api/types';
+import { getSalonDetails } from './configs/mockData';
+import type { Service } from './types/Home';
 import { SalonDetails } from './types/SalonDetails';
+import type { Therapist } from './types/SalonDetails';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -184,30 +185,8 @@ export default function HomeScreen({
     setSelectedSalonDetails(null);
     setLoadingSalonDetails(true);
     try {
-      const res = await getSalonById(salonId);
-      if (res.success && res.data) {
-        const est = res.data as SalonEstablishment;
-        const mapped: SalonDetails = {
-          id: est.id,
-          name: est.name,
-          rating: 0,
-          location: est.address,
-          image: est.salonPicture ? { uri: est.salonPicture } : require('../../../assets/spas/grand.png'),
-          services: [],
-          description: est.description ?? '',
-          address: est.address,
-          latitude: 10.3157,   // default Cebu lat
-          longitude: 123.8854, // default Cebu lng
-          operatingHours: est.businessHours ?? 'Hours not available',
-          distance: '',
-          reviewCount: 0,
-          therapists: [],
-          reviews: [],
-          phoneNumber: est.contactNumber ?? undefined,
-          facebookUrl: est.socials?.[0] ?? undefined,
-        };
-        setSelectedSalonDetails(mapped);
-      }
+      const details = await getSalonDetails(salonId);
+      setSelectedSalonDetails(details);
     } catch (e) {
       console.error('[HomeScreen] Failed to load salon details:', e);
     } finally {

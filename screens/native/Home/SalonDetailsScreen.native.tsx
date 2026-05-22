@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, ScrollView, Image, TouchableOpacity, Dimensions, BackHandler, Platform, Linking, Animated } from 'react-native';
+import { View, ScrollView, Image, TouchableOpacity, Dimensions, BackHandler, Platform, Linking, Animated, ActivityIndicator } from 'react-native';
 import { Text } from '@/components/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,8 @@ import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { TransparentHeader } from '@/components/native/TransparentHeader';
 import { SalonDetails } from './types/SalonDetails';
+import { getSalonServices } from '@/api/endpoints/apiService';
+import type { SalonServiceResponse } from '@/api/types';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
@@ -199,6 +201,19 @@ const formatRelativeDate = (date: Date | string | undefined): string => {
   }
 };
 
+const formatPrice = (price: number): string => {
+  return `₱${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const formatDuration = (minutes: number): string => {
+  if (!minutes || minutes <= 0) return 'N/A';
+  if (minutes < 60) return `${minutes} min`;
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes ? `${hours} hr ${remainingMinutes} min` : `${hours} hr`;
+};
+
 export default function MassageSpaDetailsScreen({
   salonDetails,
   onBack,
@@ -211,6 +226,9 @@ export default function MassageSpaDetailsScreen({
   const [isFavorited, setIsFavorited] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [activeTabHeight, setActiveTabHeight] = useState(1);
+  const [services, setServices] = useState<SalonServiceResponse[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [servicesError, setServicesError] = useState<string | null>(null);
   const tabScrollViewRef = useRef<ScrollView>(null);
   const contentScrollViewRef = useRef<ScrollView>(null);
   const mainScrollViewRef = useRef<ScrollView>(null);
@@ -226,6 +244,43 @@ export default function MassageSpaDetailsScreen({
     { id: 'ratings', label: 'Ratings' },
     { id: 'about', label: 'About Us' },
   ];
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadServices = async () => {
+      setServicesLoading(true);
+      setServicesError(null);
+      try {
+        const response = await getSalonServices({
+          establishmentId: salonDetails.id,
+          isActive: true,
+          pageSize: 100,
+        });
+
+        if (!mounted) return;
+
+        if (response.success && response.data) {
+          setServices(response.data.items ?? []);
+        } else {
+          setServices([]);
+          setServicesError(response.message ?? 'Failed to load services.');
+        }
+      } catch (error: any) {
+        if (!mounted) return;
+        setServices([]);
+        setServicesError(error?.message ?? 'Failed to load services.');
+      } finally {
+        if (mounted) setServicesLoading(false);
+      }
+    };
+
+    loadServices();
+
+    return () => {
+      mounted = false;
+    };
+  }, [salonDetails.id]);
 
   // Get tab index
   const getTabIndex = (tabId: TabId): number => {
@@ -359,17 +414,86 @@ export default function MassageSpaDetailsScreen({
         return (
           <View className="px-5 py-4">
             <Text className="text-lg font-semibold mb-3" style={{ color: colors.text }}>
-              Services
+              Services ({services.length})
             </Text>
-            <View className="items-center justify-center py-12">
-              <Ionicons name="cut-outline" size={48} color={colors.icon} />
-              <Text className="text-base font-semibold mt-3 mb-1" style={{ color: colors.text }}>
-                Browse & Book Services
-              </Text>
-              <Text className="text-sm text-center" style={{ color: colors.icon }}>
-                Tap "Book Appointment" below to explore all available services and pricing for this salon.
-              </Text>
-            </View>
+
+            {servicesLoading ? (
+              <View className="items-center justify-center py-12">
+                <ActivityIndicator size="small" color={primaryColor} />
+                <Text className="text-sm mt-3" style={{ color: colors.icon }}>
+                  Loading services...
+                </Text>
+              </View>
+            ) : servicesError ? (
+              <View className="items-center justify-center py-12">
+                <Ionicons name="alert-circle-outline" size={44} color={colors.icon} />
+                <Text className="text-sm text-center mt-3" style={{ color: colors.icon }}>
+                  {servicesError}
+                </Text>
+              </View>
+            ) : services.length === 0 ? (
+              <View className="items-center justify-center py-12">
+                <Ionicons name="cut-outline" size={48} color={colors.icon} />
+                <Text className="text-base font-semibold mt-3 mb-1" style={{ color: colors.text }}>
+                  N/A
+                </Text>
+                <Text className="text-sm text-center" style={{ color: colors.icon }}>
+                  No services are available for this salon yet.
+                </Text>
+              </View>
+            ) : (
+              <View style={{ gap: 12 }}>
+                {services.map((service) => {
+                  const lowestPrice = service.price.length ? Math.min(...service.price) : 0;
+                  const durationLabels = service.durationMinutes.map(formatDuration).join(', ');
+
+                  return (
+                    <View
+                      key={service.salonServiceId}
+                      className="rounded-xl bg-white p-4"
+                      style={{
+                        borderWidth: 1,
+                        borderColor: '#E5E7EB',
+                      }}
+                    >
+                      <View className="flex-row items-start justify-between mb-2" style={{ gap: 12 }}>
+                        <View className="flex-1">
+                          <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                            {service.serviceName || 'N/A'}
+                          </Text>
+                          <Text className="text-xs mt-1" style={{ color: colors.icon }}>
+                            {durationLabels || 'N/A'}
+                          </Text>
+                        </View>
+                        <Text className="text-sm font-bold" style={{ color: primaryColor }}>
+                          {lowestPrice ? `From ${formatPrice(lowestPrice)}` : 'N/A'}
+                        </Text>
+                      </View>
+
+                      <Text className="text-sm leading-5" style={{ color: colors.icon }} numberOfLines={3}>
+                        {service.description || 'N/A'}
+                      </Text>
+
+                      {service.addOns.length > 0 && (
+                        <View className="flex-row flex-wrap mt-3" style={{ gap: 6 }}>
+                          {service.addOns.map((addOn, index) => (
+                            <View
+                              key={`${service.salonServiceId}-${addOn}-${index}`}
+                              className="px-2 py-1 rounded-full"
+                              style={{ backgroundColor: colors.primary + '14' }}
+                            >
+                              <Text className="text-xs" style={{ color: colors.primary }}>
+                                {addOn}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
         );
 
@@ -688,7 +812,7 @@ export default function MassageSpaDetailsScreen({
 
         {/* Active Tab Height Measurement (off-screen) */}
         <View
-          key={`measure-${activeTab}`}
+          key={`measure-${activeTab}-${servicesLoading}-${services.length}-${servicesError ?? ''}`}
           pointerEvents="none"
           style={{
             position: 'absolute',

@@ -17,21 +17,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { viewSalons } from '@/api/endpoints/apiSalonEstablishment';
 import type { SalonEstablishment } from '@/api/types';
 import type { TopRatedSalon } from '../types/Home';
-
-function toTopRatedSalon(est: SalonEstablishment): TopRatedSalon {
-  return {
-    id: est.id,
-    name: est.name,
-    rating: 0,               // backend doesn't store rating yet
-    location: est.address,
-    image: est.salonPicture ? { uri: est.salonPicture } : require('../../../../assets/spas/grand.png'),
-    services: [],            // populated separately by SalonService if needed
-    description: est.description ?? undefined,
-    contactNumber: est.contactNumber ?? undefined,
-    businessHours: est.businessHours ?? undefined,
-    socials: est.socials ?? undefined,
-  };
-}
+import { toTopRatedSalon } from '../utils/salonMappers';
 
 export interface UseEstablishmentsResult {
   salons: TopRatedSalon[];

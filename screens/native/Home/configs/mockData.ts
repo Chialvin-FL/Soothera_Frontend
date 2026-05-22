@@ -2,6 +2,21 @@ import { SpecialDeal, Service, TopRatedSalon } from '../types/Home';
 import { SalonDetails } from '../types/SalonDetails';
 import { getSalonById as apiGetSalonById } from '@/api/endpoints/apiSalonEstablishment';
 import type { SalonEstablishment } from '@/api/types';
+import { toSalonDetails, topRatedSalonToDetails } from '../utils/salonMappers';
+
+type SalonDetailsApiData =
+  | SalonEstablishment
+  | SalonEstablishment[]
+  | {
+      items?: SalonEstablishment[];
+    };
+
+function firstSalonEstablishment(data: SalonDetailsApiData | null | undefined): SalonEstablishment | null {
+  if (!data) return null;
+  if (Array.isArray(data)) return data[0] ?? null;
+  if ('items' in data) return data.items?.[0] ?? null;
+  return data;
+}
 
 // Mock data for special deals
 export const specialDeals: SpecialDeal[] = [
@@ -239,28 +254,17 @@ export const getSalonDetails = async (salonId: string): Promise<SalonDetails | n
   try {
     // Prefer real API lookup
     const res = await apiGetSalonById(salonId);
+    console.log('[getSalonDetails] API response:', JSON.stringify({ salonId, success: res?.success, data: res?.data }));
+    
     if (res && res.success && res.data) {
-      const est = res.data as SalonEstablishment;
-      // Map SalonEstablishment -> SalonDetails (best-effort)
-      const mapped: SalonDetails = {
-        id: est.id,
-        name: est.name ?? 'Unnamed Salon',
-        rating: est.rating ?? 0,
-        location: est.address ?? '',
-        image: est.salonPicture ? { uri: est.salonPicture } : require('../../../../assets/spas/grand.png'),
-        services: est.services ?? [],
-        description: est.description ?? '',
-        address: est.address ?? '',
-        latitude: typeof est.latitude === 'number' ? est.latitude : 0,
-        longitude: typeof est.longitude === 'number' ? est.longitude : 0,
-        operatingHours: est.businessHours ?? 'Hours not available',
-        distance: est.distance ?? '',
-        reviewCount: est.reviewCount ?? 0,
-        therapists: est.therapists ?? [],
-        reviews: est.reviews ?? [],
-        phoneNumber: est.contactNumber ?? undefined,
-        facebookUrl: (est.socials && est.socials.length > 0) ? est.socials[0] : undefined,
-      };
+      const est = firstSalonEstablishment(res.data as SalonDetailsApiData);
+      if (!est) return null;
+
+      const extra = est as SalonEstablishment & { therapists?: unknown[]; reviews?: unknown[] };
+      console.log('[getSalonDetails] Mapping establishment:', { id: est.id, name: est.name, hasTherapists: !!extra.therapists?.length, hasReviews: !!extra.reviews?.length });
+      
+      const mapped = toSalonDetails(est);
+      console.log('[getSalonDetails] Mapped result:', { id: mapped.id, name: mapped.name, location: mapped.location, therapists: mapped.therapists.length, reviews: mapped.reviews.length });
       return mapped;
     }
   } catch (err) {
@@ -272,25 +276,5 @@ export const getSalonDetails = async (salonId: string): Promise<SalonDetails | n
   const salon = topRatedSalons.find(s => s.id === salonId) ?? null;
   if (!salon) return null;
 
-  // Minimal mapping from mock entry
-  const fallback: SalonDetails = {
-    id: salon.id,
-    name: salon.name,
-    rating: salon.rating ?? 0,
-    location: salon.location ?? '',
-    image: salon.image,
-    services: salon.services ?? [],
-    description: '',
-    address: salon.location ?? '',
-    latitude: 0,
-    longitude: 0,
-    operatingHours: 'Hours not available',
-    distance: '',
-    reviewCount: 0,
-    therapists: [],
-    reviews: [],
-    phoneNumber: undefined,
-    facebookUrl: undefined,
-  };
-  return fallback;
+  return topRatedSalonToDetails(salon);
 };
