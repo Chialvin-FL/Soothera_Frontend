@@ -42,7 +42,8 @@ import type { Booking } from '../screens/native/Bookings/types/Booking';
 
 export default function NativeNavigator() {
   const session = useSessionLoader();
-  const { isLoggedIn, isLoadingSession, userRole, userName, userEmail, userProfilePic, logout } = session;
+  const { isLoggedIn, isLoadingSession, userRole, userName, userEmail, userProfilePic, logout } =
+    session;
 
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [latestAdminBookingStatusUpdate, setLatestAdminBookingStatusUpdate] = useState<{
@@ -122,6 +123,7 @@ export default function NativeNavigator() {
               <RisingPage visible={activeTab === 'bookings'} fadeIn={false} fadeOut={false}>
                 {userRole === 'admin' ? (
                   <BookingsAdminScreen
+                    isActive={activeTab === 'bookings'}
                     useNavigatorOverlays
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateBookingDetails={bookings.openBookingDetails}
@@ -132,6 +134,7 @@ export default function NativeNavigator() {
                   />
                 ) : userRole === 'therapist' ? (
                   <BookingsTherapistScreen
+                    isActive={activeTab === 'bookings'}
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateBookingDetails={bookings.openBookingDetails}
                     onNavigateNotifications={home.openHomeNotifications}
@@ -139,6 +142,7 @@ export default function NativeNavigator() {
                   />
                 ) : (
                   <BookingsScreen
+                    isActive={activeTab === 'bookings'}
                     useNavigatorOverlays
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateBookingDetails={bookings.openBookingDetails}
@@ -222,13 +226,14 @@ export default function NativeNavigator() {
             fillContainer={false}
             style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
             exitDuration={isLoggedIn ? 260 : 0}
-            fadeOut={isLoggedIn}
-          >
+            fadeOut={isLoggedIn}>
             <BottomTabs activeTab={activeTab} onTabPress={setActiveTab} />
           </RisingPage>
 
           <DocumentVerification
-            visible={docUploadSlice.requiresUpload && !docUploadSlice.isChecking && userRole === 'admin'}
+            visible={
+              docUploadSlice.requiresUpload && !docUploadSlice.isChecking && userRole === 'admin'
+            }
             isUploading={docUploadSlice.isUploading}
             error={docUploadSlice.error}
             onUpload={docUploadSlice.uploadDocs}

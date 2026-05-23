@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, Image, TouchableOpacity, Dimensions, BackHandler, Platform, Linking, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+  Dimensions,
+  BackHandler,
+  Platform,
+  Linking,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { Text } from '@/components/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +27,8 @@ import type { InvoiceData } from './types/Invoice';
 import { updateBooking } from '@/api/endpoints/apiBooking';
 import { formatStartTime } from '../Home/bookAppointmentService';
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
+const MAPBOX_TOKEN =
+  'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
 // Try to load WebView at runtime for mobile (Leaflet in WebView with Mapbox tiles)
 let RNWebView: any = null;
@@ -31,8 +43,14 @@ interface BookingDetailsScreenProps {
   onBack: () => void;
   onRateSpa?: () => void;
   onRateTherapist?: () => void;
-  onNavigateToInvoice?: (invoiceData: InvoiceData, options?: { isVAT?: boolean; vatRate?: number; discounts?: number }) => void;
-  onGetDirections?: (destination: { latitude: number; longitude: number }, destinationName?: string) => void;
+  onNavigateToInvoice?: (
+    invoiceData: InvoiceData,
+    options?: { isVAT?: boolean; vatRate?: number; discounts?: number }
+  ) => void;
+  onGetDirections?: (
+    destination: { latitude: number; longitude: number },
+    destinationName?: string
+  ) => void;
   onRebook?: () => void;
   onReschedule?: (date: Date, time: Date) => void;
   onCancel?: () => void;
@@ -122,15 +140,14 @@ const MapView = ({ latitude, longitude }: { latitude: number; longitude: number 
 
       return (
         <View
-          className="w-full rounded-xl overflow-hidden"
+          className="w-full overflow-hidden rounded-xl"
           style={{
             height: 200,
             borderWidth: 1,
             borderColor: '#E5E7EB',
-          }}
-        >
+          }}>
           <WebViewComp
-            originWhitelist={["*"]}
+            originWhitelist={['*']}
             source={{ html }}
             style={{ flex: 1 }}
             scrollEnabled={false}
@@ -145,17 +162,16 @@ const MapView = ({ latitude, longitude }: { latitude: number; longitude: number 
   // Fallback: placeholder if maps are not available
   return (
     <View
-      className="w-full rounded-xl overflow-hidden"
+      className="w-full overflow-hidden rounded-xl"
       style={{
         height: 200,
         backgroundColor: colors.background,
         borderWidth: 1,
         borderColor: '#E5E7EB',
-      }}
-    >
+      }}>
       <View className="flex-1 items-center justify-center">
         <Ionicons name="map-outline" size={48} color={colors.icon} />
-        <Text className="text-sm mt-2" style={{ color: colors.icon }}>
+        <Text className="mt-2 text-sm" style={{ color: colors.icon }}>
           Map View (Lat: {validLat.toFixed(4)}, Lng: {validLng.toFixed(4)})
         </Text>
       </View>
@@ -174,13 +190,11 @@ const StarRating = ({ rating }: { rating: number }) => {
       {[...Array(fullStars)].map((_, i) => (
         <Ionicons key={`full-${i}`} name="star" size={16} color="#F59E0B" />
       ))}
-      {hasHalfStar && (
-        <Ionicons name="star-half" size={16} color="#F59E0B" />
-      )}
+      {hasHalfStar && <Ionicons name="star-half" size={16} color="#F59E0B" />}
       {[...Array(emptyStars)].map((_, i) => (
         <Ionicons key={`empty-${i}`} name="star-outline" size={16} color="#F59E0B" />
       ))}
-      <Text className="text-sm ml-2 font-semibold" style={{ color: '#F59E0B' }}>
+      <Text className="ml-2 text-sm font-semibold" style={{ color: '#F59E0B' }}>
         {rating.toFixed(1)}
       </Text>
     </View>
@@ -204,10 +218,12 @@ export default function BookingDetailsScreen({
   const isConfirmed = bookingDetails.status === BOOKING_STATUS.CONFIRMED;
   const isPending = bookingDetails.status === BOOKING_STATUS.PENDING;
   const isCancelled = bookingDetails.status === BOOKING_STATUS.CANCELLED;
-  const documentActionLabel = isCompleted || isCancelled ? 'Download Invoice' : 'Download Acknowledgement Receipt';
+  const documentActionLabel =
+    isCompleted || isCancelled ? 'Download Invoice' : 'Download Acknowledgement Receipt';
   const selectedAddOns = bookingDetails.selectedAddOns ?? [];
   const selectedAddOnPrices = bookingDetails.selectedAddOnPrices ?? [];
-  const transactionTotal = bookingDetails.price + selectedAddOnPrices.reduce((sum, price) => sum + price, 0);
+  const transactionTotal =
+    bookingDetails.price + selectedAddOnPrices.reduce((sum, price) => sum + price, 0);
   const insets = useSafeAreaInsets();
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
@@ -272,7 +288,10 @@ export default function BookingDetailsScreen({
       return true;
     } catch (error: any) {
       console.warn('[BookingDetailsScreen] Failed to reschedule booking:', error);
-      Alert.alert('Reschedule Failed', error?.message ?? 'We could not reschedule your booking. Please try again.');
+      Alert.alert(
+        'Reschedule Failed',
+        error?.message ?? 'We could not reschedule your booking. Please try again.'
+      );
       return false;
     } finally {
       setIsRescheduling(false);
@@ -300,7 +319,7 @@ export default function BookingDetailsScreen({
     setIsCancelling(true);
     try {
       const response = await updateBooking(bookingDetails.id, {
-        status: 'Cancelled',
+        status: 4,
       });
 
       if (!response.success) {
@@ -310,7 +329,10 @@ export default function BookingDetailsScreen({
       onCancel?.();
     } catch (error: any) {
       console.warn('[BookingDetailsScreen] Failed to cancel booking:', error);
-      Alert.alert('Cancel Failed', error?.message ?? 'We could not cancel your booking. Please try again.');
+      Alert.alert(
+        'Cancel Failed',
+        error?.message ?? 'We could not cancel your booking. Please try again.'
+      );
     } finally {
       setIsCancelling(false);
     }
@@ -330,12 +352,8 @@ export default function BookingDetailsScreen({
     <View className="flex-1 bg-white">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Spa Image with Overlay Header */}
-        <View className="w-full relative" style={{ height: 250 }}>
-          <Image
-            source={bookingDetails.spaImage}
-            className="w-full h-full"
-            resizeMode="cover"
-          />
+        <View className="relative w-full" style={{ height: 250 }}>
+          <Image source={bookingDetails.spaImage} className="h-full w-full" resizeMode="cover" />
 
           {/* Transparent Header Overlay */}
           <TransparentHeader onBack={onBack} title="Booking Details" />
@@ -358,10 +376,9 @@ export default function BookingDetailsScreen({
               setIsFavorited(!isFavorited);
               // TODO: Implement add to favorites functionality
               console.log('Toggle favorite:', bookingDetails.id, !isFavorited);
-            }}
-          >
+            }}>
             <Ionicons
-              name={isFavorited ? "heart" : "heart-outline"}
+              name={isFavorited ? 'heart' : 'heart-outline'}
               size={24}
               color={primaryColor}
             />
@@ -370,14 +387,14 @@ export default function BookingDetailsScreen({
 
         <View className="px-5 py-4">
           {/* Spa Name */}
-          <Text className="text-2xl font-bold mb-2" style={{ color: colors.text }}>
+          <Text className="mb-2 text-2xl font-bold" style={{ color: colors.text }}>
             {bookingDetails.spaName}
           </Text>
 
           {/* Address */}
-          <View className="flex-row items-center mb-4">
+          <View className="mb-4 flex-row items-center">
             <Ionicons name="location-outline" size={16} color={colors.icon} />
-            <Text className="text-sm ml-1" style={{ color: colors.icon }}>
+            <Text className="ml-1 text-sm" style={{ color: colors.icon }}>
               {bookingDetails.address}
             </Text>
           </View>
@@ -389,22 +406,18 @@ export default function BookingDetailsScreen({
 
           {/* Map */}
           <View className="mb-4">
-            <MapView
-              latitude={bookingDetails.latitude}
-              longitude={bookingDetails.longitude}
-            />
+            <MapView latitude={bookingDetails.latitude} longitude={bookingDetails.longitude} />
           </View>
 
           {/* Get Directions Button (only for pending bookings - status 1) */}
           {isPending && (
             <View className="mb-6">
               <TouchableOpacity
-                className="w-full flex-row items-center justify-center px-4 py-3 rounded-xl border"
+                className="w-full flex-row items-center justify-center rounded-xl border px-4 py-3"
                 style={{ borderColor: primaryColor, backgroundColor: 'white' }}
-                onPress={handleGetDirections}
-              >
+                onPress={handleGetDirections}>
                 <Ionicons name="navigate-outline" size={18} color={primaryColor} />
-                <Text className="text-sm font-semibold ml-2" style={{ color: primaryColor }}>
+                <Text className="ml-2 text-sm font-semibold" style={{ color: primaryColor }}>
                   Get Directions
                 </Text>
               </TouchableOpacity>
@@ -413,7 +426,7 @@ export default function BookingDetailsScreen({
 
           {/* Spa Details */}
           <View className="mb-6">
-            <Text className="text-lg font-semibold mb-2" style={{ color: colors.text }}>
+            <Text className="mb-2 text-lg font-semibold" style={{ color: colors.text }}>
               Spa Details
             </Text>
             <Text className="text-sm leading-5" style={{ color: colors.icon }}>
@@ -423,26 +436,31 @@ export default function BookingDetailsScreen({
 
           {/* Service Information Section */}
           <View className="mb-6">
-            <Text className="text-lg font-semibold mb-3" style={{ color: colors.text }}>
+            <Text className="mb-3 text-lg font-semibold" style={{ color: colors.text }}>
               Service Information
             </Text>
 
             {/* Service Name */}
             <View className="mb-3 flex-row items-center">
               <Ionicons name="sparkles-outline" size={18} color={colors.primary} />
-              <Text className="text-base font-semibold ml-2" style={{ color: colors.text }}>
+              <Text className="ml-2 text-base font-semibold" style={{ color: colors.text }}>
                 {bookingDetails.serviceName}
               </Text>
             </View>
 
             {/* Therapist Name */}
             <View className="mb-3 flex-row items-start">
-              <Ionicons name="person-outline" size={18} color={colors.primary} style={{ marginTop: 2 }} />
+              <Ionicons
+                name="person-outline"
+                size={18}
+                color={colors.primary}
+                style={{ marginTop: 2 }}
+              />
               <View className="ml-2 flex-1">
                 <Text className="text-base font-semibold" style={{ color: colors.text }}>
                   {bookingDetails.therapistName}
                 </Text>
-                <Text className="text-sm mt-1" style={{ color: colors.icon }}>
+                <Text className="mt-1 text-sm" style={{ color: colors.icon }}>
                   {bookingDetails.therapistTitle}
                 </Text>
               </View>
@@ -452,13 +470,13 @@ export default function BookingDetailsScreen({
             <View className="mb-3">
               <View className="flex-row items-center">
                 <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-                <Text className="text-base font-semibold ml-2" style={{ color: colors.text }}>
+                <Text className="ml-2 text-base font-semibold" style={{ color: colors.text }}>
                   {bookingDetails.date}
                 </Text>
               </View>
-              <View className="flex-row items-center mt-1">
+              <View className="mt-1 flex-row items-center">
                 <Ionicons name="time-outline" size={18} color={colors.primary} />
-                <Text className="text-base font-semibold ml-2" style={{ color: colors.text }}>
+                <Text className="ml-2 text-base font-semibold" style={{ color: colors.text }}>
                   {bookingDetails.time}
                 </Text>
               </View>
@@ -466,14 +484,15 @@ export default function BookingDetailsScreen({
 
             {/* Service Total */}
             <View className="flex-row items-center">
-              <Text className="text-sm font-medium ml-2" style={{ color: colors.icon }}>
-                Service Total: {bookingDetails.priceDisplay ?? `₱${bookingDetails.price.toFixed(2)}`}
+              <Text className="ml-2 text-sm font-medium" style={{ color: colors.icon }}>
+                Service Total:{' '}
+                {bookingDetails.priceDisplay ?? `₱${bookingDetails.price.toFixed(2)}`}
               </Text>
             </View>
 
             {selectedAddOns.length > 0 && (
               <View className="mt-4">
-                <Text className="text-base font-semibold mb-2" style={{ color: colors.text }}>
+                <Text className="mb-2 text-base font-semibold" style={{ color: colors.text }}>
                   Selected Add-ons
                 </Text>
                 {selectedAddOns.map((addOn, index) => (
@@ -486,7 +505,9 @@ export default function BookingDetailsScreen({
                     </Text>
                   </View>
                 ))}
-                <View className="flex-row justify-between items-center pt-3 mt-3 border-t" style={{ borderTopColor: '#E5E7EB' }}>
+                <View
+                  className="mt-3 flex-row items-center justify-between border-t pt-3"
+                  style={{ borderTopColor: '#E5E7EB' }}>
                   <Text className="text-base font-bold" style={{ color: colors.text }}>
                     Transaction Total
                   </Text>
@@ -497,7 +518,9 @@ export default function BookingDetailsScreen({
               </View>
             )}
             {selectedAddOns.length === 0 && (
-              <View className="flex-row justify-between items-center pt-3 mt-3 border-t" style={{ borderTopColor: '#E5E7EB' }}>
+              <View
+                className="mt-3 flex-row items-center justify-between border-t pt-3"
+                style={{ borderTopColor: '#E5E7EB' }}>
                 <Text className="text-base font-bold" style={{ color: colors.text }}>
                   Transaction Total
                 </Text>
@@ -511,24 +534,22 @@ export default function BookingDetailsScreen({
           {/* Rate Buttons (only for completed bookings - status 2) */}
           {isCompleted ? (
             <View className="mb-6">
-              <View className="flex-row mb-2">
+              <View className="mb-2 flex-row">
                 <TouchableOpacity
-                  className="flex-1 flex-row items-center justify-center px-4 py-3 rounded-xl mr-2 border"
+                  className="mr-2 flex-1 flex-row items-center justify-center rounded-xl border px-4 py-3"
                   style={{ borderColor: primaryColor, backgroundColor: 'white' }}
-                  onPress={onRateSpa}
-                >
+                  onPress={onRateSpa}>
                   <Ionicons name="star-outline" size={18} color={primaryColor} />
-                  <Text className="text-sm font-semibold ml-2" style={{ color: primaryColor }}>
+                  <Text className="ml-2 text-sm font-semibold" style={{ color: primaryColor }}>
                     Rate Spa
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  className="flex-1 flex-row items-center justify-center px-4 py-3 rounded-xl border"
+                  className="flex-1 flex-row items-center justify-center rounded-xl border px-4 py-3"
                   style={{ borderColor: primaryColor, backgroundColor: 'white' }}
-                  onPress={onRateTherapist}
-                >
+                  onPress={onRateTherapist}>
                   <Ionicons name="person-outline" size={18} color={primaryColor} />
-                  <Text className="text-sm font-semibold ml-2" style={{ color: primaryColor }}>
+                  <Text className="ml-2 text-sm font-semibold" style={{ color: primaryColor }}>
                     Rate Therapist
                   </Text>
                 </TouchableOpacity>
@@ -537,15 +558,15 @@ export default function BookingDetailsScreen({
           ) : null}
 
           {/* Booking Information Section */}
-          <View className="mb-6 pt-4 border-t" style={{ borderTopColor: '#E5E7EB' }}>
-            <Text className="text-lg font-semibold mb-3" style={{ color: colors.text }}>
+          <View className="mb-6 border-t pt-4" style={{ borderTopColor: '#E5E7EB' }}>
+            <Text className="mb-3 text-lg font-semibold" style={{ color: colors.text }}>
               Booking Information
             </Text>
 
             {/* Booking ID */}
             <View className="mb-3 flex-row items-center">
               <Ionicons name="receipt-outline" size={18} color={colors.text} />
-              <Text className="text-base font-semibold ml-2" style={{ color: colors.text }}>
+              <Text className="ml-2 text-base font-semibold" style={{ color: colors.text }}>
                 {bookingDetails.bookingId}
               </Text>
             </View>
@@ -553,8 +574,10 @@ export default function BookingDetailsScreen({
             {/* Paid Downpayment */}
             <View className="mb-3 flex-row items-center">
               <Ionicons name="wallet-outline" size={18} color={colors.text} />
-              <Text className="text-base font-semibold ml-2" style={{ color: colors.text }}>
-                {isCompleted ? 'Paid Amount' : 'Paid Downpayment'}: {bookingDetails.paidAmountDisplay ?? `₱${(isCompleted ? transactionTotal : bookingDetails.paidAmount).toFixed(2)}`}
+              <Text className="ml-2 text-base font-semibold" style={{ color: colors.text }}>
+                {isCompleted ? 'Paid Amount' : 'Paid Downpayment'}:{' '}
+                {bookingDetails.paidAmountDisplay ??
+                  `₱${(isCompleted ? transactionTotal : bookingDetails.paidAmount).toFixed(2)}`}
               </Text>
             </View>
 
@@ -563,18 +586,20 @@ export default function BookingDetailsScreen({
               <>
                 <View className="mb-3 flex-row items-center">
                   <Ionicons name="cash-outline" size={18} color={colors.text} />
-                  <Text className="text-base font-semibold ml-2" style={{ color: colors.text }}>
-                    Paid at Cashier: {bookingDetails.priceDisplay || bookingDetails.paidAmountDisplay ? 'N/A' : `₱${(transactionTotal - bookingDetails.paidAmount).toFixed(2)}`}
+                  <Text className="ml-2 text-base font-semibold" style={{ color: colors.text }}>
+                    Paid at Cashier:{' '}
+                    {bookingDetails.priceDisplay || bookingDetails.paidAmountDisplay
+                      ? 'N/A'
+                      : `₱${(transactionTotal - bookingDetails.paidAmount).toFixed(2)}`}
                   </Text>
                 </View>
                 <View className="mb-4 flex-row items-center">
                   <View
-                    className="px-3 py-1 rounded-full"
-                    style={{ backgroundColor: colors.primary }}
-                  >
+                    className="rounded-full px-3 py-1"
+                    style={{ backgroundColor: colors.primary }}>
                     <View className="flex-row items-center">
                       <Ionicons name="checkmark-circle" size={16} color="white" />
-                      <Text className="text-sm font-semibold ml-1" style={{ color: 'white' }}>
+                      <Text className="ml-1 text-sm font-semibold" style={{ color: 'white' }}>
                         Fully Paid
                       </Text>
                     </View>
@@ -586,13 +611,10 @@ export default function BookingDetailsScreen({
             {/* Non-refundable Badge (only for cancelled bookings) */}
             {isCancelled && (
               <View className="mb-4 flex-row items-center">
-                <View
-                  className="px-3 py-1 rounded-full"
-                  style={{ backgroundColor: '#EF4444' }}
-                >
+                <View className="rounded-full px-3 py-1" style={{ backgroundColor: '#EF4444' }}>
                   <View className="flex-row items-center">
                     <Ionicons name="close-circle" size={16} color="white" />
-                    <Text className="text-sm font-semibold ml-1" style={{ color: 'white' }}>
+                    <Text className="ml-1 text-sm font-semibold" style={{ color: 'white' }}>
                       Non-refundable
                     </Text>
                   </View>
@@ -602,7 +624,7 @@ export default function BookingDetailsScreen({
 
             {/* Download Document Button */}
             <TouchableOpacity
-              className="w-full flex-row items-center justify-center px-4 py-3 rounded-xl border"
+              className="w-full flex-row items-center justify-center rounded-xl border px-4 py-3"
               style={{ borderColor: primaryColor, backgroundColor: 'white' }}
               onPress={() => {
                 const invoiceData = generateInvoiceFromBooking(bookingDetails, {
@@ -616,17 +638,18 @@ export default function BookingDetailsScreen({
                   businessPhone: '+63 32 123 4567',
                   businessEmail: 'info@soothera.com',
                   businessTIN: '123-456-789-000',
-                  notes: isCompleted ? 'Full payment received. Thank you for your booking!' : 'This acknowledgement receipt confirms the paid booking amount.',
+                  notes: isCompleted
+                    ? 'Full payment received. Thank you for your booking!'
+                    : 'This acknowledgement receipt confirms the paid booking amount.',
                 });
                 if (onNavigateToInvoice) {
                   onNavigateToInvoice(invoiceData, { isVAT: false, vatRate: 0.12, discounts: 0 });
                 } else {
                   setShowInvoice(true);
                 }
-              }}
-            >
+              }}>
               <Ionicons name="download-outline" size={18} color={primaryColor} />
-              <Text className="text-sm font-semibold ml-2" style={{ color: primaryColor }}>
+              <Text className="ml-2 text-sm font-semibold" style={{ color: primaryColor }}>
                 {documentActionLabel}
               </Text>
             </TouchableOpacity>
@@ -635,57 +658,53 @@ export default function BookingDetailsScreen({
       </ScrollView>
 
       {/* Footer Buttons: Get Directions (for confirmed), Re-schedule/Cancel (for pending), or Rebook (for completed) */}
-      <View className="px-5 py-4 border-t" style={{ borderTopColor: '#E5E7EB' }}>
+      <View className="border-t px-5 py-4" style={{ borderTopColor: '#E5E7EB' }}>
         {isConfirmed ? (
           <TouchableOpacity
-            className="w-full flex-row items-center justify-center px-4 py-4 rounded-xl"
+            className="w-full flex-row items-center justify-center rounded-xl px-4 py-4"
             style={{ backgroundColor: primaryColor }}
-            onPress={handleGetDirections}
-          >
+            onPress={handleGetDirections}>
             <Ionicons name="navigate-outline" size={20} color="white" />
-            <Text className="text-base text-white font-semibold ml-2">Get Directions</Text>
+            <Text className="ml-2 text-base font-semibold text-white">Get Directions</Text>
           </TouchableOpacity>
         ) : isPending ? (
           <View className="flex-row">
             <TouchableOpacity
-              className="flex-1 flex-row items-center justify-center px-4 py-4 rounded-xl mr-2 border"
+              className="mr-2 flex-1 flex-row items-center justify-center rounded-xl border px-4 py-4"
               style={{ borderColor: primaryColor, backgroundColor: 'white' }}
               onPress={handleReschedule}
-              disabled={isRescheduling || isCancelling}
-            >
+              disabled={isRescheduling || isCancelling}>
               {isRescheduling ? (
                 <ActivityIndicator size="small" color={primaryColor} />
               ) : (
                 <Ionicons name="calendar-outline" size={20} color={primaryColor} />
               )}
-              <Text className="text-base font-semibold ml-2" style={{ color: primaryColor }}>
+              <Text className="ml-2 text-base font-semibold" style={{ color: primaryColor }}>
                 Re-schedule
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              className="flex-1 flex-row items-center justify-center px-4 py-4 rounded-xl border"
+              className="flex-1 flex-row items-center justify-center rounded-xl border px-4 py-4"
               style={{ borderColor: '#EF4444', backgroundColor: 'white' }}
               onPress={handleCancelBooking}
-              disabled={isRescheduling || isCancelling}
-            >
+              disabled={isRescheduling || isCancelling}>
               {isCancelling ? (
                 <ActivityIndicator size="small" color="#EF4444" />
               ) : (
                 <Ionicons name="close-circle-outline" size={20} color="#EF4444" />
               )}
-              <Text className="text-base font-semibold ml-2" style={{ color: '#EF4444' }}>
+              <Text className="ml-2 text-base font-semibold" style={{ color: '#EF4444' }}>
                 Cancel
               </Text>
             </TouchableOpacity>
           </View>
         ) : (
           <TouchableOpacity
-            className="w-full flex-row items-center justify-center px-4 py-4 rounded-xl"
+            className="w-full flex-row items-center justify-center rounded-xl px-4 py-4"
             style={{ backgroundColor: primaryColor }}
-            onPress={onRebook}
-          >
+            onPress={onRebook}>
             <Ionicons name="refresh" size={20} color="white" />
-            <Text className="text-base text-white font-semibold ml-2">Rebook</Text>
+            <Text className="ml-2 text-base font-semibold text-white">Rebook</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -700,33 +719,38 @@ export default function BookingDetailsScreen({
       />
 
       {/* Invoice Screen (local overlay when not using navigator stack) */}
-      {showInvoice && !onNavigateToInvoice && (() => {
-        const invoiceData = generateInvoiceFromBooking(bookingDetails, {
-          isVAT: false,
-          vatRate: 0.12,
-          discounts: 0,
-          customerName: 'Customer Name',
-          customerAddress: bookingDetails.address,
-          businessName: 'Soothera',
-          businessAddress: 'Cebu, Philippines',
-          businessPhone: '+63 32 123 4567',
-          businessEmail: 'info@soothera.com',
-          businessTIN: '123-456-789-000',
-          notes: isCompleted ? 'Full payment received. Thank you for your booking!' : 'This acknowledgement receipt confirms the paid booking amount.',
-        });
+      {showInvoice &&
+        !onNavigateToInvoice &&
+        (() => {
+          const invoiceData = generateInvoiceFromBooking(bookingDetails, {
+            isVAT: false,
+            vatRate: 0.12,
+            discounts: 0,
+            customerName: 'Customer Name',
+            customerAddress: bookingDetails.address,
+            businessName: 'Soothera',
+            businessAddress: 'Cebu, Philippines',
+            businessPhone: '+63 32 123 4567',
+            businessEmail: 'info@soothera.com',
+            businessTIN: '123-456-789-000',
+            notes: isCompleted
+              ? 'Full payment received. Thank you for your booking!'
+              : 'This acknowledgement receipt confirms the paid booking amount.',
+          });
 
-        return (
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }}>
-            <InvoiceScreen
-              invoiceData={invoiceData}
-              onBack={() => setShowInvoice(false)}
-              isVAT={false}
-              vatRate={0.12}
-              discounts={0}
-            />
-          </View>
-        );
-      })()}
+          return (
+            <View
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }}>
+              <InvoiceScreen
+                invoiceData={invoiceData}
+                onBack={() => setShowInvoice(false)}
+                isVAT={false}
+                vatRate={0.12}
+                discounts={0}
+              />
+            </View>
+          );
+        })()}
     </View>
   );
 }

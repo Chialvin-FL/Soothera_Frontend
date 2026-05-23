@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
-import { View, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
+import { View, ScrollView, Dimensions, ActivityIndicator, AppState } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +16,7 @@ import { mapApiBookingToCard, mapApiBookingToDetails } from './utils/apiBookingM
 import {
   getUpcomingBookings,
   getCompletedBookings,
-  getCancelledBookings
+  getCancelledBookings,
 } from './configs/mockBookingsData';
 import BookingCard from './components/BookingCard';
 import TabNavigation from './components/TabNavigation';
@@ -31,7 +31,12 @@ import PaymentFailedScreen from '../Home/PaymentFailedScreen.native';
 import { getSalonDetails, topRatedSalons } from '../Home/configs/mockData';
 import type { SalonDetails, Therapist } from '../Home/types/SalonDetails';
 import type { Service } from '../Home/types/Home';
-import type { BookingResponse, PaymentMutationResponse, SalonEstablishment, UpdatePaymentRequest } from '@/api/types';
+import type {
+  BookingResponse,
+  PaymentMutationResponse,
+  SalonEstablishment,
+  UpdatePaymentRequest,
+} from '@/api/types';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -63,6 +68,8 @@ interface BookingData {
   paymentResponse?: PaymentMutationResponse;
 }
 
+const BOOKINGS_REFRESH_INTERVAL_MS = 3000;
+
 interface BookingsScreenProps {
   onDetailsScreenChange?: (isActive: boolean) => void;
   onNavigateToProfile?: () => void;
@@ -72,7 +79,10 @@ interface BookingsScreenProps {
   onNavigateRatingSpa?: (bookingId: string, fromReview?: boolean) => void;
   onNavigateRatingTherapist?: (bookingId: string, fromReview?: boolean) => void;
   onNavigateNotifications?: () => void;
-  onNavigateGetDirections?: (destination: { latitude: number; longitude: number }, destinationName?: string) => void;
+  onNavigateGetDirections?: (
+    destination: { latitude: number; longitude: number },
+    destinationName?: string
+  ) => void;
   onNavigateRebook?: (booking: Booking) => void;
   userProfilePic?: string | null;
 }
@@ -112,6 +122,7 @@ export default function BookingsScreen({
   const [apiBookingsById, setApiBookingsById] = useState<Record<string, BookingResponse>>({});
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
   const [bookingsError, setBookingsError] = useState<string | null>(null);
+  const isFetchingBookingsRef = useRef(false);
 
   const screenWidth = Dimensions.get('window').width;
 
@@ -119,9 +130,14 @@ export default function BookingsScreen({
   const bookingDetailsTranslateX = useSharedValue(screenWidth);
   const ratingSpaTranslateX = useSharedValue(screenWidth);
   const ratingTherapistTranslateX = useSharedValue(screenWidth);
-  
+
   // Tab order for paging (All is first)
-  const tabs: Array<'all' | 'upcoming' | 'completed' | 'cancelled'> = ['all', 'upcoming', 'completed', 'cancelled'];
+  const tabs: Array<'all' | 'upcoming' | 'completed' | 'cancelled'> = [
+    'all',
+    'upcoming',
+    'completed',
+    'cancelled',
+  ];
   const pageScrollViewRef = useRef<ScrollView>(null);
   const maxAnimatedItems = 6;
   const baseItemDelay = 140;
@@ -131,41 +147,51 @@ export default function BookingsScreen({
     return picture ? { uri: picture } : undefined;
   };
 
-  const getApiBookingEstablishmentId = useCallback((booking: BookingResponse): string | undefined => {
-    const raw = booking as any;
-    return raw.establishmentId ?? raw.EstablishmentId ?? raw.establishmentID ?? raw.EstablishmentID;
-  }, []);
+  const getApiBookingEstablishmentId = useCallback(
+    (booking: BookingResponse): string | undefined => {
+      const raw = booking as any;
+      return (
+        raw.establishmentId ?? raw.EstablishmentId ?? raw.establishmentID ?? raw.EstablishmentID
+      );
+    },
+    []
+  );
 
-  const findBookingEstablishment = useCallback((
-    booking: BookingResponse,
-    establishments: SalonEstablishment[],
-  ): SalonEstablishment | undefined => {
-    const establishmentId = getApiBookingEstablishmentId(booking);
-    if (establishmentId) {
-      const byId = establishments.find((establishment) => establishment.id === establishmentId);
-      if (byId) return byId;
-    }
+  const findBookingEstablishment = useCallback(
+    (
+      booking: BookingResponse,
+      establishments: SalonEstablishment[]
+    ): SalonEstablishment | undefined => {
+      const establishmentId = getApiBookingEstablishmentId(booking);
+      if (establishmentId) {
+        const byId = establishments.find((establishment) => establishment.id === establishmentId);
+        if (byId) return byId;
+      }
 
-    return establishments.find(
-      (establishment) =>
-        establishment.name.toLowerCase() === (booking.establishmentName ?? '').toLowerCase(),
-    );
-  }, [getApiBookingEstablishmentId]);
+      return establishments.find(
+        (establishment) =>
+          establishment.name.toLowerCase() === (booking.establishmentName ?? '').toLowerCase()
+      );
+    },
+    [getApiBookingEstablishmentId]
+  );
 
-  useEffect(() => {
-    let isMounted = true;
+  const fetchCurrentUserBookings = useCallback(
+    async (options?: { showLoading?: boolean }) => {
+      if (isFetchingBookingsRef.current) return;
 
-    const fetchCurrentUserBookings = async () => {
-      setIsLoadingBookings(true);
+      const shouldShowLoading = options?.showLoading ?? false;
+      isFetchingBookingsRef.current = true;
+      if (shouldShowLoading) {
+        setIsLoadingBookings(true);
+      }
       setBookingsError(null);
 
       try {
         const session = await loadStoredSession();
         if (!session?.uid) {
-          if (isMounted) {
-            setBookings([]);
-            setBookingsError('Not authenticated.');
-          }
+          setBookings([]);
+          setBookingsError('Not authenticated.');
           return;
         }
 
@@ -191,42 +217,55 @@ export default function BookingsScreen({
           console.warn('[BookingsScreen] Failed to load establishment images:', establishmentError);
         }
 
-        if (isMounted) {
-          setBookings(items.map((item) => {
+        setBookings(
+          items.map((item) => {
             const establishment = findBookingEstablishment(item, establishments);
             return {
               ...mapApiBookingToCard(item),
               spaImage: getEstablishmentImageSource(establishment?.salonPicture),
             };
-          }));
-          setApiBookingsById(
-            items.reduce<Record<string, BookingResponse>>((acc, item) => {
-              if (item.bookingId) acc[item.bookingId] = item;
-              return acc;
-            }, {}),
-          );
-        }
+          })
+        );
+        setApiBookingsById(
+          items.reduce<Record<string, BookingResponse>>((acc, item) => {
+            if (item.bookingId) acc[item.bookingId] = item;
+            return acc;
+          }, {})
+        );
       } catch (error: any) {
         console.warn('[BookingsScreen] Failed to load current user bookings:', error);
-        if (isMounted) {
+        if (shouldShowLoading || bookings.length === 0) {
           setBookings([]);
           setApiBookingsById({});
-          setBookingsError(error?.message ?? 'Failed to load bookings.');
         }
+        setBookingsError(error?.message ?? 'Failed to load bookings.');
       } finally {
-        if (isMounted) {
-          setIsLoadingBookings(false);
-        }
+        setIsLoadingBookings(false);
+        isFetchingBookingsRef.current = false;
       }
-    };
+    },
+    [bookings.length, findBookingEstablishment]
+  );
 
-    fetchCurrentUserBookings();
+  useEffect(() => {
+    if (!isVisible) return;
+
+    fetchCurrentUserBookings({ showLoading: bookings.length === 0 });
+    const refreshInterval = setInterval(() => {
+      fetchCurrentUserBookings();
+    }, BOOKINGS_REFRESH_INTERVAL_MS);
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        fetchCurrentUserBookings();
+      }
+    });
 
     return () => {
-      isMounted = false;
+      clearInterval(refreshInterval);
+      appStateSubscription.remove();
     };
-  }, [findBookingEstablishment]);
-  
+  }, [bookings.length, fetchCurrentUserBookings, isVisible]);
+
   // Handle page scroll to sync active tab
   const handlePageScroll = (event: any) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -235,7 +274,7 @@ export default function BookingsScreen({
       setActiveTab(tabs[pageIndex]);
     }
   };
-  
+
   // Handle tab press to scroll to corresponding page
   const handleTabPress = (tab: 'all' | 'upcoming' | 'completed' | 'cancelled') => {
     const tabIndex = tabs.indexOf(tab);
@@ -258,10 +297,10 @@ export default function BookingsScreen({
         const [month, day, year] = dateStr.split('/').map(Number);
         return new Date(year, month - 1, day);
       };
-      
+
       const dateA = parseDate(a.date);
       const dateB = parseDate(b.date);
-      
+
       // Most recent first (descending order)
       return dateB.getTime() - dateA.getTime();
     });
@@ -272,30 +311,34 @@ export default function BookingsScreen({
     return sortBookingsByDate(bookings);
   };
 
-  const getSelectedBookingDetails = useCallback((bookingId: string): BookingDetails | undefined => {
-    const apiBooking = apiBookingsById[bookingId];
-    const booking = bookings.find((item) => item.id === bookingId);
-    if (!apiBooking) return getBookingDetails(bookingId);
-    const details = mapApiBookingToDetails(apiBooking);
-    return {
-      ...details,
-      spaImage: booking?.spaImage ?? details.spaImage,
-    };
-  }, [apiBookingsById, bookings]);
+  const getSelectedBookingDetails = useCallback(
+    (bookingId: string): BookingDetails | undefined => {
+      const apiBooking = apiBookingsById[bookingId];
+      const booking = bookings.find((item) => item.id === bookingId);
+      if (!apiBooking) return getBookingDetails(bookingId);
+      const details = mapApiBookingToDetails(apiBooking);
+      return {
+        ...details,
+        spaImage: booking?.spaImage ?? details.spaImage,
+      };
+    },
+    [apiBookingsById, bookings]
+  );
 
   const buildRescheduledApiBooking = (
     booking: BookingResponse,
     date: Date,
-    time: Date,
+    time: Date
   ): BookingResponse => {
     const startTime = new Date(date);
     startTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
 
     const previousStart = new Date(booking.startTime);
     const previousEnd = new Date(booking.endTime);
-    const durationMs = !Number.isNaN(previousStart.getTime()) && !Number.isNaN(previousEnd.getTime())
-      ? Math.max(previousEnd.getTime() - previousStart.getTime(), 0)
-      : (booking.selectedDurationMinutes || 60) * 60 * 1000;
+    const durationMs =
+      !Number.isNaN(previousStart.getTime()) && !Number.isNaN(previousEnd.getTime())
+        ? Math.max(previousEnd.getTime() - previousStart.getTime(), 0)
+        : (booking.selectedDurationMinutes || 60) * 60 * 1000;
     const endTime = new Date(startTime.getTime() + durationMs);
 
     return {
@@ -318,13 +361,9 @@ export default function BookingsScreen({
   // Handle back from details screen
   const handleBack = () => {
     if (useNavigatorOverlays) return;
-    bookingDetailsTranslateX.value = withTiming(
-      screenWidth,
-      { duration: 300 },
-      () => {
-        runOnJS(setSelectedBookingId)(null);
-      }
-    );
+    bookingDetailsTranslateX.value = withTiming(screenWidth, { duration: 300 }, () => {
+      runOnJS(setSelectedBookingId)(null);
+    });
   };
 
   // Handle rate spa
@@ -345,15 +384,11 @@ export default function BookingsScreen({
   // Handle back from rating screen
   const handleBackFromRating = () => {
     if (useNavigatorOverlays) return;
-    ratingSpaTranslateX.value = withTiming(
-      screenWidth,
-      { duration: 300 },
-      () => {
-        runOnJS(setShowRatingScreen)(false);
-        runOnJS(setRatingBookingId)(null);
-        runOnJS(setIsFromReviewButton)(false); // Reset flag
-      }
-    );
+    ratingSpaTranslateX.value = withTiming(screenWidth, { duration: 300 }, () => {
+      runOnJS(setShowRatingScreen)(false);
+      runOnJS(setRatingBookingId)(null);
+      runOnJS(setIsFromReviewButton)(false); // Reset flag
+    });
   };
 
   // Handle submit rating
@@ -381,15 +416,11 @@ export default function BookingsScreen({
   // Handle back from therapist rating screen
   const handleBackFromTherapistRating = () => {
     if (useNavigatorOverlays) return;
-    ratingTherapistTranslateX.value = withTiming(
-      screenWidth,
-      { duration: 300 },
-      () => {
-        runOnJS(setShowTherapistRatingScreen)(false);
-        runOnJS(setTherapistRatingBookingId)(null);
-        runOnJS(setIsFromReviewButton)(false); // Reset flag
-      }
-    );
+    ratingTherapistTranslateX.value = withTiming(screenWidth, { duration: 300 }, () => {
+      runOnJS(setShowTherapistRatingScreen)(false);
+      runOnJS(setTherapistRatingBookingId)(null);
+      runOnJS(setIsFromReviewButton)(false); // Reset flag
+    });
   };
 
   // Handle review button press from BookingCard
@@ -544,8 +575,8 @@ export default function BookingsScreen({
       bookingList.map((booking) =>
         booking.id === selectedBookingId
           ? { ...mapApiBookingToCard(updated), spaImage: booking.spaImage }
-          : booking,
-      ),
+          : booking
+      )
     );
     setApiBookingsById((prev) => {
       return {
@@ -563,8 +594,8 @@ export default function BookingsScreen({
       prev.map((booking) =>
         booking.id === selectedBookingId
           ? { ...booking, status: BOOKING_STATUS.CANCELLED }
-          : booking,
-      ),
+          : booking
+      )
     );
     setApiBookingsById((prev) => {
       const current = prev[selectedBookingId];
@@ -573,7 +604,7 @@ export default function BookingsScreen({
         ...prev,
         [selectedBookingId]: {
           ...current,
-          status: 'Cancelled',
+          status: 4,
         },
       };
     });
@@ -594,13 +625,22 @@ export default function BookingsScreen({
     if (useNavigatorOverlays) return;
     onDetailsScreenChange?.(
       selectedBookingId !== null ||
-      showRatingScreen ||
-      showTherapistRatingScreen ||
-      showBookAppointmentScreen ||
-      showPaymentSuccessfulScreen ||
-      showPaymentFailedScreen
+        showRatingScreen ||
+        showTherapistRatingScreen ||
+        showBookAppointmentScreen ||
+        showPaymentSuccessfulScreen ||
+        showPaymentFailedScreen
     );
-  }, [selectedBookingId, showRatingScreen, showTherapistRatingScreen, showBookAppointmentScreen, showPaymentSuccessfulScreen, showPaymentFailedScreen, onDetailsScreenChange, useNavigatorOverlays]);
+  }, [
+    selectedBookingId,
+    showRatingScreen,
+    showTherapistRatingScreen,
+    showBookAppointmentScreen,
+    showPaymentSuccessfulScreen,
+    showPaymentFailedScreen,
+    onDetailsScreenChange,
+    useNavigatorOverlays,
+  ]);
 
   // Animate overlays when state changes (enter)
   useEffect(() => {
@@ -712,7 +752,7 @@ export default function BookingsScreen({
     <View className="flex-1 bg-white">
       {/* Header Section */}
       <RisingItem delay={0}>
-        <Header 
+        <Header
           onProfilePress={onNavigateToProfile}
           onNotificationPress={onNavigateNotifications}
           profilePic={userProfilePic}
@@ -733,15 +773,17 @@ export default function BookingsScreen({
         onMomentumScrollEnd={handlePageScroll}
         onLayout={handleScrollViewLayout}
         className="flex-1"
-        decelerationRate="fast"
-      >
+        decelerationRate="fast">
         {tabs.map((tab) => {
-          const filteredBookings = 
-            tab === 'upcoming' ? getUpcomingBookings(bookings) :
-            tab === 'completed' ? getCompletedBookings(bookings) :
-            tab === 'cancelled' ? getCancelledBookings(bookings) :
-            getAllBookings();
-          
+          const filteredBookings =
+            tab === 'upcoming'
+              ? getUpcomingBookings(bookings)
+              : tab === 'completed'
+                ? getCompletedBookings(bookings)
+                : tab === 'cancelled'
+                  ? getCancelledBookings(bookings)
+                  : getAllBookings();
+
           // Sort all tab bookings by date (recent to old)
           const tabBookings = sortBookingsByDate(filteredBookings);
 
@@ -751,22 +793,21 @@ export default function BookingsScreen({
               className="flex-1 px-5"
               style={{ width: screenWidth }}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: insets.bottom + 70, paddingTop: 12 }}
-            >
+              contentContainerStyle={{ paddingBottom: insets.bottom + 70, paddingTop: 12 }}>
               {isLoadingBookings && tab === activeTab ? (
                 <View className="items-center justify-center py-20">
                   <ActivityIndicator size="large" color={colors.primary} />
-                  <Text className="text-sm mt-4" style={{ color: colors.icon }}>
+                  <Text className="mt-4 text-sm" style={{ color: colors.icon }}>
                     Loading bookings...
                   </Text>
                 </View>
               ) : bookingsError && tab === activeTab ? (
                 <View className="items-center justify-center py-20">
                   <Ionicons name="alert-circle-outline" size={64} color={colors.icon} />
-                  <Text className="text-lg font-semibold mt-4" style={{ color: colors.text }}>
+                  <Text className="mt-4 text-lg font-semibold" style={{ color: colors.text }}>
                     Unable to load bookings
                   </Text>
-                  <Text className="text-sm mt-2" style={{ color: colors.icon }}>
+                  <Text className="mt-2 text-sm" style={{ color: colors.icon }}>
                     {bookingsError}
                   </Text>
                 </View>
@@ -775,9 +816,9 @@ export default function BookingsScreen({
                   const shouldAnimate = tab === activeTab && index < maxAnimatedItems;
                   const delay = baseItemDelay + Math.min(index, maxAnimatedItems) * perItemDelay;
                   return (
-                    <BookingCard 
-                      key={booking.id} 
-                      booking={booking} 
+                    <BookingCard
+                      key={booking.id}
+                      booking={booking}
                       tabType={tab}
                       onPress={() => handleBookingPress(booking.id)}
                       onReview={handleReviewPress}
@@ -788,30 +829,32 @@ export default function BookingsScreen({
                     />
                   );
                 })
-              ) : (
-                tab === activeTab ? (
-                  <RisingItem delay={baseItemDelay} visible={isVisible}>
-                    <View className="items-center justify-center py-20">
-                      <Ionicons name="calendar-outline" size={64} color={colors.icon} />
-                      <Text className="text-lg font-semibold mt-4" style={{ color: colors.text }}>
-                        {tab === 'all' ? 'No bookings' : `No ${tab} bookings`}
-                      </Text>
-                      <Text className="text-sm mt-2" style={{ color: colors.icon }}>
-                        {tab === 'all' ? 'Your bookings will appear here' : `Your ${tab} bookings will appear here`}
-                      </Text>
-                    </View>
-                  </RisingItem>
-                ) : (
+              ) : tab === activeTab ? (
+                <RisingItem delay={baseItemDelay} visible={isVisible}>
                   <View className="items-center justify-center py-20">
                     <Ionicons name="calendar-outline" size={64} color={colors.icon} />
-                    <Text className="text-lg font-semibold mt-4" style={{ color: colors.text }}>
+                    <Text className="mt-4 text-lg font-semibold" style={{ color: colors.text }}>
                       {tab === 'all' ? 'No bookings' : `No ${tab} bookings`}
                     </Text>
-                    <Text className="text-sm mt-2" style={{ color: colors.icon }}>
-                      {tab === 'all' ? 'Your bookings will appear here' : `Your ${tab} bookings will appear here`}
+                    <Text className="mt-2 text-sm" style={{ color: colors.icon }}>
+                      {tab === 'all'
+                        ? 'Your bookings will appear here'
+                        : `Your ${tab} bookings will appear here`}
                     </Text>
                   </View>
-                )
+                </RisingItem>
+              ) : (
+                <View className="items-center justify-center py-20">
+                  <Ionicons name="calendar-outline" size={64} color={colors.icon} />
+                  <Text className="mt-4 text-lg font-semibold" style={{ color: colors.text }}>
+                    {tab === 'all' ? 'No bookings' : `No ${tab} bookings`}
+                  </Text>
+                  <Text className="mt-2 text-sm" style={{ color: colors.icon }}>
+                    {tab === 'all'
+                      ? 'Your bookings will appear here'
+                      : `Your ${tab} bookings will appear here`}
+                  </Text>
+                </View>
               )}
             </ScrollView>
           );
@@ -840,8 +883,7 @@ export default function BookingsScreen({
               zIndex: 5,
             },
             bookingDetailsAnimatedStyle,
-          ]}
-        >
+          ]}>
           {(() => {
             const bookingDetails = getSelectedBookingDetails(selectedBookingId);
             if (!bookingDetails) return null;
@@ -874,8 +916,7 @@ export default function BookingsScreen({
               zIndex: 6,
             },
             ratingSpaAnimatedStyle,
-          ]}
-        >
+          ]}>
           {(() => {
             const bookingDetails = getSelectedBookingDetails(ratingBookingId);
             if (!bookingDetails) return null;
@@ -903,8 +944,7 @@ export default function BookingsScreen({
               zIndex: 7,
             },
             ratingTherapistAnimatedStyle,
-          ]}
-        >
+          ]}>
           {(() => {
             const bookingDetails = getSelectedBookingDetails(therapistRatingBookingId);
             if (!bookingDetails) return null;
