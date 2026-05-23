@@ -47,12 +47,15 @@ export function generateInvoiceFromBooking(
   const selectedAddOns = bookingDetails.selectedAddOns ?? [];
   const selectedAddOnPrices = bookingDetails.selectedAddOnPrices ?? [];
   const transactionTotal = selectedPrice + selectedAddOnPrices.reduce((sum, price) => sum + price, 0);
-  const paidAmount = isCompleted ? transactionTotal : bookingDetails.paidAmount;
-  const paymentLabel = isCompleted
-    ? 'Full Payment'
-    : paidAmount >= transactionTotal
-      ? 'Full Payment (100%)'
-      : 'Partial Downpayment (50%)';
+  const isFullPayment =
+    (bookingDetails.paymentStatus?.toLowerCase().includes('full') ?? false) ||
+    bookingDetails.paidAmount >= transactionTotal;
+  const paidAmount = isFullPayment
+    ? transactionTotal
+    : Number((transactionTotal * 0.5).toFixed(2));
+  const paymentLabel = isFullPayment || paidAmount >= transactionTotal
+    ? 'Full Payment (100%)'
+    : 'Partial Downpayment (50%)';
   const documentAmount = transactionTotal;
 
   // Generate document number (format: INV/AR-YYYYMMDD-XXX)

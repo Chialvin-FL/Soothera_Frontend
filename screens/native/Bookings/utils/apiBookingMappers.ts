@@ -165,5 +165,6 @@ export const mapApiBookingToDetails = (
     selectedPrice: selectedPrice ?? undefined,
     selectedAddOns,
     selectedAddOnPrices,
+    createdDate: apiBooking.createdDate,
   };
 };

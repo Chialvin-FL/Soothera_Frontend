@@ -65,6 +65,9 @@ export default function InvoiceScreen({
     ? calculateVATInclusive(grossAmount, vatRate, discounts)
     : calculateNonVAT(grossAmount, discounts);
 
+  const isFullPayment = invoiceData.paymentStatus?.toLowerCase().includes('full') || invoiceData.paidAmount >= calculations.totalAmountDue;
+  const isPartialPayment = !isFullPayment;
+
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [sootheraFolderUri, setSootheraFolderUri] = useState<string | null>(null);
   const [existingInvoice, setExistingInvoice] = useState<InvoiceMetadata | null>(null);
@@ -608,15 +611,34 @@ export default function InvoiceScreen({
       </div>
       ${data.paidAmount > 0 ? `
       <div class="total-row">
-        <span class="total-label">${isAcknowledgementReceipt ? 'Amount Acknowledged:' : 'Paid Amount:'}</span>
+        <div>
+          <span class="total-label">${
+            isAcknowledgementReceipt 
+              ? 'Amount Acknowledged:' 
+              : (data.paymentStatus?.toLowerCase().includes('full') || data.paidAmount >= calc.totalAmountDue)
+                ? 'Paid Amount:'
+                : 'Partial Payment (Downpayment):'
+          }</span>
+          ${!isAcknowledgementReceipt && data.status === 3 && data.createdDate && !(data.paymentStatus?.toLowerCase().includes('full') || data.paidAmount >= calc.totalAmountDue) ? `<br><span style="color: #666; font-size: 10px; font-weight: normal;">Paid on: ${formatDate(data.createdDate)}</span>` : ''}
+        </div>
         <span>${formatCurrency(data.paidAmount)}</span>
       </div>
-      ${!isAcknowledgementReceipt ? `
-      <div class="total-row">
-        <span class="total-label">Balance:</span>
-        <span>${formatCurrency(calc.totalAmountDue - data.paidAmount)}</span>
-      </div>
-      ` : ''}
+      ${!isAcknowledgementReceipt && !(data.paymentStatus?.toLowerCase().includes('full') || data.paidAmount >= calc.totalAmountDue) ? (
+        data.status === 3 ? `
+        <div class="total-row">
+          <div>
+            <span class="total-label">Remaining Balance Paid (Cashier):</span>
+            <br><span style="color: #666; font-size: 10px; font-weight: normal;">Paid on end date: ${data.date} ${data.time ? data.time.split(' - ')[1] || '' : ''}</span>
+          </div>
+          <span class="total-label">${formatCurrency(calc.totalAmountDue - data.paidAmount)}</span>
+        </div>
+        ` : `
+        <div class="total-row">
+          <span class="total-label">Balance:</span>
+          <span>${formatCurrency(calc.totalAmountDue - data.paidAmount)}</span>
+        </div>
+        `
+      ) : ''}
       ` : ''}
     </div>
 
@@ -916,23 +938,48 @@ export default function InvoiceScreen({
               {invoiceData.paidAmount > 0 && (
                 <>
                   <View className="flex-row justify-between py-2 border-b" style={{ borderBottomColor: '#E5E7EB' }}>
-                    <Text className="text-sm font-semibold" style={{ color: colors.text }}>
-                      {isAcknowledgementReceipt ? 'Amount Acknowledged:' : 'Paid Amount:'}
-                    </Text>
+                    <View>
+                      <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                        {isAcknowledgementReceipt 
+                          ? 'Amount Acknowledged:' 
+                          : isFullPayment 
+                            ? 'Paid Amount:' 
+                            : 'Partial Payment (Downpayment):'}
+                      </Text>
+                      {!isAcknowledgementReceipt && invoiceData.status === 3 && invoiceData.createdDate && isPartialPayment && (
+                        <Text className="text-xs mt-0.5" style={{ color: colors.icon }}>
+                          Paid on: {formatDate(invoiceData.createdDate)}
+                        </Text>
+                      )}
+                    </View>
                     <Text className="text-sm" style={{ color: colors.text }}>
                       {formatCurrency(invoiceData.paidAmount)}
                     </Text>
                   </View>
-                  {!isAcknowledgementReceipt && (
-                  <View className="flex-row justify-between py-2">
-                    <Text className="text-sm font-semibold" style={{ color: colors.text }}>
-                      Balance:
-                    </Text>
-                    <Text className="text-sm font-semibold" style={{ color: colors.text }}>
-                      {formatCurrency(calculations.totalAmountDue - invoiceData.paidAmount)}
-                    </Text>
-                  </View>
-                  )}
+                  {!isAcknowledgementReceipt && isPartialPayment && invoiceData.status === 3 ? (
+                    <View className="flex-row justify-between py-2">
+                      <View>
+                        <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                          Remaining Balance Paid (Cashier):
+                        </Text>
+                        <Text className="text-xs mt-0.5" style={{ color: colors.icon }}>
+                          Paid on end date: {invoiceData.date} {invoiceData.time?.split(' - ')[1] || ''}
+                        </Text>
+                      </View>
+                      <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                        {formatCurrency(calculations.totalAmountDue - invoiceData.paidAmount)}
+                      </Text>
+                    </View>
+                  ) : !isAcknowledgementReceipt && isPartialPayment ? (
+                    <View className="flex-row justify-between py-2">
+                      <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                        Balance:
+                      </Text>
+                      <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                        {formatCurrency(calculations.totalAmountDue - invoiceData.paidAmount)}
+                      </Text>
+                    </View>
+                  ) : null}
                 </>
               )}
             </View>
