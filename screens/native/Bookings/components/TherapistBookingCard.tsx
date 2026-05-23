@@ -13,6 +13,7 @@ interface TherapistBookingCardProps {
     onViewDetails?: (bookingId: string) => void;
     onCancel?: (bookingId: string) => void;
     onComplete?: (bookingId: string) => void;
+    onStartSession?: (bookingId: string) => void;
     animateContent?: boolean;
     animationDelay?: number;
     contentVisible?: boolean;
@@ -38,6 +39,7 @@ export default function TherapistBookingCard({
     onViewDetails,
     onCancel,
     onComplete,
+    onStartSession,
     animateContent = false,
     animationDelay = 0,
     contentVisible = true
@@ -110,7 +112,19 @@ export default function TherapistBookingCard({
 
             {/* Action Buttons */}
             <View className="flex-row">
-                {(booking.status === BOOKING_STATUS.PENDING || booking.status === BOOKING_STATUS.CONFIRMED) ? (
+                {booking.status === BOOKING_STATUS.CONFIRMED ? (
+                    <TouchableOpacity
+                        className="flex-1 flex-row items-center justify-center px-4 py-2 rounded-xl"
+                        style={{ backgroundColor: primaryColor }}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            onStartSession?.(booking.id);
+                        }}
+                    >
+                        <Ionicons name="play-circle-outline" size={16} color="white" />
+                        <Text className="text-sm font-semibold ml-2" style={{ color: 'white' }}>Start Session</Text>
+                    </TouchableOpacity>
+                ) : booking.status === BOOKING_STATUS.ONGOING ? (
                     <>
                         <TouchableOpacity
                             className="flex-1 flex-row items-center justify-center px-4 py-2 rounded-xl mr-2 border"

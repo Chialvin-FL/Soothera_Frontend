@@ -1,10 +1,11 @@
 // Booking status constants
-// 0 = confirmed, 1 = pending, 2 = completed, 3 = cancelled
+// 0 = pending, 1 = confirmed, 2 = ongoing, 3 = completed, 4 = cancelled
 export const BOOKING_STATUS = {
-  CONFIRMED: 0,
-  PENDING: 1,
-  COMPLETED: 2,
-  CANCELLED: 3,
+  PENDING: 0,
+  CONFIRMED: 1,
+  ONGOING: 2,
+  COMPLETED: 3,
+  CANCELLED: 4,
 } as const;
 
 export type BookingStatus = typeof BOOKING_STATUS[keyof typeof BOOKING_STATUS];
@@ -16,7 +17,7 @@ export interface Booking {
   customerName?: string;
   customerImage?: any;
   spaImage?: any;
-  status: number; // 0 = confirmed, 1 = pending, 2 = completed, 3 = cancelled
+  status: number; // 0 = pending, 1 = confirmed, 2 = ongoing, 3 = completed, 4 = cancelled
   date: string;
   time: string;
   price: number;
@@ -26,10 +27,12 @@ export interface Booking {
 // Convert status number to display text
 export function getStatusText(status: number): string {
   switch (status) {
-    case BOOKING_STATUS.CONFIRMED:
-      return 'Confirmed';
     case BOOKING_STATUS.PENDING:
       return 'Pending';
+    case BOOKING_STATUS.CONFIRMED:
+      return 'Confirmed';
+    case BOOKING_STATUS.ONGOING:
+      return 'Ongoing';
     case BOOKING_STATUS.COMPLETED:
       return 'Completed';
     case BOOKING_STATUS.CANCELLED:

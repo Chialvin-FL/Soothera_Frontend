@@ -1,16 +1,23 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { View, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, AppState } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { API_CONFIG } from '@/api/config';
+import { getBookings } from '@/api/endpoints/apiBooking';
+import { getUsers } from '@/api/endpoints/apiUser';
 import { Header } from '@/components/native/Header';
 import { RisingItem } from '@/components/native/RisingItem';
-import { therapistBookings } from './configs/mockTherapistBookingsData';
+import { loadStoredSession } from '@/screens/native/Login/loginService';
+import type { BookingResponse, UserDto } from '@/api/types';
 import { Booking, BOOKING_STATUS } from './types/Booking';
+import { mapApiBookingToCard } from './utils/apiBookingMappers';
 import TherapistBookingCard from './components/TherapistBookingCard';
 import TabNavigation, { TabType } from './components/TabNavigation';
+
+const BOOKINGS_REFRESH_INTERVAL_MS = 3000;
 
 interface BookingsTherapistScreenProps {
     onNavigateToProfile?: () => void;
@@ -30,15 +37,131 @@ export default function BookingsTherapistScreen({
     const insets = useSafeAreaInsets();
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
-    const isDark = colorScheme === 'dark';
+    const isVisible = isActive ?? true;
 
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [viewDate, setViewDate] = useState(new Date());
     const [activeTab, setActiveTab] = useState<TabType>('upcoming');
+    const [bookings, setBookings] = useState<Booking[]>([]);
+    const [isLoadingBookings, setIsLoadingBookings] = useState(true);
+    const [bookingsError, setBookingsError] = useState<string | null>(null);
+    const isFetchingBookingsRef = useRef(false);
 
     const screenWidth = Dimensions.get('window').width;
     const pageScrollViewRef = useRef<ScrollView>(null);
     const tabs: TabType[] = ['upcoming', 'completed', 'cancelled'];
+
+    const getCustomerImageSource = useCallback((profilePicture?: string | null) => {
+        if (!profilePicture || profilePicture === 'null') return undefined;
+        const trimmed = profilePicture.trim();
+        if (!trimmed) return undefined;
+        if (trimmed.startsWith('http') || trimmed.startsWith('file')) {
+            return { uri: trimmed };
+        }
+        return { uri: `${API_CONFIG.BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}` };
+    }, []);
+
+    const extractUserFromResponse = useCallback((data: unknown): UserDto | undefined => {
+        const value = data as any;
+        if (Array.isArray(value?.items)) return value.items[0];
+        if (Array.isArray(value)) return value[0];
+        if (value?.uid || value?.fullName || value?.profilePicture) return value as UserDto;
+        return undefined;
+    }, []);
+
+    const loadCustomersById = useCallback(
+        async (customerIds: string[]): Promise<Record<string, UserDto>> => {
+            const uniqueCustomerIds = Array.from(new Set(customerIds.filter(Boolean)));
+            const customers = await Promise.all(
+                uniqueCustomerIds.map(async (uid) => {
+                    try {
+                        const response = await getUsers({ uid, page: 1, pageSize: 1 });
+                        const user = extractUserFromResponse(response.data);
+                        return user ? ([uid, user] as const) : null;
+                    } catch (error) {
+                        console.warn('[BookingsTherapistScreen] Failed to load customer data:', uid, error);
+                        return null;
+                    }
+                })
+            );
+
+            return customers.reduce<Record<string, UserDto>>((acc, entry) => {
+                if (entry) acc[entry[0]] = entry[1];
+                return acc;
+            }, {});
+        },
+        [extractUserFromResponse]
+    );
+
+    const fetchTherapistBookings = useCallback(
+        async (options?: { showLoading?: boolean }) => {
+            if (isFetchingBookingsRef.current) return;
+
+            const shouldShowLoading = options?.showLoading ?? false;
+            isFetchingBookingsRef.current = true;
+            if (shouldShowLoading) {
+                setIsLoadingBookings(true);
+            }
+            setBookingsError(null);
+
+            try {
+                const session = await loadStoredSession();
+                if (!session?.uid) {
+                    setBookings([]);
+                    setBookingsError('Not authenticated.');
+                    return;
+                }
+
+                const response = await getBookings({
+                    staffId: session.uid,
+                    page: 1,
+                    pageSize: 100,
+                });
+
+                const items = response.data?.items ?? [];
+                const customersById = await loadCustomersById(items.map((item) => item.customerId));
+                setBookings(
+                    items.map((item: BookingResponse) => {
+                        const customer = customersById[item.customerId];
+                        return {
+                            ...mapApiBookingToCard(item),
+                            customerName: customer?.fullName,
+                            customerImage: getCustomerImageSource(customer?.profilePicture),
+                        };
+                    })
+                );
+            } catch (error: any) {
+                console.warn('[BookingsTherapistScreen] Failed to load therapist bookings:', error);
+                if (shouldShowLoading || bookings.length === 0) {
+                    setBookings([]);
+                }
+                setBookingsError(error?.message ?? 'Failed to load bookings.');
+            } finally {
+                setIsLoadingBookings(false);
+                isFetchingBookingsRef.current = false;
+            }
+        },
+        [bookings.length, getCustomerImageSource, loadCustomersById]
+    );
+
+    useEffect(() => {
+        if (!isVisible) return;
+
+        fetchTherapistBookings({ showLoading: bookings.length === 0 });
+        const refreshInterval = setInterval(() => {
+            fetchTherapistBookings();
+        }, BOOKINGS_REFRESH_INTERVAL_MS);
+        const appStateSubscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') {
+                fetchTherapistBookings();
+            }
+        });
+
+        return () => {
+            clearInterval(refreshInterval);
+            appStateSubscription.remove();
+        };
+    }, [bookings.length, fetchTherapistBookings, isVisible]);
 
     // Handle page scroll to sync active tab
     const handlePageScroll = (event: any) => {
@@ -83,13 +206,12 @@ export default function BookingsTherapistScreen({
     // Booking counts per day
     const bookingCounts = useMemo(() => {
         const counts: Record<string, number> = {};
-        therapistBookings.forEach((booking: Booking) => {
-            // date format in mock is MM/DD/YYYY
+        bookings.forEach((booking: Booking) => {
             const dateKey = booking.date;
             counts[dateKey] = (counts[dateKey] || 0) + 1;
         });
         return counts;
-    }, [therapistBookings]);
+    }, [bookings]);
 
     const formatDateKey = (date: Date) => {
         const m = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -108,11 +230,16 @@ export default function BookingsTherapistScreen({
     const getBookingsForTab = (tab: TabType, date?: Date) => {
         if (tab === 'upcoming') {
             const dateKey = formatDateKey(date || selectedDate);
-            return therapistBookings.filter((b: Booking) => b.date === dateKey);
+            return bookings.filter((b: Booking) => 
+                b.date === dateKey && 
+                (b.status === BOOKING_STATUS.PENDING || 
+                 b.status === BOOKING_STATUS.CONFIRMED || 
+                 b.status === BOOKING_STATUS.ONGOING)
+            );
         } else if (tab === 'completed') {
-            return therapistBookings.filter((b: Booking) => b.status === BOOKING_STATUS.COMPLETED);
+            return bookings.filter((b: Booking) => b.status === BOOKING_STATUS.COMPLETED);
         } else if (tab === 'cancelled') {
-            return therapistBookings.filter((b: Booking) => b.status === BOOKING_STATUS.CANCELLED);
+            return bookings.filter((b: Booking) => b.status === BOOKING_STATUS.CANCELLED);
         }
         return [];
     };
@@ -271,13 +398,31 @@ export default function BookingsTherapistScreen({
                                     </RisingItem>
                                 )}
 
-                                {bookings.length > 0 ? (
+                                {isLoadingBookings && tab === activeTab ? (
+                                    <RisingItem delay={400}>
+                                        <View className="items-center justify-center py-10 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                                            <ActivityIndicator size="small" color={primaryColor} />
+                                            <Text className="text-sm mt-3" style={{ color: colors.icon }}>Loading bookings...</Text>
+                                        </View>
+                                    </RisingItem>
+                                ) : bookingsError && tab === activeTab ? (
+                                    <RisingItem delay={400}>
+                                        <View className="items-center justify-center py-10 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                                            <Ionicons name="warning-outline" size={48} color={colors.icon} />
+                                            <Text className="text-sm font-semibold mt-3" style={{ color: colors.text }}>Unable to load bookings</Text>
+                                            <Text className="text-xs mt-1 text-center px-6" style={{ color: colors.icon }}>
+                                                {bookingsError}
+                                            </Text>
+                                        </View>
+                                    </RisingItem>
+                                ) : bookings.length > 0 ? (
                                     bookings.map((booking: Booking, index: number) => (
                                         <TherapistBookingCard
                                             key={booking.id}
                                             booking={booking}
                                             onPress={() => onNavigateBookingDetails?.(booking.id)}
                                             onViewDetails={onNavigateBookingDetails}
+                                            onStartSession={(id) => console.log('Start Session', id)}
                                             onCancel={(id) => console.log('Cancel', id)}
                                             onComplete={(id) => console.log('Complete', id)}
                                             animateContent={activeTab === tab}

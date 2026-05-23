@@ -14,12 +14,13 @@ export const mapApiStatus = (status: number | string | null | undefined): number
     switch (status) {
       case 1:
         return BOOKING_STATUS.CONFIRMED;
+      case 2:
+        return BOOKING_STATUS.ONGOING;
       case 3:
         return BOOKING_STATUS.COMPLETED;
       case 4:
         return BOOKING_STATUS.CANCELLED;
       case 0:
-      case 2:
       default:
         return BOOKING_STATUS.PENDING;
     }
@@ -28,6 +29,9 @@ export const mapApiStatus = (status: number | string | null | undefined): number
   switch ((status ?? '').toLowerCase()) {
     case 'confirmed':
       return BOOKING_STATUS.CONFIRMED;
+    case 'ongoing':
+    case 'in progress':
+      return BOOKING_STATUS.ONGOING;
     case 'completed':
       return BOOKING_STATUS.COMPLETED;
     case 'cancelled':
