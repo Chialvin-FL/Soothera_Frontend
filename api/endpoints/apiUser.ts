@@ -55,6 +55,11 @@ export async function updateUser(
   if (payload.profilePic != null) {
     const pic = payload.profilePic as any;
     if (pic.uri) {
+      console.log('[apiUser] updateUser: appending ProfilePic file =', {
+        uri: pic.uri,
+        name: pic.name ?? 'profile_picture.jpg',
+        type: pic.type ?? 'image/jpeg',
+      });
       // React Native ImagePicker asset: { uri, name, type }
       formData.append('ProfilePic', {
         uri: pic.uri,
@@ -62,6 +67,7 @@ export async function updateUser(
         type: pic.type ?? 'image/jpeg',
       } as any);
     } else {
+      console.log('[apiUser] updateUser: appending ProfilePic raw file/blob');
       // Web File object
       formData.append('ProfilePic', pic);
     }

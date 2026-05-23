@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { API_CONFIG } from '@/api/config';
 import { TransparentHeader } from '@/components/native/TransparentHeader';
 import { BookingDetails } from './types/BookingDetails';
 import { BOOKING_STATUS } from './types/Booking';
@@ -13,6 +14,15 @@ import { generateInvoiceFromBooking } from './utils/invoiceDataGenerator';
 import type { InvoiceData } from './types/Invoice';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
+
+const resolveCustomerImageSource = (image: any) => {
+    if (!image || image === 'null') return require('../../../assets/user.jpg');
+    if (typeof image !== 'string') return image;
+    const trimmed = image.trim();
+    if (!trimmed) return require('../../../assets/user.jpg');
+    if (trimmed.startsWith('http') || trimmed.startsWith('file')) return { uri: trimmed };
+    return { uri: `${API_CONFIG.BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}` };
+};
 
 // Try to load WebView at runtime for mobile (Leaflet in WebView with Mapbox tiles)
 let RNWebView: any = null;
@@ -201,10 +211,8 @@ export default function BookingDetailsAdminScreen({
 
     const [showInvoice, setShowInvoice] = useState(false);
 
-    // Use customer image directly from details or mock if unavailable.
-    // Note: the mock details should ideally also contain customer name. For now, we mock Customer Name visually or dynamically pass it if later integrated.
-    const customerImageSource = require('../../../assets/user.jpg');
-    const fallbackCustomerName = 'Customer User';
+    const customerImageSource = resolveCustomerImageSource(bookingDetails.customerImage);
+    const customerName = bookingDetails.customerName || 'Customer';
 
     // Handle Android back button
     useEffect(() => {
@@ -234,7 +242,7 @@ export default function BookingDetailsAdminScreen({
                 <View className="px-5 py-4">
                     {/* Customer Name */}
                     <Text className="text-2xl font-bold mb-2 text-center" style={{ color: colors.text }}>
-                        Customer Details
+                        {customerName}
                     </Text>
 
                     {/* Customer Rating (Mocked as Spa Rating for now, could be its own field later) */}
@@ -307,10 +315,10 @@ export default function BookingDetailsAdminScreen({
                             </View>
                         </View>
 
-                        {/* Price */}
+                        {/* Service Total */}
                         <View className="flex-row items-center">
-                            <Text className="text-2xl font-bold ml-2" style={{ color: primaryColor }}>
-                                ₱{bookingDetails.price.toFixed(2)}
+                            <Text className="text-sm font-medium ml-2" style={{ color: colors.icon }}>
+                                Service Total: ₱{bookingDetails.price.toFixed(2)}
                             </Text>
                         </View>
 
@@ -329,14 +337,24 @@ export default function BookingDetailsAdminScreen({
                                         </Text>
                                     </View>
                                 ))}
-                                <View className="flex-row justify-between pt-2 mt-2 border-t" style={{ borderTopColor: '#E5E7EB' }}>
-                                    <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                                <View className="flex-row justify-between items-center pt-3 mt-3 border-t" style={{ borderTopColor: '#E5E7EB' }}>
+                                    <Text className="text-base font-bold" style={{ color: colors.text }}>
                                         Transaction Total
                                     </Text>
-                                    <Text className="text-sm font-semibold" style={{ color: primaryColor }}>
+                                    <Text className="text-2xl font-bold" style={{ color: primaryColor }}>
                                         ₱{transactionTotal.toFixed(2)}
                                     </Text>
                                 </View>
+                            </View>
+                        )}
+                        {selectedAddOns.length === 0 && (
+                            <View className="flex-row justify-between items-center pt-3 mt-3 border-t" style={{ borderTopColor: '#E5E7EB' }}>
+                                <Text className="text-base font-bold" style={{ color: colors.text }}>
+                                    Transaction Total
+                                </Text>
+                                <Text className="text-2xl font-bold" style={{ color: primaryColor }}>
+                                    ₱{transactionTotal.toFixed(2)}
+                                </Text>
                             </View>
                         )}
                     </View>
@@ -414,7 +432,7 @@ export default function BookingDetailsAdminScreen({
                                     isVAT: false,
                                     vatRate: 0.12,
                                     discounts: 0,
-                                    customerName: fallbackCustomerName,
+                                    customerName,
                                     customerAddress: bookingDetails.address,
                                     businessName: 'Soothera',
                                     businessAddress: 'Cebu, Philippines',
@@ -486,7 +504,7 @@ export default function BookingDetailsAdminScreen({
                     isVAT: false,
                     vatRate: 0.12,
                     discounts: 0,
-                    customerName: fallbackCustomerName,
+                    customerName,
                     customerAddress: bookingDetails.address,
                     businessName: 'Soothera',
                     businessAddress: 'Cebu, Philippines',

@@ -51,7 +51,7 @@ export default function BookingCard({ booking, tabType, onPress, onReview, onReb
       <View className="flex-row">
         {/* Image */}
         <Image
-          source={require('../../../../assets/salon.jpg')}
+          source={booking.spaImage || require('../../../../assets/salon.jpg')}
           className="w-20 h-20 rounded-xl mr-3"
           resizeMode="cover"
         />

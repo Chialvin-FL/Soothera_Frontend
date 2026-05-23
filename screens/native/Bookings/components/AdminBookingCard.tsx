@@ -4,6 +4,7 @@ import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { API_CONFIG } from '@/api/config';
 import { RisingItem } from '@/components/native/RisingItem';
 import { Booking, BOOKING_STATUS, getStatusText } from '../types/Booking';
 
@@ -37,6 +38,15 @@ const getStatusColor = (status: number, colors: any) => {
     }
 };
 
+const resolveImageSource = (image: any) => {
+    if (!image || image === 'null') return require('../../../../assets/user.jpg');
+    if (typeof image !== 'string') return image;
+    const trimmed = image.trim();
+    if (!trimmed) return require('../../../../assets/user.jpg');
+    if (trimmed.startsWith('http') || trimmed.startsWith('file')) return { uri: trimmed };
+    return { uri: `${API_CONFIG.BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}` };
+};
+
 export default function AdminBookingCard({
     booking,
     tabType,
@@ -67,7 +77,7 @@ export default function AdminBookingCard({
             <View className="flex-row">
                 {/* Image */}
                 <Image
-                    source={booking.customerImage || require('../../../../assets/user.jpg')}
+                    source={resolveImageSource(booking.customerImage)}
                     className="w-20 h-20 rounded-xl mr-3"
                     resizeMode="cover"
                 />

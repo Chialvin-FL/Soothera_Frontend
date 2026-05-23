@@ -464,10 +464,10 @@ export default function BookingDetailsScreen({
               </View>
             </View>
 
-            {/* Price */}
+            {/* Service Total */}
             <View className="flex-row items-center">
-              <Text className="text-2xl font-bold ml-2" style={{ color: primaryColor }}>
-                {bookingDetails.priceDisplay ?? `₱${bookingDetails.price.toFixed(2)}`}
+              <Text className="text-sm font-medium ml-2" style={{ color: colors.icon }}>
+                Service Total: {bookingDetails.priceDisplay ?? `₱${bookingDetails.price.toFixed(2)}`}
               </Text>
             </View>
 
@@ -486,14 +486,24 @@ export default function BookingDetailsScreen({
                     </Text>
                   </View>
                 ))}
-                <View className="flex-row justify-between pt-2 mt-2 border-t" style={{ borderTopColor: '#E5E7EB' }}>
-                  <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                <View className="flex-row justify-between items-center pt-3 mt-3 border-t" style={{ borderTopColor: '#E5E7EB' }}>
+                  <Text className="text-base font-bold" style={{ color: colors.text }}>
                     Transaction Total
                   </Text>
-                  <Text className="text-sm font-semibold" style={{ color: primaryColor }}>
+                  <Text className="text-2xl font-bold" style={{ color: primaryColor }}>
                     ₱{transactionTotal.toFixed(2)}
                   </Text>
                 </View>
+              </View>
+            )}
+            {selectedAddOns.length === 0 && (
+              <View className="flex-row justify-between items-center pt-3 mt-3 border-t" style={{ borderTopColor: '#E5E7EB' }}>
+                <Text className="text-base font-bold" style={{ color: colors.text }}>
+                  Transaction Total
+                </Text>
+                <Text className="text-2xl font-bold" style={{ color: primaryColor }}>
+                  {bookingDetails.priceDisplay ?? `₱${transactionTotal.toFixed(2)}`}
+                </Text>
               </View>
             )}
           </View>

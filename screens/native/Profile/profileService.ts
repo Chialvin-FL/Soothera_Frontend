@@ -90,7 +90,14 @@ export async function performUpdateProfile(
 export async function performFetchProfile(uid: string): Promise<ProfileDataResponse> {
     try {
         const response = await apiGetUsers({ uid });
-        if (!response.success || !response.data || response.data.items.length === 0) {
+        const responseData = response.data as any;
+        const user = Array.isArray(responseData?.items)
+            ? responseData.items[0]
+            : Array.isArray(responseData)
+                ? responseData[0]
+                : responseData;
+
+        if (!response.success || !user) {
             return { 
                 success: false, 
                 message: response.message || 'User not found.', 
@@ -100,7 +107,7 @@ export async function performFetchProfile(uid: string): Promise<ProfileDataRespo
         return { 
             success: true, 
             message: 'Profile fetched successfully.', 
-            data: response.data.items[0] 
+            data: user,
         };
     } catch (err) {
         const apiErr = err as ApiError;

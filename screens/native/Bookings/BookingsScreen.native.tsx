@@ -8,6 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Header } from '@/components/native/Header';
 import { RisingItem } from '@/components/native/RisingItem';
 import { getBookings } from '@/api/endpoints/apiBooking';
+import { viewSalons } from '@/api/endpoints/apiSalonEstablishment';
 import { loadStoredSession } from '@/screens/native/Login/loginService';
 import { BOOKING_STATUS, type Booking } from './types/Booking';
 import type { BookingDetails } from './types/BookingDetails';
@@ -30,7 +31,7 @@ import PaymentFailedScreen from '../Home/PaymentFailedScreen.native';
 import { getSalonDetails, topRatedSalons } from '../Home/configs/mockData';
 import type { SalonDetails, Therapist } from '../Home/types/SalonDetails';
 import type { Service } from '../Home/types/Home';
-import type { BookingResponse, PaymentMutationResponse, UpdatePaymentRequest } from '@/api/types';
+import type { BookingResponse, PaymentMutationResponse, SalonEstablishment, UpdatePaymentRequest } from '@/api/types';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -126,6 +127,31 @@ export default function BookingsScreen({
   const baseItemDelay = 140;
   const perItemDelay = 140;
 
+  const getEstablishmentImageSource = (picture?: string | null) => {
+    return picture ? { uri: picture } : undefined;
+  };
+
+  const getApiBookingEstablishmentId = useCallback((booking: BookingResponse): string | undefined => {
+    const raw = booking as any;
+    return raw.establishmentId ?? raw.EstablishmentId ?? raw.establishmentID ?? raw.EstablishmentID;
+  }, []);
+
+  const findBookingEstablishment = useCallback((
+    booking: BookingResponse,
+    establishments: SalonEstablishment[],
+  ): SalonEstablishment | undefined => {
+    const establishmentId = getApiBookingEstablishmentId(booking);
+    if (establishmentId) {
+      const byId = establishments.find((establishment) => establishment.id === establishmentId);
+      if (byId) return byId;
+    }
+
+    return establishments.find(
+      (establishment) =>
+        establishment.name.toLowerCase() === (booking.establishmentName ?? '').toLowerCase(),
+    );
+  }, [getApiBookingEstablishmentId]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -150,8 +176,29 @@ export default function BookingsScreen({
         });
 
         const items = response.data?.items ?? [];
+        let establishments: SalonEstablishment[] = [];
+        try {
+          const establishmentResponse = await viewSalons();
+          const data = establishmentResponse.data as any;
+          establishments = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.items)
+              ? data.items
+              : data
+                ? [data]
+                : [];
+        } catch (establishmentError) {
+          console.warn('[BookingsScreen] Failed to load establishment images:', establishmentError);
+        }
+
         if (isMounted) {
-          setBookings(items.map(mapApiBookingToCard));
+          setBookings(items.map((item) => {
+            const establishment = findBookingEstablishment(item, establishments);
+            return {
+              ...mapApiBookingToCard(item),
+              spaImage: getEstablishmentImageSource(establishment?.salonPicture),
+            };
+          }));
           setApiBookingsById(
             items.reduce<Record<string, BookingResponse>>((acc, item) => {
               if (item.bookingId) acc[item.bookingId] = item;
@@ -178,7 +225,7 @@ export default function BookingsScreen({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [findBookingEstablishment]);
   
   // Handle page scroll to sync active tab
   const handlePageScroll = (event: any) => {
@@ -227,8 +274,14 @@ export default function BookingsScreen({
 
   const getSelectedBookingDetails = useCallback((bookingId: string): BookingDetails | undefined => {
     const apiBooking = apiBookingsById[bookingId];
-    return apiBooking ? mapApiBookingToDetails(apiBooking) : getBookingDetails(bookingId);
-  }, [apiBookingsById]);
+    const booking = bookings.find((item) => item.id === bookingId);
+    if (!apiBooking) return getBookingDetails(bookingId);
+    const details = mapApiBookingToDetails(apiBooking);
+    return {
+      ...details,
+      spaImage: booking?.spaImage ?? details.spaImage,
+    };
+  }, [apiBookingsById, bookings]);
 
   const buildRescheduledApiBooking = (
     booking: BookingResponse,
@@ -490,7 +543,7 @@ export default function BookingsScreen({
     setBookings((bookingList) =>
       bookingList.map((booking) =>
         booking.id === selectedBookingId
-          ? mapApiBookingToCard(updated)
+          ? { ...mapApiBookingToCard(updated), spaImage: booking.spaImage }
           : booking,
       ),
     );

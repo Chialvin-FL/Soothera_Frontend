@@ -12,7 +12,10 @@ import GetDirectionsScreen from '../../screens/native/Bookings/GetDirectionsScre
 import BookAppointmentScreen from '../../screens/native/Home/BookAppointmentScreen.native';
 import { getBookingDetails } from '../../screens/native/Bookings/configs/mockBookingDetailsData';
 import { getBookingById } from '../../api/endpoints/apiBooking';
+import { getUsers } from '../../api/endpoints/apiUser';
+import { getSalonById, viewSalons } from '../../api/endpoints/apiSalonEstablishment';
 import { getSalonServices } from '../../api/endpoints/apiService';
+import { API_CONFIG } from '../../api/config';
 import { mapApiBookingToDetails } from '../../screens/native/Bookings/utils/apiBookingMappers';
 import { topRatedSalons, getSalonDetails } from '../../screens/native/Home/configs/mockData';
 import type { BookingsStackState } from '../hooks/useBookingsStack';
@@ -26,6 +29,24 @@ const OVERLAY_BASE = {
     right: 0,
     bottom: 0,
 };
+
+function profileImageSource(profilePicture?: string | null): { uri: string } | undefined {
+    if (!profilePicture || profilePicture === 'null') return undefined;
+    const trimmed = profilePicture.trim();
+    if (!trimmed) return undefined;
+    if (trimmed.startsWith('http') || trimmed.startsWith('file')) {
+        return { uri: trimmed };
+    }
+    return { uri: `${API_CONFIG.BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}` };
+}
+
+function extractUserFromResponse(data: unknown): any | undefined {
+    const value = data as any;
+    if (Array.isArray(value?.items)) return value.items[0];
+    if (Array.isArray(value)) return value[0];
+    if (value?.uid || value?.fullName || value?.profilePicture) return value;
+    return undefined;
+}
 
 interface BookingsStackProps {
     bookings: BookingsStackState;
@@ -106,7 +127,7 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
         let mounted = true;
 
         const fetchSelectedBookingDetails = async () => {
-            if (!bookingSelectedId || userRole !== 'customer') {
+            if (!bookingSelectedId || (userRole !== 'customer' && userRole !== 'admin')) {
                 setApiBookingDetails(null);
                 setBookingDetailsError(null);
                 setIsLoadingBookingDetails(false);
@@ -135,8 +156,50 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
                         console.warn('[BookingsStack] Failed to load salon service details:', serviceError);
                     }
                 }
+                let customerName: string | undefined;
+                let customerImage: { uri: string } | undefined;
+                const customerId = apiBooking?.customerId ?? apiBooking?.CustomerId;
+                if (customerId) {
+                    try {
+                        const customerResponse = await getUsers({ uid: customerId, page: 1, pageSize: 1 });
+                        const customer = extractUserFromResponse(customerResponse.data);
+                        customerName = customer?.fullName;
+                        customerImage = profileImageSource(customer?.profilePicture);
+                    } catch (customerError) {
+                        console.warn('[BookingsStack] Failed to load customer details:', customerError);
+                    }
+                }
+                let spaImage: { uri: string } | undefined;
+                const establishmentId = apiBooking?.establishmentId ?? apiBooking?.EstablishmentId;
+                try {
+                    const establishmentResponse = establishmentId
+                        ? await getSalonById(establishmentId)
+                        : await viewSalons();
+                    const establishmentData = establishmentResponse.data as any;
+                    const establishments = Array.isArray(establishmentData)
+                        ? establishmentData
+                        : Array.isArray(establishmentData?.items)
+                            ? establishmentData.items
+                            : establishmentData
+                                ? [establishmentData]
+                                : [];
+                    const establishment = establishmentId
+                        ? establishments[0]
+                        : establishments.find((item: any) =>
+                            String(item.name ?? '').toLowerCase() === String(apiBooking?.establishmentName ?? '').toLowerCase());
+                    spaImage = establishment?.salonPicture ? { uri: establishment.salonPicture } : undefined;
+                } catch (establishmentError) {
+                    console.warn('[BookingsStack] Failed to load establishment details:', establishmentError);
+                }
                 if (mounted) {
-                    setApiBookingDetails(apiBooking ? mapApiBookingToDetails(apiBooking, salonService) : null);
+                    setApiBookingDetails(apiBooking
+                        ? {
+                            ...mapApiBookingToDetails(apiBooking, salonService),
+                            customerName,
+                            customerImage,
+                            ...(spaImage ? { spaImage } : {}),
+                        }
+                        : null);
                     setBookingDetailsError(apiBooking ? null : 'Booking details not found.');
                 }
             } catch (error: any) {
@@ -162,8 +225,8 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
     return (
         <>
             {bookingSelectedId && (() => {
-                const details = userRole === 'customer' ? apiBookingDetails : getBookingDetails(bookingSelectedId);
-                if (userRole === 'customer' && isLoadingBookingDetails) {
+                const details = userRole === 'customer' || userRole === 'admin' ? apiBookingDetails : getBookingDetails(bookingSelectedId);
+                if ((userRole === 'customer' || userRole === 'admin') && isLoadingBookingDetails) {
                     return (
                         <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 12 }, bookingsDetailsStyle]}>
                             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'white' }}>
@@ -173,7 +236,7 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
                         </Animated.View>
                     );
                 }
-                if (userRole === 'customer' && bookingDetailsError) {
+                if ((userRole === 'customer' || userRole === 'admin') && bookingDetailsError) {
                     return (
                         <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 12 }, bookingsDetailsStyle]}>
                             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', padding: 24 }}>

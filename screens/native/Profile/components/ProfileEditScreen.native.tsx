@@ -11,6 +11,7 @@ import { loadStoredSession, updateStoredUserData } from '@/screens/native/Login/
 import * as ImagePicker from 'expo-image-picker';
 import { SuccessModal } from '@/components/native/SuccessModal';
 import { API_CONFIG } from '@/api/config';
+import type { UpdateUserRequest } from '@/api/types';
 
 interface ProfileEditScreenProps {
   onBack: () => void;
@@ -150,7 +151,7 @@ export default function ProfileEditScreen({ onBack, session: activeSession }: Pr
 
         // 2. Update Profile - Only send changed fields
         console.log('[ProfileEdit] Building update payload with changed fields only...');
-        const payload: any = {};
+        const payload: UpdateUserRequest = {};
         
         if (firstName !== initialData?.firstName) payload.fname = firstName;
         if (lastName !== initialData?.lastName) payload.lname = lastName;
@@ -159,7 +160,7 @@ export default function ProfileEditScreen({ onBack, session: activeSession }: Pr
         // If we have a new image file, handle upload
         if (imageFile) {
             console.log('[ProfileEdit] New profile picture detected for payload.');
-            payload.profilePic = imageFile.uri;
+            payload.profilePic = imageFile;
         }
 
         const hasProfileChanges = Object.keys(payload).length > 0;
@@ -184,19 +185,49 @@ export default function ProfileEditScreen({ onBack, session: activeSession }: Pr
             return;
         }
 
-        console.log('[ProfileEdit] Updating profile with payload:', payload);
+        console.log('[ProfileEdit] Updating profile with payload:', {
+            ...payload,
+            profilePic: imageFile ? {
+                uri: imageFile.uri,
+                name: imageFile.name,
+                type: imageFile.type,
+            } : undefined,
+        });
         await handleUpdateProfile(uid, payload, async () => {
             console.log('[ProfileEdit] Profile update success. Syncing local state...');
+            const updatedProfile = await handleFetchProfile(uid);
+            const persistedProfilePicture = updatedProfile?.profilePicture ?? null;
+
+            if (imageFile && !persistedProfilePicture) {
+                console.warn('[ProfileEdit] Profile update succeeded, but profilePicture is still empty after refetch.');
+                setFeedbackModal({
+                    visible: true,
+                    variant: 'error',
+                    title: 'Image Upload Not Confirmed',
+                    message: 'Your profile details were saved, but the profile picture was not returned by the server. Please try again.',
+                });
+                return;
+            }
+
+            const nextProfilePicture = persistedProfilePicture ?? profilePic;
             
             // Sync with AsyncStorage for persistence
             await updateStoredUserData({
                 firstName,
                 lastName,
-                profilePicture: imageFile ? imageFile.uri : profilePic
+                profilePicture: nextProfilePicture,
             });
 
             // Sync with global session for immediate UI update
-            activeSession.updateSessionData(firstName, lastName, imageFile ? imageFile.uri : profilePic);
+            activeSession.updateSessionData(firstName, lastName, nextProfilePicture);
+            setProfilePic(nextProfilePicture);
+            setImageFile(null);
+            setInitialData({
+                firstName,
+                lastName,
+                phone,
+                profilePic: nextProfilePicture,
+            });
 
             setFeedbackModal({
                 visible: true,

@@ -1,15 +1,20 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { View, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { View, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, primaryColor } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { API_CONFIG } from '@/api/config';
 import { Header } from '@/components/native/Header';
 import { RisingItem } from '@/components/native/RisingItem';
+import { getBookings } from '@/api/endpoints/apiBooking';
+import { getUsers } from '@/api/endpoints/apiUser';
+import { loadStoredSession } from '@/screens/native/Login/loginService';
+import { fetchMyEstablishment } from '@/screens/native/Profile/businessSettingsService';
+import type { BookingResponse, UserDto } from '@/api/types';
+import type { Booking } from './types/Booking';
 import {
-    Booking,
-    allBookings,
     getUpcomingBookings,
     getCompletedBookings,
     getCancelledBookings
@@ -17,7 +22,7 @@ import {
 import AdminBookingCard from './components/AdminBookingCard';
 import TabNavigation from './components/TabNavigation';
 import BookingDetailsAdminScreen from './BookingDetailsAdminScreen.native';
-import { getBookingDetails } from './configs/mockBookingDetailsData';
+import { mapApiBookingToCard, mapApiBookingToDetails } from './utils/apiBookingMappers';
 
 import Animated, {
     useSharedValue,
@@ -53,6 +58,10 @@ export default function BookingsAdminScreen({
     const isVisible = isActive ?? true;
     const [activeTab, setActiveTab] = useState<'upcoming' | 'completed' | 'cancelled' | 'all'>('all');
     const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+    const [bookings, setBookings] = useState<Booking[]>([]);
+    const [apiBookingsById, setApiBookingsById] = useState<Record<string, BookingResponse>>({});
+    const [isLoadingBookings, setIsLoadingBookings] = useState(true);
+    const [bookingsError, setBookingsError] = useState<string | null>(null);
 
 
     const screenWidth = Dimensions.get('window').width;
@@ -67,6 +76,128 @@ export default function BookingsAdminScreen({
     const maxAnimatedItems = 6;
     const baseItemDelay = 140;
     const perItemDelay = 140;
+
+    const getCustomerImageSource = (profilePicture?: string | null) => {
+        if (!profilePicture || profilePicture === 'null') return undefined;
+        const trimmed = profilePicture.trim();
+        if (!trimmed) return undefined;
+        if (trimmed.startsWith('http') || trimmed.startsWith('file')) {
+            return { uri: trimmed };
+        }
+        return { uri: `${API_CONFIG.BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}` };
+    };
+
+    const extractUserFromResponse = (data: unknown): UserDto | undefined => {
+        const value = data as any;
+        if (Array.isArray(value?.items)) return value.items[0];
+        if (Array.isArray(value)) return value[0];
+        if (value?.uid || value?.fullName || value?.profilePicture) return value as UserDto;
+        return undefined;
+    };
+
+    const loadCustomersById = async (customerIds: string[]): Promise<Record<string, UserDto>> => {
+        const uniqueCustomerIds = Array.from(new Set(customerIds.filter(Boolean)));
+        const customers = await Promise.all(
+            uniqueCustomerIds.map(async (uid) => {
+                try {
+                    const response = await getUsers({ uid, page: 1, pageSize: 1 });
+                    const user = extractUserFromResponse(response.data);
+                    return user ? [uid, user] as const : null;
+                } catch (error) {
+                    console.warn('[BookingsAdminScreen] Failed to load customer data:', uid, error);
+                    return null;
+                }
+            }),
+        );
+
+        return customers.reduce<Record<string, UserDto>>((acc, entry) => {
+            if (entry) acc[entry[0]] = entry[1];
+            return acc;
+        }, {});
+    };
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchEstablishmentBookings = async () => {
+            setIsLoadingBookings(true);
+            setBookingsError(null);
+
+            try {
+                const session = await loadStoredSession();
+                if (!session?.uid) {
+                    if (isMounted) {
+                        setBookings([]);
+                        setApiBookingsById({});
+                        setBookingsError('Not authenticated.');
+                    }
+                    return;
+                }
+
+                let establishmentId = session.establishmentId;
+                if (!establishmentId) {
+                    const establishmentResponse = await fetchMyEstablishment();
+                    if (!establishmentResponse.success) {
+                        throw new Error(establishmentResponse.message || 'Failed to load establishment.');
+                    }
+                    establishmentId = establishmentResponse.data?.id ?? null;
+                }
+
+                if (!establishmentId) {
+                    if (isMounted) {
+                        setBookings([]);
+                        setApiBookingsById({});
+                        setBookingsError('No establishment found for this account.');
+                    }
+                    return;
+                }
+
+                const response = await getBookings({
+                    establishmentId,
+                    page: 1,
+                    pageSize: 100,
+                });
+
+                const items = response.data?.items ?? [];
+                const customersById = await loadCustomersById(
+                    items.map((item) => item.customerId),
+                );
+                if (isMounted) {
+                    setBookings(items.map((item) => {
+                        const customer = customersById[item.customerId];
+                        return {
+                            ...mapApiBookingToCard(item),
+                            customerName: customer?.fullName,
+                            customerImage: getCustomerImageSource(customer?.profilePicture),
+                        };
+                    }));
+                    setApiBookingsById(
+                        items.reduce<Record<string, BookingResponse>>((acc, item) => {
+                            if (item.bookingId) acc[item.bookingId] = item;
+                            return acc;
+                        }, {}),
+                    );
+                }
+            } catch (error: any) {
+                console.warn('[BookingsAdminScreen] Failed to load establishment bookings:', error);
+                if (isMounted) {
+                    setBookings([]);
+                    setApiBookingsById({});
+                    setBookingsError(error?.message ?? 'Failed to load establishment bookings.');
+                }
+            } finally {
+                if (isMounted) {
+                    setIsLoadingBookings(false);
+                }
+            }
+        };
+
+        fetchEstablishmentBookings();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     // Handle page scroll to sync active tab
     const handlePageScroll = (event: any) => {
@@ -130,12 +261,13 @@ export default function BookingsAdminScreen({
     // If booking details not found, reset selection
     useEffect(() => {
         if (selectedBookingId) {
-            const bookingDetails = getBookingDetails(selectedBookingId);
+            const apiBooking = apiBookingsById[selectedBookingId];
+            const bookingDetails = apiBooking ? mapApiBookingToDetails(apiBooking) : null;
             if (!bookingDetails) {
                 setSelectedBookingId(null);
             }
         }
-    }, [selectedBookingId]);
+    }, [selectedBookingId, apiBookingsById]);
 
     // Notify parent when details screen is shown/hidden
     useEffect(() => {
@@ -216,10 +348,10 @@ export default function BookingsAdminScreen({
             >
                 {tabs.map((tab) => {
                     const filteredBookings =
-                        tab === 'upcoming' ? getUpcomingBookings(allBookings) :
-                            tab === 'completed' ? getCompletedBookings(allBookings) :
-                                tab === 'cancelled' ? getCancelledBookings(allBookings) :
-                                    allBookings;
+                        tab === 'upcoming' ? getUpcomingBookings(bookings) :
+                            tab === 'completed' ? getCompletedBookings(bookings) :
+                                tab === 'cancelled' ? getCancelledBookings(bookings) :
+                                    bookings;
 
                     const tabBookings = sortBookingsByDate(filteredBookings);
 
@@ -231,7 +363,24 @@ export default function BookingsAdminScreen({
                             showsVerticalScrollIndicator={false}
                             contentContainerStyle={{ paddingBottom: insets.bottom + 70, paddingTop: 12 }}
                         >
-                            {tabBookings.length > 0 ? (
+                            {isLoadingBookings && tab === activeTab ? (
+                                <View className="items-center justify-center py-20">
+                                    <ActivityIndicator size="large" color={colors.primary} />
+                                    <Text className="text-sm mt-4" style={{ color: colors.icon }}>
+                                        Loading bookings...
+                                    </Text>
+                                </View>
+                            ) : bookingsError && tab === activeTab ? (
+                                <View className="items-center justify-center py-20 px-6">
+                                    <Ionicons name="alert-circle-outline" size={64} color={colors.icon} />
+                                    <Text className="text-lg font-semibold mt-4 text-center" style={{ color: colors.text }}>
+                                        Unable to load bookings
+                                    </Text>
+                                    <Text className="text-sm mt-2 text-center" style={{ color: colors.icon }}>
+                                        {bookingsError}
+                                    </Text>
+                                </View>
+                            ) : tabBookings.length > 0 ? (
                                 tabBookings.map((booking, index) => {
                                     const shouldAnimate = tab === activeTab && index < maxAnimatedItems;
                                     const delay = baseItemDelay + Math.min(index, maxAnimatedItems) * perItemDelay;
@@ -317,13 +466,19 @@ export default function BookingsAdminScreen({
                         bookingDetailsAnimatedStyle,
                     ]}
                 >
-                    <BookingDetailsAdminScreen
-                        bookingDetails={getBookingDetails(selectedBookingId)!}
-                        onBack={closeBookingDetails}
-                        onAccept={() => console.log('Accept via details')}
-                        onDecline={() => console.log('Decline via details')}
-                        onRefund={() => console.log('Refund via details')}
-                    />
+                    {apiBookingsById[selectedBookingId] && (
+                        <BookingDetailsAdminScreen
+                            bookingDetails={{
+                                ...mapApiBookingToDetails(apiBookingsById[selectedBookingId]),
+                                customerName: bookings.find((booking) => booking.id === selectedBookingId)?.customerName,
+                                customerImage: bookings.find((booking) => booking.id === selectedBookingId)?.customerImage,
+                            }}
+                            onBack={closeBookingDetails}
+                            onAccept={() => console.log('Accept via details')}
+                            onDecline={() => console.log('Decline via details')}
+                            onRefund={() => console.log('Refund via details')}
+                        />
+                    )}
                 </Animated.View>
             )}
 
