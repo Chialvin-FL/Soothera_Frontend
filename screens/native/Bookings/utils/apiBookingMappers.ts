@@ -56,20 +56,46 @@ export const formatApiDate = (dateValue: string | null | undefined): string => {
   });
 };
 
-export const formatApiTime = (startValue: string | null | undefined, endValue: string | null | undefined): string => {
+export const formatApiTime = (
+  startValue: string | null | undefined, 
+  endValue: string | null | undefined,
+  durationMinutes?: number | null
+): string => {
   if (!startValue && !endValue) return 'N/A';
-  const formatTime = (value: string | null | undefined): string => {
-    if (!value) return 'N/A';
+  
+  const parseValidDate = (value: string | null | undefined): Date | null => {
+    if (!value || value.trim() === '') return null;
     const parsed = new Date(value);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toLocaleTimeString('en-US', {
+    if (Number.isNaN(parsed.getTime())) return null;
+    if (parsed.getFullYear() < 2000) return null; // Catch 0001-01-01
+    return parsed;
+  };
+
+  const startDate = parseValidDate(startValue);
+  let endDate = parseValidDate(endValue);
+
+  if (startDate && !endDate && durationMinutes) {
+    endDate = new Date(startDate.getTime() + durationMinutes * 60000);
+  }
+
+  const formatTime = (date: Date | null, originalValue: string | null | undefined): string | null => {
+    if (date) {
+      return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
       });
     }
-    return value;
+    if (originalValue && originalValue.trim() !== '') return originalValue;
+    return null;
   };
-  return `${formatTime(startValue)} - ${formatTime(endValue)}`;
+  
+  const start = formatTime(startDate, startValue);
+  const end = formatTime(endDate, endValue);
+  
+  if (start && end) return `${start} - ${end}`;
+  if (start) return start;
+  if (end) return end;
+  return 'N/A';
 };
 
 export const mapApiBookingToCard = (apiBooking: BookingResponse): Booking => {
@@ -81,7 +107,7 @@ export const mapApiBookingToCard = (apiBooking: BookingResponse): Booking => {
     spaName: nullableText(apiBooking.establishmentName),
     status: mapApiStatus(apiBooking.status),
     date: formatApiDate(apiBooking.bookingDate),
-    time: formatApiTime(apiBooking.startTime, apiBooking.endTime),
+    time: formatApiTime(apiBooking.startTime, apiBooking.endTime, apiBooking.selectedDurationMinutes),
     price: price ?? 0,
     priceDisplay: price == null ? 'N/A' : undefined,
   };

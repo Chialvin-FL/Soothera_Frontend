@@ -54,7 +54,12 @@ export const allBookings: Booking[] = [
 
 // Helper functions to filter bookings by status
 export const getUpcomingBookings = (bookings: Booking[]): Booking[] => {
-  return bookings.filter(b => b.status === BOOKING_STATUS.CONFIRMED || b.status === BOOKING_STATUS.PENDING);
+  return bookings.filter(
+    b =>
+      b.status === BOOKING_STATUS.CONFIRMED ||
+      b.status === BOOKING_STATUS.ONGOING ||
+      b.status === BOOKING_STATUS.PENDING
+  );
 };
 
 export const getCompletedBookings = (bookings: Booking[]): Booking[] => {

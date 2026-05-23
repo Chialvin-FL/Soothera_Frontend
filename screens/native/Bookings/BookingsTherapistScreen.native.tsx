@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { API_CONFIG } from '@/api/config';
-import { getBookings } from '@/api/endpoints/apiBooking';
+import { getBookings, updateBooking } from '@/api/endpoints/apiBooking';
 import { getUsers } from '@/api/endpoints/apiUser';
 import { Header } from '@/components/native/Header';
 import { RisingItem } from '@/components/native/RisingItem';
@@ -45,6 +45,7 @@ export default function BookingsTherapistScreen({
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [isLoadingBookings, setIsLoadingBookings] = useState(true);
     const [bookingsError, setBookingsError] = useState<string | null>(null);
+    const [updatingBookingId, setUpdatingBookingId] = useState<string | null>(null);
     const isFetchingBookingsRef = useRef(false);
 
     const screenWidth = Dimensions.get('window').width;
@@ -256,6 +257,31 @@ export default function BookingsTherapistScreen({
         setViewDate(newDate);
     };
 
+    const handleBookingStatusUpdate = async (bookingId: string, status: number) => {
+        if (updatingBookingId) return;
+
+        setUpdatingBookingId(bookingId);
+        setBookingsError(null);
+
+        try {
+            const response = await updateBooking(bookingId, { status });
+            if (!response.success) {
+                throw new Error(response.message || 'Failed to update booking.');
+            }
+
+            setBookings((currentBookings) =>
+                currentBookings.map((booking) =>
+                    booking.id === bookingId ? { ...booking, status } : booking
+                )
+            );
+        } catch (error: any) {
+            console.warn('[BookingsTherapistScreen] Failed to update booking status:', error);
+            setBookingsError(error?.message ?? 'Failed to update booking.');
+        } finally {
+            setUpdatingBookingId(null);
+        }
+    };
+
     return (
         <View className="flex-1 bg-white">
             <Header
@@ -422,9 +448,9 @@ export default function BookingsTherapistScreen({
                                             booking={booking}
                                             onPress={() => onNavigateBookingDetails?.(booking.id)}
                                             onViewDetails={onNavigateBookingDetails}
-                                            onStartSession={(id) => console.log('Start Session', id)}
-                                            onCancel={(id) => console.log('Cancel', id)}
-                                            onComplete={(id) => console.log('Complete', id)}
+                                            onStartSession={(id) => handleBookingStatusUpdate(id, BOOKING_STATUS.ONGOING)}
+                                            onCancel={(id) => handleBookingStatusUpdate(id, BOOKING_STATUS.CANCELLED)}
+                                            onComplete={(id) => handleBookingStatusUpdate(id, BOOKING_STATUS.COMPLETED)}
                                             animateContent={activeTab === tab}
                                             animationDelay={350 + (index * 100)}
                                         />

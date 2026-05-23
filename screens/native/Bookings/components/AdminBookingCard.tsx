@@ -28,6 +28,7 @@ const getStatusColor = (status: number, colors: any) => {
     switch (status) {
         case BOOKING_STATUS.COMPLETED:
         case BOOKING_STATUS.CONFIRMED:
+        case BOOKING_STATUS.ONGOING:
             return primaryColor; // Green/teal
         case BOOKING_STATUS.CANCELLED:
             return '#EF4444'; // Red
@@ -66,10 +67,14 @@ export default function AdminBookingCard({
     // Status booleans
     const isPending = booking.status === BOOKING_STATUS.PENDING;
     const isConfirmed = booking.status === BOOKING_STATUS.CONFIRMED;
+    const isOngoing = booking.status === BOOKING_STATUS.ONGOING;
     const isCompleted = booking.status === BOOKING_STATUS.COMPLETED;
     const isCancelled = booking.status === BOOKING_STATUS.CANCELLED;
+    const isUpcomingStatus = isPending || isConfirmed || isOngoing;
 
-    const showStatusTag = tabType === 'upcoming' || (tabType === 'all' && (booking.status === BOOKING_STATUS.CONFIRMED || booking.status === BOOKING_STATUS.PENDING || booking.status === BOOKING_STATUS.COMPLETED || booking.status === BOOKING_STATUS.CANCELLED));
+    const showStatusTag =
+        tabType === 'upcoming' ||
+        (tabType === 'all' && (isUpcomingStatus || isCompleted || isCancelled));
 
     const content = (
         <>
@@ -166,7 +171,7 @@ export default function AdminBookingCard({
                     </>
                 )}
 
-                {isConfirmed && (
+                {(isConfirmed || isOngoing) && (
                     <TouchableOpacity
                         className="flex-1 flex-row items-center justify-center px-4 py-2 rounded-xl"
                         style={{ backgroundColor: primaryColor }}

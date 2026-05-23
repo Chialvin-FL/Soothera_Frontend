@@ -24,6 +24,7 @@ const getStatusColor = (status: number, colors: any) => {
   switch (status) {
     case BOOKING_STATUS.COMPLETED:
     case BOOKING_STATUS.CONFIRMED:
+    case BOOKING_STATUS.ONGOING:
       return primaryColor; // Green/teal
     case BOOKING_STATUS.CANCELLED:
       return '#EF4444'; // Red
@@ -39,11 +40,20 @@ export default function BookingCard({ booking, tabType, onPress, onReview, onReb
   const colors = Colors[colorScheme ?? 'light'];
   
   // Determine which buttons to show based on booking status when in 'all' tab
-  const showUpcomingButtons = tabType === 'upcoming' || (tabType === 'all' && (booking.status === BOOKING_STATUS.CONFIRMED || booking.status === BOOKING_STATUS.PENDING));
+  const isUpcomingStatus =
+    booking.status === BOOKING_STATUS.CONFIRMED ||
+    booking.status === BOOKING_STATUS.ONGOING ||
+    booking.status === BOOKING_STATUS.PENDING;
+  const showUpcomingButtons = tabType === 'upcoming' || (tabType === 'all' && isUpcomingStatus);
   const showManageBookingButton = showUpcomingButtons && booking.status !== BOOKING_STATUS.CONFIRMED;
   const showCompletedButtons = tabType === 'completed' || (tabType === 'all' && booking.status === BOOKING_STATUS.COMPLETED);
   const showCancelledButtons = tabType === 'cancelled' || (tabType === 'all' && booking.status === BOOKING_STATUS.CANCELLED);
-  const showStatusTag = tabType === 'upcoming' || (tabType === 'all' && (booking.status === BOOKING_STATUS.CONFIRMED || booking.status === BOOKING_STATUS.PENDING || booking.status === BOOKING_STATUS.COMPLETED || booking.status === BOOKING_STATUS.CANCELLED));
+  const showStatusTag =
+    tabType === 'upcoming' ||
+    (tabType === 'all' &&
+      (isUpcomingStatus ||
+        booking.status === BOOKING_STATUS.COMPLETED ||
+        booking.status === BOOKING_STATUS.CANCELLED));
 
   const content = (
     <>
