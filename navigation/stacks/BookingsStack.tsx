@@ -267,10 +267,25 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
         }
     }, [onAdminBookingStatusUpdated, updatingBookingStatusId]);
 
+    const resolveBookingDetails = React.useCallback((bookingId: string): BookingDetails | null => {
+        const canUseApiDetails = userRole === 'customer' || userRole === 'admin';
+        if (
+            canUseApiDetails &&
+            apiBookingDetails &&
+            (bookingId === bookingSelectedId ||
+                bookingId === apiBookingDetails.id ||
+                bookingId === apiBookingDetails.bookingId)
+        ) {
+            return apiBookingDetails;
+        }
+
+        return getBookingDetails(bookingId) ?? null;
+    }, [apiBookingDetails, bookingSelectedId, userRole]);
+
     return (
         <>
             {bookingSelectedId && (() => {
-                const details = userRole === 'customer' || userRole === 'admin' ? apiBookingDetails : getBookingDetails(bookingSelectedId);
+                const details = resolveBookingDetails(bookingSelectedId);
                 if ((userRole === 'customer' || userRole === 'admin') && isLoadingBookingDetails) {
                     return (
                         <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 12 }, bookingsDetailsStyle]}>
@@ -338,7 +353,7 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
             })()}
 
             {bookingRatingSpaId && (() => {
-                const details = getBookingDetails(bookingRatingSpaId);
+                const details = resolveBookingDetails(bookingRatingSpaId);
                 if (!details) return null;
                 return (
                     <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 13 }, bookingsRatingSpaStyle]}>
@@ -352,7 +367,7 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
             })()}
 
             {bookingRatingTherapistId && (() => {
-                const details = getBookingDetails(bookingRatingTherapistId);
+                const details = resolveBookingDetails(bookingRatingTherapistId);
                 if (!details) return null;
                 return (
                     <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 14 }, bookingsRatingTherapistStyle]}>
