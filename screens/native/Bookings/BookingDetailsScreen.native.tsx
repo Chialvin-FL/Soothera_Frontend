@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, Image, TouchableOpacity, Dimensions, BackHandler, Platform, Linking } from 'react-native';
+import { View, ScrollView, Image, TouchableOpacity, Dimensions, BackHandler, Platform, Linking, Alert, ActivityIndicator } from 'react-native';
 import { Text } from '@/components/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,8 @@ import { useConfirmation } from '@/components/native/ConfirmationModalContext';
 import InvoiceScreen from './components/InvoiceScreen.native';
 import { generateInvoiceFromBooking } from './utils/invoiceDataGenerator';
 import type { InvoiceData } from './types/Invoice';
+import { updateBooking } from '@/api/endpoints/apiBooking';
+import { formatStartTime } from '../Home/bookAppointmentService';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
@@ -202,7 +204,7 @@ export default function BookingDetailsScreen({
   const isConfirmed = bookingDetails.status === BOOKING_STATUS.CONFIRMED;
   const isPending = bookingDetails.status === BOOKING_STATUS.PENDING;
   const isCancelled = bookingDetails.status === BOOKING_STATUS.CANCELLED;
-  const documentActionLabel = isCompleted ? 'Download Invoice' : 'Download Acknowledgement Receipt';
+  const documentActionLabel = isCompleted || isCancelled ? 'Download Invoice' : 'Download Acknowledgement Receipt';
   const selectedAddOns = bookingDetails.selectedAddOns ?? [];
   const selectedAddOnPrices = bookingDetails.selectedAddOnPrices ?? [];
   const transactionTotal = bookingDetails.price + selectedAddOnPrices.reduce((sum, price) => sum + price, 0);
@@ -210,6 +212,8 @@ export default function BookingDetailsScreen({
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const { showConfirmation } = useConfirmation();
 
   // Handle Get Directions
@@ -252,17 +256,64 @@ export default function BookingDetailsScreen({
   };
 
   // Handle reschedule confirm
-  const handleRescheduleConfirm = (date: Date, time: Date) => {
-    // TODO: Implement reschedule API call
-    console.log('Reschedule booking:', bookingDetails.id, 'to', date, time);
-    setShowRescheduleModal(false);
-    // Call the parent callback if provided
-    onReschedule?.();
+  const handleRescheduleConfirm = async (date: Date, time: Date): Promise<boolean> => {
+    setIsRescheduling(true);
+    try {
+      const response = await updateBooking(bookingDetails.id, {
+        startTime: formatStartTime(date, time),
+      });
+
+      if (!response.success) {
+        throw new Error(response.message || 'Unable to reschedule booking.');
+      }
+
+      setShowRescheduleModal(false);
+      onReschedule?.();
+      return true;
+    } catch (error: any) {
+      console.warn('[BookingDetailsScreen] Failed to reschedule booking:', error);
+      Alert.alert('Reschedule Failed', error?.message ?? 'We could not reschedule your booking. Please try again.');
+      return false;
+    } finally {
+      setIsRescheduling(false);
+    }
   };
 
   // Handle reschedule cancel
   const handleRescheduleCancel = () => {
     setShowRescheduleModal(false);
+  };
+
+  const handleCancelBooking = async () => {
+    const confirmed = await showConfirmation({
+      title: 'Cancel Booking',
+      message: 'Are you sure you want to cancel this booking? This action cannot be undone.',
+      confirmText: 'Cancel Booking',
+      cancelText: 'Keep Booking',
+      icon: 'warning-outline',
+      iconColor: '#EF4444',
+      confirmButtonColor: '#EF4444',
+    });
+
+    if (!confirmed) return;
+
+    setIsCancelling(true);
+    try {
+      const response = await updateBooking(bookingDetails.id, {
+        status: 'Cancelled',
+      });
+
+      if (!response.success) {
+        throw new Error(response.message || 'Unable to cancel booking.');
+      }
+
+      onCancel?.();
+    } catch (error: any) {
+      console.warn('[BookingDetailsScreen] Failed to cancel booking:', error);
+      Alert.alert('Cancel Failed', error?.message ?? 'We could not cancel your booking. Please try again.');
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   // Handle Android back button
@@ -590,8 +641,13 @@ export default function BookingDetailsScreen({
               className="flex-1 flex-row items-center justify-center px-4 py-4 rounded-xl mr-2 border"
               style={{ borderColor: primaryColor, backgroundColor: 'white' }}
               onPress={handleReschedule}
+              disabled={isRescheduling || isCancelling}
             >
-              <Ionicons name="calendar-outline" size={20} color={primaryColor} />
+              {isRescheduling ? (
+                <ActivityIndicator size="small" color={primaryColor} />
+              ) : (
+                <Ionicons name="calendar-outline" size={20} color={primaryColor} />
+              )}
               <Text className="text-base font-semibold ml-2" style={{ color: primaryColor }}>
                 Re-schedule
               </Text>
@@ -599,22 +655,14 @@ export default function BookingDetailsScreen({
             <TouchableOpacity
               className="flex-1 flex-row items-center justify-center px-4 py-4 rounded-xl border"
               style={{ borderColor: '#EF4444', backgroundColor: 'white' }}
-              onPress={async () => {
-                const confirmed = await showConfirmation({
-                  title: 'Cancel Booking',
-                  message: 'Are you sure you want to cancel this booking? This action cannot be undone.',
-                  confirmText: 'Cancel Booking',
-                  cancelText: 'Keep Booking',
-                  icon: 'warning-outline',
-                  iconColor: '#EF4444',
-                  confirmButtonColor: '#EF4444',
-                });
-                if (confirmed) {
-                  onCancel?.();
-                }
-              }}
+              onPress={handleCancelBooking}
+              disabled={isRescheduling || isCancelling}
             >
-              <Ionicons name="close-circle-outline" size={20} color="#EF4444" />
+              {isCancelling ? (
+                <ActivityIndicator size="small" color="#EF4444" />
+              ) : (
+                <Ionicons name="close-circle-outline" size={20} color="#EF4444" />
+              )}
               <Text className="text-base font-semibold ml-2" style={{ color: '#EF4444' }}>
                 Cancel
               </Text>

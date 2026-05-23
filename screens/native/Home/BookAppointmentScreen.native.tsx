@@ -68,6 +68,9 @@ interface AddOn {
   price: number;
 }
 
+const HOME_SERVICE_FEE = 100;
+const PWD_DISCOUNT_RATE = 0.2;
+
 
 
 // Add-ons are loaded dynamically from the selected service (SalonServiceResponse)
@@ -326,14 +329,33 @@ export default function BookAppointmentScreen({
     return () => backHandler.remove();
   }, [currentStep, onBack]);
 
-  // Calculate price using real tier prices from the selected service
-  const calculatePrice = (): number => {
+  const calculateSubtotal = (): number => {
     if (!selectedService || selectedDurationIndex < 0) return 0;
     let price = selectedService.price[selectedDurationIndex] ?? 0;
     selectedAddOnIndices.forEach((idx) => {
       price += selectedService.addOnPrices[idx] ?? 0;
     });
     return Math.round(price);
+  };
+
+  const calculatePriceAdjustments = () => {
+    const subtotal = calculateSubtotal();
+    const homeServiceFee = isHomeService ? HOME_SERVICE_FEE : 0;
+    const totalBeforeDiscount = subtotal + homeServiceFee;
+    const pwdDiscount = isPWD ? Math.round(totalBeforeDiscount * PWD_DISCOUNT_RATE) : 0;
+    const total = Math.max(0, totalBeforeDiscount - pwdDiscount);
+
+    return {
+      subtotal,
+      pwdDiscount,
+      homeServiceFee,
+      total,
+    };
+  };
+
+  // Calculate price using real tier prices plus selected booking options.
+  const calculatePrice = (): number => {
+    return calculatePriceAdjustments().total;
   };
 
   // Round time to nearest 15-minute interval
@@ -1256,7 +1278,8 @@ export default function BookAppointmentScreen({
 
   // Render Step 6: Booking Summary
   const renderStep6 = () => {
-    const totalPrice = calculatePrice();
+    const { subtotal, pwdDiscount, homeServiceFee, total } = calculatePriceAdjustments();
+    const hasPriceAdjustments = isPWD || isHomeService;
     const selectedTherapistObj = selectedTherapist
       ? therapists.find((t) => t.staffId === selectedTherapist)
       : null;
@@ -1364,12 +1387,45 @@ export default function BookAppointmentScreen({
 
           {/* Total Price */}
           <View className="mt-4 pt-4 border-t mb-6" style={{ borderTopColor: isDark ? '#3a3a3a' : '#E5E7EB' }}>
+            {hasPriceAdjustments && (
+              <View className="flex-row justify-between items-center mb-2">
+                <Text className="text-sm" style={{ color: colors.icon }}>
+                  Subtotal
+                </Text>
+                <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                  {formatPrice(subtotal)}
+                </Text>
+              </View>
+            )}
+
+            {isHomeService && (
+              <View className="flex-row justify-between items-center mb-2">
+                <Text className="text-sm" style={{ color: colors.icon }}>
+                  Home Service Fee
+                </Text>
+                <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                  {formatPrice(homeServiceFee)}
+                </Text>
+              </View>
+            )}
+
+            {isPWD && (
+              <View className="flex-row justify-between items-center mb-3">
+                <Text className="text-sm" style={{ color: colors.icon }}>
+                  PWD Discount (20%)
+                </Text>
+                <Text className="text-sm font-semibold" style={{ color: primaryColor }}>
+                  -{formatPrice(pwdDiscount)}
+                </Text>
+              </View>
+            )}
+
             <View className="flex-row justify-between items-center">
               <Text className="text-lg font-semibold" style={{ color: colors.text }}>
                 Total Price
               </Text>
               <Text className="text-xl font-bold" style={{ color: primaryColor }}>
-                {formatPrice(totalPrice)}
+                {formatPrice(total)}
               </Text>
             </View>
           </View>

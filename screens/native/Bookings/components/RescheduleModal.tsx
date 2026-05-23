@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Modal, View, TouchableOpacity, TouchableWithoutFeedback, ScrollView } from 'react-native';
+import { Modal, View, TouchableOpacity, TouchableWithoutFeedback, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, primaryColor } from '@/constants/theme';
@@ -10,7 +10,7 @@ export interface RescheduleModalProps {
   visible: boolean;
   initialDate?: Date;
   initialTime?: Date;
-  onConfirm: (date: Date, time: Date) => void;
+  onConfirm: (date: Date, time: Date) => void | Promise<boolean | void>;
   onCancel: () => void;
 }
 
@@ -33,6 +33,7 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
     "Your booking has been successfully rescheduled. Please wait for the confirmation email."
   );
   const [successModalActionLabel, setSuccessModalActionLabel] = useState<string | undefined>(undefined);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Initialize with current date/time or provided values
   const [selectedDate, setSelectedDate] = useState<Date>(
@@ -256,24 +257,23 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
 
 
   // Handle confirm
-  const handleConfirm = () => {
-    // Combine date and time
-    const combinedDateTime = new Date(selectedDate);
-    combinedDateTime.setHours(selectedTime.getHours());
-    combinedDateTime.setMinutes(selectedTime.getMinutes());
-    combinedDateTime.setSeconds(0);
-    combinedDateTime.setMilliseconds(0);
+  const handleConfirm = async () => {
+    if (isConfirming) return;
 
-    // Show success state first
-    onCancel();
+    setIsConfirming(true);
+    let success: boolean | void;
+    try {
+      success = await onConfirm(selectedDate, selectedTime);
+    } finally {
+      setIsConfirming(false);
+    }
+    if (success === false) return;
+
     setSuccessModalVariant('success');
     setSuccessModalTitle('Booking Rescheduled!');
     setSuccessModalMessage("Your booking has been successfully rescheduled. Please wait for the confirmation email.");
     setSuccessModalActionLabel('Continue');
     setShowSuccessModal(true);
-
-    // Call the onConfirm callback (e.g., API call)
-    onConfirm(selectedDate, selectedTime);
   };
 
   // Handle success modal close
@@ -282,16 +282,9 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
     setSuccessModalActionLabel(undefined);
   };
 
-  // Handle success modal action (success -> failed content, failed -> close)
+  // Handle success modal action
   const handleSuccessModalAction = () => {
-    if (successModalVariant === 'success') {
-      setSuccessModalVariant('error');
-      setSuccessModalTitle('Reschedule Failed');
-      setSuccessModalMessage('We could not reschedule your booking. Please try again.');
-      setSuccessModalActionLabel('Close');
-    } else {
-      handleSuccessModalClose();
-    }
+    handleSuccessModalClose();
   };
 
   return (
@@ -466,11 +459,16 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
                   className="flex-1 rounded-xl py-3.5"
                   style={{ backgroundColor: primaryColor }}
                   onPress={handleConfirm}
+                  disabled={isConfirming}
                   activeOpacity={0.7}
                 >
-                  <Text className="text-white font-semibold text-center">
-                    Confirm
-                  </Text>
+                  {isConfirming ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <Text className="text-white font-semibold text-center">
+                      Confirm
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>

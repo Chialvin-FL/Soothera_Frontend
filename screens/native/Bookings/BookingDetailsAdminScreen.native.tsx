@@ -194,7 +194,7 @@ export default function BookingDetailsAdminScreen({
     const isConfirmed = bookingDetails.status === BOOKING_STATUS.CONFIRMED;
     const isPending = bookingDetails.status === BOOKING_STATUS.PENDING;
     const isCancelled = bookingDetails.status === BOOKING_STATUS.CANCELLED;
-    const documentActionLabel = isCompleted ? 'Download Invoice' : 'Download Acknowledgement Receipt';
+    const documentActionLabel = isCompleted || isCancelled ? 'Download Invoice' : 'Download Acknowledgement Receipt';
     const selectedAddOns = bookingDetails.selectedAddOns ?? [];
     const selectedAddOnPrices = bookingDetails.selectedAddOnPrices ?? [];
     const transactionTotal = bookingDetails.price + selectedAddOnPrices.reduce((sum, price) => sum + price, 0);

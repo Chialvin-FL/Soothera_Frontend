@@ -6,11 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Header } from '@/components/native/Header';
-import { useConfirmation } from '@/components/native/ConfirmationModalContext';
 import { RisingItem } from '@/components/native/RisingItem';
 import { getBookings } from '@/api/endpoints/apiBooking';
 import { loadStoredSession } from '@/screens/native/Login/loginService';
-import type { Booking } from './types/Booking';
+import { BOOKING_STATUS, type Booking } from './types/Booking';
 import type { BookingDetails } from './types/BookingDetails';
 import { mapApiBookingToCard, mapApiBookingToDetails } from './utils/apiBookingMappers';
 import {
@@ -94,7 +93,6 @@ export default function BookingsScreen({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const isVisible = isActive ?? true;
-  const { showConfirmation } = useConfirmation();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed' | 'cancelled' | 'all'>('all');
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [showRatingScreen, setShowRatingScreen] = useState(false);
@@ -463,25 +461,28 @@ export default function BookingsScreen({
     // Modal is now handled in BookingDetailsScreen
   };
 
-  // Handle cancel booking
-  const handleCancel = async () => {
+  // Handle successful cancel from BookingDetailsScreen
+  const handleCancel = () => {
     if (!selectedBookingId) return;
 
-    const confirmed = await showConfirmation({
-      title: 'Cancel Booking',
-      message: 'Are you sure you want to cancel this booking? This action cannot be undone.',
-      confirmText: 'Cancel Booking',
-      cancelText: 'Keep Booking',
-      icon: 'warning-outline',
-      iconColor: '#EF4444',
-      confirmButtonColor: '#EF4444',
+    setBookings((prev) =>
+      prev.map((booking) =>
+        booking.id === selectedBookingId
+          ? { ...booking, status: BOOKING_STATUS.CANCELLED }
+          : booking,
+      ),
+    );
+    setApiBookingsById((prev) => {
+      const current = prev[selectedBookingId];
+      if (!current) return prev;
+      return {
+        ...prev,
+        [selectedBookingId]: {
+          ...current,
+          status: 'Cancelled',
+        },
+      };
     });
-
-    if (confirmed) {
-      // TODO: Implement cancel booking functionality
-      console.log('Cancel booking:', selectedBookingId);
-      // You can add your cancel booking logic here
-    }
   };
 
   // If booking details not found, reset selection

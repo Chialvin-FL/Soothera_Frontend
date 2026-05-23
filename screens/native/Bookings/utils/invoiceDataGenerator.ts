@@ -42,7 +42,7 @@ export function generateInvoiceFromBooking(
 
   const isCompleted = bookingDetails.status === BOOKING_STATUS.COMPLETED;
   const isCancelled = bookingDetails.status === BOOKING_STATUS.CANCELLED;
-  const documentType = isCompleted ? 'invoice' : 'acknowledgementReceipt';
+  const documentType = isCompleted || isCancelled ? 'invoice' : 'acknowledgementReceipt';
   const selectedPrice = bookingDetails.selectedPrice ?? bookingDetails.price;
   const selectedAddOns = bookingDetails.selectedAddOns ?? [];
   const selectedAddOnPrices = bookingDetails.selectedAddOnPrices ?? [];

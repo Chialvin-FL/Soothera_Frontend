@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, Platform, Linking } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Platform, Linking, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,6 +47,9 @@ export default function InvoiceScreen({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isCompactWidth = width < 380;
+  const isNarrowWidth = width < 430;
   const isAcknowledgementReceipt = invoiceData.documentType === 'acknowledgementReceipt';
   const documentTitle = isAcknowledgementReceipt ? 'ACKNOWLEDGEMENT RECEIPT' : 'INVOICE';
   const documentTitleCase = isAcknowledgementReceipt ? 'Acknowledgement Receipt' : 'Invoice';
@@ -627,7 +630,7 @@ export default function InvoiceScreen({
     ${data.isNonRefundable ? `
     <div class="notes-section">
       <div class="notes-title">Non-refundable</div>
-      <p>This receipt acknowledges the paid amount only. The paid amount is non-refundable.</p>
+      <p>This ${documentTitleCase.toLowerCase()} acknowledges the paid amount only. The paid amount is non-refundable.</p>
     </div>
     ` : ''}
 
@@ -681,8 +684,15 @@ export default function InvoiceScreen({
       >
         {/* Invoice Header */}
         <View className="px-5 py-4 border-b" style={{ borderBottomColor: '#E5E7EB' }}>
-          <View className="flex-row justify-between items-start mb-4">
-            <View className="flex-1">
+          <View
+            className="mb-4"
+            style={{
+              flexDirection: isNarrowWidth ? 'column' : 'row',
+              justifyContent: 'space-between',
+              alignItems: isNarrowWidth ? 'stretch' : 'flex-start',
+            }}
+          >
+            <View style={{ flex: 1, marginRight: isNarrowWidth ? 0 : 16, marginBottom: isNarrowWidth ? 16 : 0 }}>
               <Text className="text-2xl font-bold mb-2" style={{ color: primaryColor }}>
                 {invoiceData.businessName || 'Soothera'}
               </Text>
@@ -705,8 +715,11 @@ export default function InvoiceScreen({
                 </Text>
               )}
             </View>
-            <View className="items-end">
-              <Text className="text-3xl font-bold mb-2" style={{ color: primaryColor }}>
+            <View style={{ alignItems: isNarrowWidth ? 'flex-start' : 'flex-end' }}>
+              <Text
+                className="font-bold mb-2"
+                style={{ color: primaryColor, fontSize: isCompactWidth ? 22 : 30, textAlign: isNarrowWidth ? 'left' : 'right' }}
+              >
                 {documentTitle}
               </Text>
               <Text className="text-sm" style={{ color: colors.icon }}>
@@ -727,8 +740,8 @@ export default function InvoiceScreen({
 
         {/* Customer & Service Info */}
         <View className="px-5 py-4 bg-gray-50 dark:bg-[#2a2a2a] mx-5 mt-4 rounded-xl">
-          <View className="flex-row justify-between">
-            <View className="flex-1 mr-4">
+          <View style={{ flexDirection: isNarrowWidth ? 'column' : 'row', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1, marginRight: isNarrowWidth ? 0 : 16, marginBottom: isNarrowWidth ? 16 : 0 }}>
               <Text className="text-base font-semibold mb-2" style={{ color: primaryColor }}>
                 Customer Information
               </Text>
@@ -751,7 +764,7 @@ export default function InvoiceScreen({
                 </Text>
               )}
             </View>
-            <View className="flex-1">
+            <View style={{ flex: 1 }}>
               <Text className="text-base font-semibold mb-2" style={{ color: primaryColor }}>
                 Service Details
               </Text>
@@ -776,7 +789,11 @@ export default function InvoiceScreen({
 
         {/* Items Table */}
         <View className="px-5 py-4 mt-4">
-          <View className="border rounded-xl overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View
+            className="border rounded-xl overflow-hidden"
+            style={{ borderColor: '#E5E7EB', minWidth: Math.max(width - 40, isCompactWidth ? 430 : 0) }}
+          >
             {/* Table Header */}
             <View
               className="flex-row px-4 py-3"
@@ -837,6 +854,7 @@ export default function InvoiceScreen({
               </View>
             ))}
           </View>
+          </ScrollView>
         </View>
 
         {/* Totals Section */}
@@ -888,10 +906,10 @@ export default function InvoiceScreen({
                 className="flex-row justify-between py-3 mt-2 border-t-2 border-b-2"
                 style={{ borderTopColor: primaryColor, borderBottomColor: primaryColor }}
               >
-                <Text className="text-lg font-bold" style={{ color: primaryColor }}>
+                <Text className="font-bold flex-1 pr-3" style={{ color: primaryColor, fontSize: isCompactWidth ? 15 : 18 }}>
                   {isAcknowledgementReceipt ? 'Total Transaction Amount:' : 'Total Amount Due:'}
                 </Text>
-                <Text className="text-lg font-bold" style={{ color: primaryColor }}>
+                <Text className="font-bold text-right" style={{ color: primaryColor, fontSize: isCompactWidth ? 15 : 18 }}>
                   {formatCurrency(calculations.totalAmountDue)}
                 </Text>
               </View>
@@ -942,7 +960,7 @@ export default function InvoiceScreen({
                 Non-refundable
               </Text>
               <Text className="text-sm" style={{ color: colors.text }}>
-                This receipt acknowledges the paid amount only. The paid amount is non-refundable.
+                This {documentTitleCase.toLowerCase()} acknowledges the paid amount only. The paid amount is non-refundable.
               </Text>
             </View>
           </View>
@@ -983,7 +1001,7 @@ export default function InvoiceScreen({
             size={20}
             color="white"
           />
-          <Text className="text-base text-white font-semibold ml-2">
+          <Text className="text-base text-white font-semibold ml-2 text-center" style={{ flexShrink: 1 }}>
             {isGeneratingPDF 
               ? (existingInvoice ? 'Opening PDF...' : 'Generating PDF...') 
               : existingInvoice 
