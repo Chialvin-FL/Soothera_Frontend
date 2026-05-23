@@ -230,6 +230,29 @@ export default function BookingsScreen({
     return apiBooking ? mapApiBookingToDetails(apiBooking) : getBookingDetails(bookingId);
   }, [apiBookingsById]);
 
+  const buildRescheduledApiBooking = (
+    booking: BookingResponse,
+    date: Date,
+    time: Date,
+  ): BookingResponse => {
+    const startTime = new Date(date);
+    startTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+
+    const previousStart = new Date(booking.startTime);
+    const previousEnd = new Date(booking.endTime);
+    const durationMs = !Number.isNaN(previousStart.getTime()) && !Number.isNaN(previousEnd.getTime())
+      ? Math.max(previousEnd.getTime() - previousStart.getTime(), 0)
+      : (booking.selectedDurationMinutes || 60) * 60 * 1000;
+    const endTime = new Date(startTime.getTime() + durationMs);
+
+    return {
+      ...booking,
+      bookingDate: startTime.toISOString(),
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+    };
+  };
+
   // Handle booking card press
   const handleBookingPress = (bookingId: string) => {
     if (useNavigatorOverlays) {
@@ -456,9 +479,27 @@ export default function BookingsScreen({
     console.log('Booking completed');
   };
 
-  // Handle reschedule (just a placeholder callback, modal is handled in BookingDetailsScreen)
-  const handleReschedule = () => {
-    // Modal is now handled in BookingDetailsScreen
+  // Handle successful reschedule from BookingDetailsScreen
+  const handleReschedule = (date: Date, time: Date) => {
+    if (!selectedBookingId) return;
+
+    const current = apiBookingsById[selectedBookingId];
+    if (!current) return;
+
+    const updated = buildRescheduledApiBooking(current, date, time);
+    setBookings((bookingList) =>
+      bookingList.map((booking) =>
+        booking.id === selectedBookingId
+          ? mapApiBookingToCard(updated)
+          : booking,
+      ),
+    );
+    setApiBookingsById((prev) => {
+      return {
+        ...prev,
+        [selectedBookingId]: updated,
+      };
+    });
   };
 
   // Handle successful cancel from BookingDetailsScreen

@@ -62,6 +62,46 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
         openBookingRatingTherapist,
     } = bookings;
 
+    const formatDisplayDate = React.useCallback((date: Date): string => {
+        return date.toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: 'numeric',
+        });
+    }, []);
+
+    const formatDisplayTime = React.useCallback((date: Date, time: Date, previousTime?: string): string => {
+        const startTime = new Date(date);
+        startTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+
+        const previousTimes = previousTime?.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/gi) ?? [];
+        const parseDisplayTime = (value: string): Date | null => {
+            const match = value.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+            if (!match) return null;
+            let hours = parseInt(match[1], 10);
+            const minutes = parseInt(match[2], 10);
+            const ampm = match[3].toUpperCase();
+            if (ampm === 'PM' && hours !== 12) hours += 12;
+            if (ampm === 'AM' && hours === 12) hours = 0;
+            const parsed = new Date(startTime);
+            parsed.setHours(hours, minutes, 0, 0);
+            return parsed;
+        };
+
+        const previousStart = previousTimes[0] ? parseDisplayTime(previousTimes[0]) : null;
+        const previousEnd = previousTimes[1] ? parseDisplayTime(previousTimes[1]) : null;
+        const durationMs = previousStart && previousEnd
+            ? Math.max(previousEnd.getTime() - previousStart.getTime(), 0)
+            : 60 * 60 * 1000;
+        const endTime = new Date(startTime.getTime() + durationMs);
+        const options: Intl.DateTimeFormatOptions = {
+            hour: '2-digit',
+            minute: '2-digit',
+        };
+
+        return `${startTime.toLocaleTimeString('en-US', options)} - ${endTime.toLocaleTimeString('en-US', options)}`;
+    }, []);
+
     React.useEffect(() => {
         let mounted = true;
 
@@ -171,7 +211,15 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
                                         onRebook(matchingSalon.id);
                                     }
                                 }}
-                                onReschedule={() => { }}
+                                onReschedule={(date, time) => {
+                                    setApiBookingDetails((current) => current
+                                        ? {
+                                            ...current,
+                                            date: formatDisplayDate(date),
+                                            time: formatDisplayTime(date, time, current.time),
+                                        }
+                                        : current);
+                                }}
                                 onCancel={async () => {
                                     console.log('Cancel booking:', bookingSelectedId);
                                 }}

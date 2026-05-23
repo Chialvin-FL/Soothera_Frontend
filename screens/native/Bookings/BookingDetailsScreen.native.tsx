@@ -34,7 +34,7 @@ interface BookingDetailsScreenProps {
   onNavigateToInvoice?: (invoiceData: InvoiceData, options?: { isVAT?: boolean; vatRate?: number; discounts?: number }) => void;
   onGetDirections?: (destination: { latitude: number; longitude: number }, destinationName?: string) => void;
   onRebook?: () => void;
-  onReschedule?: () => void;
+  onReschedule?: (date: Date, time: Date) => void;
   onCancel?: () => void;
 }
 
@@ -268,7 +268,7 @@ export default function BookingDetailsScreen({
       }
 
       setShowRescheduleModal(false);
-      onReschedule?.();
+      onReschedule?.(date, time);
       return true;
     } catch (error: any) {
       console.warn('[BookingDetailsScreen] Failed to reschedule booking:', error);
