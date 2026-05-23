@@ -1,6 +1,6 @@
 import React from 'react';
 import Animated from 'react-native-reanimated';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Alert, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@/components/Text';
 import BookingDetailsScreen from '../../screens/native/Bookings/BookingDetailsScreen.native';
@@ -11,13 +11,14 @@ import InvoiceScreen from '../../screens/native/Bookings/components/InvoiceScree
 import GetDirectionsScreen from '../../screens/native/Bookings/GetDirectionsScreen.native';
 import BookAppointmentScreen from '../../screens/native/Home/BookAppointmentScreen.native';
 import { getBookingDetails } from '../../screens/native/Bookings/configs/mockBookingDetailsData';
-import { getBookingById } from '../../api/endpoints/apiBooking';
+import { getBookingById, updateBooking } from '../../api/endpoints/apiBooking';
 import { getUsers } from '../../api/endpoints/apiUser';
 import { getSalonById, viewSalons } from '../../api/endpoints/apiSalonEstablishment';
 import { getSalonServices } from '../../api/endpoints/apiService';
 import { API_CONFIG } from '../../api/config';
 import { mapApiBookingToDetails } from '../../screens/native/Bookings/utils/apiBookingMappers';
 import { topRatedSalons, getSalonDetails } from '../../screens/native/Home/configs/mockData';
+import { BOOKING_STATUS } from '../../screens/native/Bookings/types/Booking';
 import type { BookingsStackState } from '../hooks/useBookingsStack';
 import type { UIRole } from '../hooks/useSessionLoader';
 import type { BookingDetails } from '../../screens/native/Bookings/types/BookingDetails';
@@ -28,6 +29,13 @@ const OVERLAY_BASE = {
     left: 0,
     right: 0,
     bottom: 0,
+};
+
+type AdminBookingApiStatus = 'Confirmed' | 'Cancelled';
+
+const ADMIN_BOOKING_API_STATUS_VALUE: Record<AdminBookingApiStatus, number> = {
+    Confirmed: 1,
+    Cancelled: 4,
 };
 
 function profileImageSource(profilePicture?: string | null): { uri: string } | undefined {
@@ -52,12 +60,14 @@ interface BookingsStackProps {
     bookings: BookingsStackState;
     userRole: UIRole | null;
     onRebook: (salonId: string) => void;
+    onAdminBookingStatusUpdated?: (bookingId: string, status: AdminBookingApiStatus) => void;
 }
 
-export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackProps) {
+export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStatusUpdated }: BookingsStackProps) {
     const [apiBookingDetails, setApiBookingDetails] = React.useState<BookingDetails | null>(null);
     const [isLoadingBookingDetails, setIsLoadingBookingDetails] = React.useState(false);
     const [bookingDetailsError, setBookingDetailsError] = React.useState<string | null>(null);
+    const [updatingBookingStatusId, setUpdatingBookingStatusId] = React.useState<string | null>(null);
     const {
         bookingSelectedId,
         bookingRatingSpaId,
@@ -222,6 +232,41 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
         };
     }, [bookingSelectedId, userRole]);
 
+    const handleAdminBookingStatusUpdate = React.useCallback(async (
+        bookingId: string,
+        status: AdminBookingApiStatus,
+    ) => {
+        if (updatingBookingStatusId) return;
+
+        setUpdatingBookingStatusId(bookingId);
+        try {
+            const response = await updateBooking(bookingId, {
+                status: ADMIN_BOOKING_API_STATUS_VALUE[status],
+            });
+            if (!response.success) {
+                throw new Error(response.message || 'Failed to update booking status.');
+            }
+
+            setApiBookingDetails((current) =>
+                current
+                    ? {
+                        ...current,
+                        status: status === 'Confirmed' ? BOOKING_STATUS.CONFIRMED : BOOKING_STATUS.CANCELLED,
+                    }
+                    : current,
+            );
+            onAdminBookingStatusUpdated?.(bookingId, status);
+        } catch (error: any) {
+            console.warn('[BookingsStack] Failed to update booking status:', error);
+            Alert.alert(
+                'Unable to update booking',
+                error?.message ?? 'Please try again.',
+            );
+        } finally {
+            setUpdatingBookingStatusId(null);
+        }
+    }, [onAdminBookingStatusUpdated, updatingBookingStatusId]);
+
     return (
         <>
             {bookingSelectedId && (() => {
@@ -255,8 +300,8 @@ export function BookingsStack({ bookings, userRole, onRebook }: BookingsStackPro
                                 bookingDetails={details}
                                 onBack={closeBookingDetails}
                                 onNavigateToInvoice={openBookingInvoice}
-                                onAccept={() => console.log('Accept booking:', bookingSelectedId)}
-                                onDecline={() => console.log('Decline booking:', bookingSelectedId)}
+                                onAccept={() => handleAdminBookingStatusUpdate(bookingSelectedId, 'Confirmed')}
+                                onDecline={() => handleAdminBookingStatusUpdate(bookingSelectedId, 'Cancelled')}
                                 onRefund={() => console.log('Refund booking:', bookingSelectedId)}
                             />
                         ) : (

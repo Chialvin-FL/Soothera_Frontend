@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomTabs } from '../components/native/BottomTabs';
@@ -37,7 +37,6 @@ import { useBackHandler } from './hooks/useBackHandler';
 
 // Types
 import type { TabId } from './types';
-import { useState, useEffect } from 'react';
 import { topRatedSalons } from '../screens/native/Home/configs/mockData';
 import type { Booking } from '../screens/native/Bookings/types/Booking';
 
@@ -46,6 +45,11 @@ export default function NativeNavigator() {
   const { isLoggedIn, isLoadingSession, userRole, userName, userEmail, userProfilePic, logout } = session;
 
   const [activeTab, setActiveTab] = useState<TabId>('home');
+  const [latestAdminBookingStatusUpdate, setLatestAdminBookingStatusUpdate] = useState<{
+    bookingId: string;
+    status: 'Confirmed' | 'Cancelled';
+    sequence: number;
+  } | null>(null);
   const docUploadSlice = useDocUploadSlice();
   const idVerificationSlice = useIdVerificationSlice();
 
@@ -124,6 +128,7 @@ export default function NativeNavigator() {
                     onNavigateWalkInBooking={bookings.openWalkInBooking}
                     onNavigateNotifications={home.openHomeNotifications}
                     userProfilePic={userProfilePic}
+                    latestBookingStatusUpdate={latestAdminBookingStatusUpdate}
                   />
                 ) : userRole === 'therapist' ? (
                   <BookingsTherapistScreen
@@ -194,6 +199,13 @@ export default function NativeNavigator() {
             onRebook={(salonId) => {
               home.setHomeSelectedSalonId(salonId);
               home.setHomeBookVisible(true);
+            }}
+            onAdminBookingStatusUpdated={(bookingId, status) => {
+              setLatestAdminBookingStatusUpdate((current) => ({
+                bookingId,
+                status,
+                sequence: (current?.sequence ?? 0) + 1,
+              }));
             }}
           />
           <ProfileStack

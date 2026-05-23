@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { View, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { API_CONFIG } from '@/api/config';
 import { Header } from '@/components/native/Header';
 import { RisingItem } from '@/components/native/RisingItem';
-import { getBookings } from '@/api/endpoints/apiBooking';
+import { getBookings, updateBooking } from '@/api/endpoints/apiBooking';
 import { getUsers } from '@/api/endpoints/apiUser';
 import { loadStoredSession } from '@/screens/native/Login/loginService';
 import { fetchMyEstablishment } from '@/screens/native/Profile/businessSettingsService';
@@ -23,6 +23,7 @@ import AdminBookingCard from './components/AdminBookingCard';
 import TabNavigation from './components/TabNavigation';
 import BookingDetailsAdminScreen from './BookingDetailsAdminScreen.native';
 import { mapApiBookingToCard, mapApiBookingToDetails } from './utils/apiBookingMappers';
+import { BOOKING_STATUS } from './types/Booking';
 
 import Animated, {
     useSharedValue,
@@ -30,6 +31,13 @@ import Animated, {
     withTiming,
     runOnJS,
 } from 'react-native-reanimated';
+
+type AdminBookingApiStatus = 'Confirmed' | 'Cancelled';
+
+const ADMIN_BOOKING_API_STATUS_VALUE: Record<AdminBookingApiStatus, number> = {
+    Confirmed: 1,
+    Cancelled: 4,
+};
 
 interface BookingsAdminScreenProps {
     onDetailsScreenChange?: (isActive: boolean) => void;
@@ -40,6 +48,11 @@ interface BookingsAdminScreenProps {
     onNavigateNotifications?: () => void;
     onNavigateWalkInBooking?: () => void;
     userProfilePic?: string | null;
+    latestBookingStatusUpdate?: {
+        bookingId: string;
+        status: AdminBookingApiStatus;
+        sequence: number;
+    } | null;
 }
 
 export default function BookingsAdminScreen({
@@ -51,6 +64,7 @@ export default function BookingsAdminScreen({
     onNavigateNotifications,
     onNavigateWalkInBooking,
     userProfilePic,
+    latestBookingStatusUpdate,
 }: BookingsAdminScreenProps = {}) {
     const insets = useSafeAreaInsets();
     const colorScheme = useColorScheme();
@@ -62,6 +76,10 @@ export default function BookingsAdminScreen({
     const [apiBookingsById, setApiBookingsById] = useState<Record<string, BookingResponse>>({});
     const [isLoadingBookings, setIsLoadingBookings] = useState(true);
     const [bookingsError, setBookingsError] = useState<string | null>(null);
+    const [updatingBookingId, setUpdatingBookingId] = useState<string | null>(null);
+    const latestBookingStatusUpdateSequence = latestBookingStatusUpdate?.sequence;
+    const latestBookingStatusUpdateId = latestBookingStatusUpdate?.bookingId;
+    const latestBookingStatusUpdateStatus = latestBookingStatusUpdate?.status;
 
 
     const screenWidth = Dimensions.get('window').width;
@@ -235,6 +253,62 @@ export default function BookingsAdminScreen({
         });
     };
 
+    const updateLocalBookingStatus = (bookingId: string, apiStatus: AdminBookingApiStatus) => {
+        const localStatus = apiStatus === 'Confirmed' ? BOOKING_STATUS.CONFIRMED : BOOKING_STATUS.CANCELLED;
+
+        setBookings((currentBookings) =>
+            currentBookings.map((booking) =>
+                booking.id === bookingId ? { ...booking, status: localStatus } : booking,
+            ),
+        );
+        setApiBookingsById((currentBookingsById) => {
+            const existingBooking = currentBookingsById[bookingId];
+            if (!existingBooking) return currentBookingsById;
+            return {
+                ...currentBookingsById,
+                [bookingId]: {
+                    ...existingBooking,
+                    status: apiStatus,
+                },
+            };
+        });
+    };
+
+    useEffect(() => {
+        if (!latestBookingStatusUpdateId || !latestBookingStatusUpdateStatus) return;
+        updateLocalBookingStatus(
+            latestBookingStatusUpdateId,
+            latestBookingStatusUpdateStatus,
+        );
+    }, [
+        latestBookingStatusUpdateId,
+        latestBookingStatusUpdateSequence,
+        latestBookingStatusUpdateStatus,
+    ]);
+
+    const handleBookingStatusUpdate = async (bookingId: string, status: AdminBookingApiStatus) => {
+        if (updatingBookingId) return;
+
+        setUpdatingBookingId(bookingId);
+        try {
+            const response = await updateBooking(bookingId, {
+                status: ADMIN_BOOKING_API_STATUS_VALUE[status],
+            });
+            if (!response.success) {
+                throw new Error(response.message || `Failed to ${status === 'Confirmed' ? 'accept' : 'decline'} booking.`);
+            }
+            updateLocalBookingStatus(bookingId, status);
+        } catch (error: any) {
+            console.warn('[BookingsAdminScreen] Failed to update booking status:', error);
+            Alert.alert(
+                'Unable to update booking',
+                error?.message ?? 'Please try again.',
+            );
+        } finally {
+            setUpdatingBookingId(null);
+        }
+    };
+
     // Handle booking card press
     const handleBookingPress = (bookingId: string) => {
         if (useNavigatorOverlays) {
@@ -390,8 +464,8 @@ export default function BookingsAdminScreen({
                                             booking={booking}
                                             tabType={tab}
                                             onPress={() => handleBookingPress(booking.id)}
-                                            onAccept={(id) => console.log('Accept booking:', id)}
-                                            onDecline={(id) => console.log('Decline booking:', id)}
+                                            onAccept={(id) => handleBookingStatusUpdate(id, 'Confirmed')}
+                                            onDecline={(id) => handleBookingStatusUpdate(id, 'Cancelled')}
                                             onViewBooking={(id) => handleBookingPress(id)}
                                             onRateCustomer={(id) => console.log('Rate customer:', id)}
                                             onRefund={(id) => console.log('Refund booking:', id)}
@@ -474,8 +548,8 @@ export default function BookingsAdminScreen({
                                 customerImage: bookings.find((booking) => booking.id === selectedBookingId)?.customerImage,
                             }}
                             onBack={closeBookingDetails}
-                            onAccept={() => console.log('Accept via details')}
-                            onDecline={() => console.log('Decline via details')}
+                            onAccept={() => handleBookingStatusUpdate(selectedBookingId, 'Confirmed')}
+                            onDecline={() => handleBookingStatusUpdate(selectedBookingId, 'Cancelled')}
                             onRefund={() => console.log('Refund via details')}
                         />
                     )}

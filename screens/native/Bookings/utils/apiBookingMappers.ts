@@ -9,7 +9,22 @@ export const nullableText = (value: unknown): string => {
   return String(value);
 };
 
-export const mapApiStatus = (status: string | null | undefined): number => {
+export const mapApiStatus = (status: number | string | null | undefined): number => {
+  if (typeof status === 'number') {
+    switch (status) {
+      case 1:
+        return BOOKING_STATUS.CONFIRMED;
+      case 3:
+        return BOOKING_STATUS.COMPLETED;
+      case 4:
+        return BOOKING_STATUS.CANCELLED;
+      case 0:
+      case 2:
+      default:
+        return BOOKING_STATUS.PENDING;
+    }
+  }
+
   switch ((status ?? '').toLowerCase()) {
     case 'confirmed':
       return BOOKING_STATUS.CONFIRMED;

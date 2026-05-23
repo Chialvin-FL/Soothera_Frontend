@@ -533,8 +533,8 @@ export interface CreateBookingRequest {
  * Sent as JSON. All fields optional.
  */
 export interface UpdateBookingRequest {
-    /** Booking status string e.g. "Confirmed", "Cancelled", "Completed", "NoShow" */
-    status?: string;
+    /** Booking status enum value or legacy string. Backend enum: Pending=0, Confirmed=1, Ongoing=2, Completed=3, Cancelled=4 */
+    status?: number | string;
     /** Payment status string e.g. "Pending", "Paid", "Refunded" */
     paymentStatus?: string;
     /** Format: "M-dd-yyyy:HH:mm" */
@@ -547,8 +547,8 @@ export interface GetBookingsParams extends PaginationParams {
     establishmentId?: string;
     customerId?: string;
     staffId?: string;
-    /** e.g. "Pending", "Confirmed", "Cancelled", "Completed", "NoShow" */
-    status?: string;
+    /** e.g. "Pending", "Confirmed", "Cancelled", "Completed", "NoShow", or backend enum value */
+    status?: number | string;
 }
 
 /**
@@ -586,7 +586,7 @@ export interface BookingResponse {
     bookingDate: string;
     startTime: string;
     endTime: string;
-    status: string;
+    status: number | string;
     paymentStatus: string;
     createdDate: string;
     updatedDate: string;
