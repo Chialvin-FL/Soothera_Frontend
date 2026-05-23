@@ -114,6 +114,21 @@ export function MassageSpaCardsList({ salons, contentContainerStyle, onSalonPres
                 </Text>
               </View>
 
+              {/* Distance */}
+              {salon.distance !== undefined && salon.distance !== null && salon.distance !== Infinity && (
+                <View className="flex-row items-center mb-1">
+                  <Ionicons name="navigate" size={12} color={colors.primary} />
+                  <Text 
+                    className="text-xs ml-1 font-semibold" 
+                    style={{ color: colors.primary }}
+                  >
+                    {typeof salon.distance === 'number' 
+                      ? `${salon.distance.toFixed(1)} km away` 
+                      : salon.distance}
+                  </Text>
+                </View>
+              )}
+
               {/* Location */}
               <View className="flex-row items-center mb-2">
                 <Ionicons name="location" size={14} color={colors.icon} />

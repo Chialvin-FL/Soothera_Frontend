@@ -27,4 +27,7 @@ export interface TopRatedSalon {
   contactNumber?: string;
   businessHours?: string;
   socials?: string[];
+  latitude?: number;
+  longitude?: number;
+  distance?: number | string;
 }

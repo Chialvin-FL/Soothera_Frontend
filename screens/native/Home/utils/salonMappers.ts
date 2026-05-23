@@ -100,6 +100,8 @@ export function toTopRatedSalon(establishment: SalonEstablishment | ApiSalonEsta
     contactNumber: optionalText(pick(est, 'contactNumber', 'ContactNumber')),
     businessHours: optionalText(pick(est, 'businessHours', 'BusinessHours')),
     socials: stringArray(pick(est, 'socials', 'Socials')),
+    latitude: numberOrZero(pick(est, 'latitude', 'Latitude')),
+    longitude: numberOrZero(pick(est, 'longitude', 'Longitude')),
   };
 }
 
