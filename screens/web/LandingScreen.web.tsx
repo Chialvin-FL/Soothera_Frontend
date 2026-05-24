@@ -2,8 +2,8 @@ import React from 'react';
 import { View, ScrollView, Pressable, ImageBackground, Image } from 'react-native';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
-import { Asset } from 'expo-asset';
-const apkAsset = Asset.fromModule(require("../../assets/apk/app_v1.0.apk"));
+
+const APK_URL = '/apk/app_v1.0.apk';
 interface LandingScreenProps {
     onAdminLogin: () => void;
 }
@@ -11,8 +11,8 @@ interface LandingScreenProps {
 export default function LandingScreen({ onAdminLogin }: LandingScreenProps) {
     const handleDownload = () => {
         const link = document.createElement('a');
-        link.href = apkAsset.localUri || apkAsset.uri;
-        link.download = '';
+        link.href = APK_URL;
+        link.download = 'Soothera_v1.0.apk';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
