@@ -11,13 +11,30 @@ export const EXIT_TRANSITION_DURATION = 300;
 
 /** Support / AI chatbot conversation stub used by the Help screen FAB */
 export const SUPPORT_CHATBOT_CONVERSATION: Conversation = {
-    id: '5',
+    id: 'cb-support',
+    bookingId: '',
     name: 'Soothera Assistant',
     lastMessage:
         'I can help you find the perfect salon or book an appointment. What would you like to do?',
     timestamp: '08:40 AM',
     type: 'chatbot',
-    chatbotId: '1',
-    avatar: undefined,
-    isOnline: true,
+    isReadOnly: false,
+    timeRemainingSeconds: 0,
+    customerId: '',
+    customerName: '',
+    staffId: '',
+    staffName: '',
+    currentUserId: '',
+    conversationData: {
+        conversationId: 'cb-support',
+        bookingId: '',
+        customerId: '',
+        customerName: '',
+        staffId: '',
+        staffName: '',
+        activatedDate: '',
+        isReadOnly: false,
+        timeRemainingSeconds: 0,
+        messages: [],
+    },
 };

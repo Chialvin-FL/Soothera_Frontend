@@ -738,3 +738,46 @@ export interface PaymentMutationResponse {
     id?: string | null;
     invoice?: InvoiceDTO | null;
 }
+
+// ─── Messaging ────────────────────────────────────────────────
+
+/** Single message — mirrors MessageResponseDTO */
+export interface MessageResponseDTO {
+    messageId: string;
+    senderId: string;
+    senderName: string;
+    content: string;
+    /** ISO timestamp string from the backend */
+    timestamp: string;
+}
+
+/** Full conversation — mirrors ConversationResponseDTO */
+export interface ConversationResponseDTO {
+    conversationId: string;
+    bookingId: string;
+    customerId: string;
+    customerName: string;
+    staffId: string;
+    staffName: string;
+    activatedDate: string;
+    /** true when the 3-day window has expired */
+    isReadOnly: boolean;
+    /** Seconds remaining before it becomes read-only (0 when already read-only) */
+    timeRemainingSeconds: number;
+    messages: MessageResponseDTO[];
+}
+
+/** GET /api/Message/booking/{bookingId} response envelope */
+export interface GetConversationResponseDTO {
+    success: boolean;
+    statusCode: number;
+    message: string;
+    data: ConversationResponseDTO | null;
+}
+
+/** POST /api/Message/booking/{bookingId}/send response */
+export interface SendMessageResponseDTO {
+    success: boolean;
+    statusCode: number;
+    message: string;
+}

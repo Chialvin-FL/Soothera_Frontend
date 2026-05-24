@@ -163,6 +163,7 @@ export default function NativeNavigator() {
                   onNavigateNotifications={home.openHomeNotifications}
                   userRole={userRole}
                   userProfilePic={userProfilePic}
+                  currentUserId={session.uid}
                 />
               </RisingPage>
 
