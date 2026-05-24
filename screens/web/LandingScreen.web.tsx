@@ -2,12 +2,22 @@ import React from 'react';
 import { View, ScrollView, Pressable, ImageBackground, Image } from 'react-native';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
-
+import { Asset } from 'expo-asset';
+const apkAsset = Asset.fromModule(require("../../assets/apk/app_v1.0.apk"));
 interface LandingScreenProps {
     onAdminLogin: () => void;
 }
 
 export default function LandingScreen({ onAdminLogin }: LandingScreenProps) {
+    const handleDownload = () => {
+        const link = document.createElement('a');
+        link.href = apkAsset.localUri || apkAsset.uri;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <View className="flex-1 bg-white">
             {/* Navbar */}
@@ -48,10 +58,7 @@ export default function LandingScreen({ onAdminLogin }: LandingScreenProps) {
                         <View className="flex-row gap-4">
                             <Pressable
                                 className="bg-primary px-8 py-4 rounded-2xl shadow-lg shadow-primary-200 flex-row items-center active:scale-95 transition-transform"
-                                onPress={() => {
-                                    // Link to APK download
-                                    alert('APK Download started!');
-                                }}
+                                onPress={handleDownload}
                             >
                                 <Ionicons name="logo-android" size={24} color="white" />
                                 <Text className="text-white text-lg ml-3">Download APK</Text>
