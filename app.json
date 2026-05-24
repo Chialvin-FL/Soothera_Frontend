@@ -11,7 +11,9 @@
       "tsconfigPaths": true
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "@react-native-community/datetimepicker",
+      "expo-asset"
     ],
     "orientation": "portrait",
     "icon": "./assets/soothera.png",
@@ -33,7 +35,8 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [],
-      "package": "com.scyn4pse.soothera"
+      "package": "com.scyn4pse.soothera",
+      "usesCleartextTraffic": true
     },
     "extra": {
       "eas": {
