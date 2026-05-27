@@ -206,6 +206,30 @@ export interface UpdateSalonRequest {
     businessHours?: string;
 }
 
+export interface RevenueChartItem {
+    label: string;
+    revenue: number;
+}
+
+export interface TopSpenderItem {
+    customerId: string;
+    name: string;
+    profilePicture: string | null;
+    amount: number;
+    date: string;
+}
+
+export interface OwnerAnalytics {
+    salonName: string;
+    salonPicture: string | null;
+    totalBookings: number;
+    totalClients: number;
+    totalStaff: number;
+    totalRevenue: number;
+    revenueChart: RevenueChartItem[];
+    recentTopSpenders: TopSpenderItem[];
+}
+
 // ─── Document Upload ─────────────────────────────────────────
 
 /** Document status enum. */

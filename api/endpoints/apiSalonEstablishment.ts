@@ -4,6 +4,7 @@ import type {
   SalonEstablishment,
   CreateSalonRequest,
   UpdateSalonRequest,
+  OwnerAnalytics,
 } from '../types';
 
 // ─────────────────────────────────────────────────────────────
@@ -152,5 +153,27 @@ export async function deleteSalon(
     `${BASE}/delete/${id}`,
   );
   console.log('[apiEstablishment] deleteSalon: response =', JSON.stringify(data));
+  return data;
+}
+
+/**
+ * GET /api/Establishment/owner-analytics
+ * Retrieves dashboard analytics for the salon owner.
+ * If establishmentId is not provided, defaults to the owner's first salon.
+ */
+export async function getOwnerAnalytics(
+  establishmentId?: string,
+  filter?: 'monthly' | 'weekly',
+): Promise<ApiResponse<OwnerAnalytics>> {
+  console.log('[apiEstablishment] getOwnerAnalytics: sending GET with params', { establishmentId, filter });
+  const { data } = await axiosClient.get<ApiResponse<OwnerAnalytics>>(
+    `${BASE}/owner-analytics`,
+    {
+      params: {
+        ...(establishmentId ? { establishmentId } : {}),
+        ...(filter ? { filter } : {}),
+      },
+    },
+  );
   return data;
 }
