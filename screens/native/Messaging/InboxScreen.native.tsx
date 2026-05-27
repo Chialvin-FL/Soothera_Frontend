@@ -28,6 +28,7 @@ import Animated, {
 import { getBookings } from '@/api/endpoints/apiBooking';
 import { getOrCreateConversation } from '@/api/endpoints/apiMessage';
 import type { ConversationResponseDTO } from '@/api/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── Conversation type shared with ChatRoomScreen + navigation stack ───────────
 export interface Conversation {
@@ -56,7 +57,7 @@ export interface Conversation {
 
 // ─── Mock chatbot data ─────────────────────────────────────────────────────────
 const mockChatbots = [
-  { id: 'cb1', name: 'Soothera Assistant', description: 'Your wellness companion', lastMessage: 'I can help you find the perfect massage spa or book an appointment. What would you like to do?', timestamp: '08:40 AM' },
+  { id: 'cb-support', name: 'Soothera Assistant', description: 'Your wellness companion', lastMessage: 'I can help you find the perfect massage spa or book an appointment. What would you like to do?', timestamp: '08:40 AM' },
   { id: 'cb2', name: 'Booking Helper', description: 'Help with appointments', lastMessage: 'I found 3 available time slots for tomorrow. Would you like to see them?', timestamp: '07:00 AM' },
 ];
 
@@ -112,6 +113,35 @@ export default function InboxScreen({
   const insets = useSafeAreaInsets();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [chatbotConversations, setChatbotConversations] = useState<Conversation[]>(() =>
+    mockChatbots.map((bot) => ({
+      id: bot.id,
+      bookingId: '',
+      name: bot.name,
+      lastMessage: bot.lastMessage,
+      timestamp: bot.timestamp,
+      type: 'chatbot' as const,
+      isReadOnly: false,
+      timeRemainingSeconds: 0,
+      customerId: '',
+      customerName: '',
+      staffId: '',
+      staffName: '',
+      currentUserId: currentUserId ?? '',
+      conversationData: {
+        conversationId: bot.id,
+        bookingId: '',
+        customerId: '',
+        customerName: '',
+        staffId: '',
+        staffName: '',
+        activatedDate: '',
+        isReadOnly: false,
+        timeRemainingSeconds: 0,
+        messages: [],
+      },
+    }))
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -216,35 +246,85 @@ export default function InboxScreen({
     return () => clearInterval(interval);
   }, [loadConversations]);
 
-  // ─── Build chatbot pseudo-conversations ──────────────────────────────────────
+  // Load chatbot conversations and their last messages
+  useEffect(() => {
+    const loadChatbots = async () => {
+      const loadedBots = await Promise.all(
+        mockChatbots.map(async (bot) => {
+          try {
+            const stored = await AsyncStorage.getItem(`@chatbot_msg_${bot.id}`);
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                const lastMsg = parsed.at(-1);
+                return {
+                  id: bot.id,
+                  bookingId: '',
+                  name: bot.name,
+                  lastMessage: lastMsg?.content ?? bot.lastMessage,
+                  timestamp: lastMsg ? formatTimestamp(lastMsg.timestamp) : bot.timestamp,
+                  type: 'chatbot' as const,
+                  isReadOnly: false,
+                  timeRemainingSeconds: 0,
+                  customerId: '',
+                  customerName: '',
+                  staffId: '',
+                  staffName: '',
+                  currentUserId: currentUserId ?? '',
+                  conversationData: {
+                    conversationId: bot.id,
+                    bookingId: '',
+                    customerId: '',
+                    customerName: '',
+                    staffId: '',
+                    staffName: '',
+                    activatedDate: '',
+                    isReadOnly: false,
+                    timeRemainingSeconds: 0,
+                    messages: parsed,
+                  },
+                };
+              }
+            }
+          } catch (e) {
+            console.error('Failed to load chatbot inbox data:', e);
+          }
+          return {
+            id: bot.id,
+            bookingId: '',
+            name: bot.name,
+            lastMessage: bot.lastMessage,
+            timestamp: bot.timestamp,
+            type: 'chatbot' as const,
+            isReadOnly: false,
+            timeRemainingSeconds: 0,
+            customerId: '',
+            customerName: '',
+            staffId: '',
+            staffName: '',
+            currentUserId: currentUserId ?? '',
+            conversationData: {
+              conversationId: bot.id,
+              bookingId: '',
+              customerId: '',
+              customerName: '',
+              staffId: '',
+              staffName: '',
+              activatedDate: '',
+              isReadOnly: false,
+              timeRemainingSeconds: 0,
+              messages: [],
+            },
+          };
+        })
+      );
+      setChatbotConversations(loadedBots);
+    };
 
-  const chatbotConversations: Conversation[] = mockChatbots.map((bot) => ({
-    id: bot.id,
-    bookingId: '',
-    name: bot.name,
-    lastMessage: bot.lastMessage,
-    timestamp: bot.timestamp,
-    type: 'chatbot',
-    isReadOnly: false,
-    timeRemainingSeconds: 0,
-    customerId: '',
-    customerName: '',
-    staffId: '',
-    staffName: '',
-    currentUserId: currentUserId ?? '',
-    conversationData: {
-      conversationId: bot.id,
-      bookingId: '',
-      customerId: '',
-      customerName: '',
-      staffId: '',
-      staffName: '',
-      activatedDate: '',
-      isReadOnly: false,
-      timeRemainingSeconds: 0,
-      messages: [],
-    },
-  }));
+    loadChatbots();
+  }, [currentUserId, selectedConversationId]);
+
+  // Chatbot conversations loaded and updated via state effect above
 
   // ─── Filtering ───────────────────────────────────────────────────────────────
 

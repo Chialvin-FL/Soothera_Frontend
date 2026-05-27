@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Conversation, formatTimestamp } from './InboxScreen.native';
 import { getOrCreateConversation, sendMessage } from '@/api/endpoints/apiMessage';
 import type { MessageResponseDTO } from '@/api/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,47 @@ export default function ChatRoomScreen({ conversation, onBack }: ChatRoomScreenP
   );
   const [isReadOnly, setIsReadOnly] = useState(conversation.isReadOnly);
   const [timeRemaining, setTimeRemaining] = useState(conversation.timeRemainingSeconds);
+
+  // Helper to save chatbot messages to AsyncStorage
+  const saveChatbotMessages = async (newMessages: MessageResponseDTO[]) => {
+    try {
+      await AsyncStorage.setItem(`@chatbot_msg_${conversation.id}`, JSON.stringify(newMessages));
+    } catch (e) {
+      console.error('Failed to save chatbot messages:', e);
+    }
+  };
+
+  // Load chatbot messages on mount
+  useEffect(() => {
+    if (conversation.type !== 'chatbot') return;
+
+    const loadStoredMessages = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(`@chatbot_msg_${conversation.id}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMessages(parsed);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load chatbot messages:', e);
+      }
+
+      // Fallback/Initial message if none stored
+      const initialMsg: MessageResponseDTO = {
+        messageId: `cb-greeting-${conversation.id}`,
+        senderId: 'chatbot',
+        senderName: conversation.name,
+        content: conversation.lastMessage || 'I can help you find the perfect salon or book an appointment. What would you like to do?',
+        timestamp: new Date().toISOString(),
+      };
+      setMessages([initialMsg]);
+    };
+
+    loadStoredMessages();
+  }, [conversation.id, conversation.type]);
 
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -128,7 +170,7 @@ export default function ChatRoomScreen({ conversation, onBack }: ChatRoomScreenP
 
   const handleSendMessage = async () => {
     const trimmed = messageText.trim();
-    if (!trimmed || isSending || isReadOnly || !bookingId) return;
+    if (!trimmed || isSending || isReadOnly) return;
 
     setSendError(null);
     setIsSending(true);
@@ -136,13 +178,64 @@ export default function ChatRoomScreen({ conversation, onBack }: ChatRoomScreenP
     // Optimistic local append
     const optimistic: MessageResponseDTO = {
       messageId: `optimistic-${Date.now()}`,
-      senderId: currentUserId,
+      senderId: currentUserId || 'user',
       senderName: 'You',
       content: trimmed,
       timestamp: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, optimistic]);
     setMessageText('');
+
+    if (conversation.type === 'chatbot') {
+      const updatedMessages = [...messages, optimistic];
+      setMessages(updatedMessages);
+      await saveChatbotMessages(updatedMessages);
+
+      try {
+        const response = await fetch('https://soothera-ai.vercel.app/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: trimmed }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get response from AI.');
+        }
+
+        const data = await response.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        const botResponse: MessageResponseDTO = {
+          messageId: `chatbot-${Date.now()}`,
+          senderId: 'chatbot',
+          senderName: conversation.name,
+          content: data.response || 'Sorry, I did not receive a proper response.',
+          timestamp: new Date().toISOString(),
+        };
+
+        const finalMessages = [...updatedMessages, botResponse];
+        setMessages(finalMessages);
+        await saveChatbotMessages(finalMessages);
+      } catch (err: any) {
+        const rolledBack = messages.filter((m) => m.messageId !== optimistic.messageId);
+        setMessages(rolledBack);
+        await saveChatbotMessages(rolledBack);
+        setSendError(err?.message ?? 'Network error. Please try again.');
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
+
+    if (!bookingId) {
+      setIsSending(false);
+      return;
+    }
+
+    setMessages((prev) => [...prev, optimistic]);
 
     try {
       const res = await sendMessage(bookingId, trimmed);
