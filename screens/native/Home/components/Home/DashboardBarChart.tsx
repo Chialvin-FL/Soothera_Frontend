@@ -4,7 +4,6 @@ import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { RisingItem } from '@/components/native/RisingItem';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
 
 export interface BarChartData {
     label: string;
@@ -40,7 +39,6 @@ export const DashboardBarChart = ({
     yAxisSuffix = '',
 }: DashboardBarChartProps) => {
     const colorScheme = useColorScheme();
-    const colors = Colors[colorScheme ?? 'light'];
     const isDark = colorScheme === 'dark';
 
     const maxValue = customMaxValue || Math.max(...data.map(d => d.value), 1);

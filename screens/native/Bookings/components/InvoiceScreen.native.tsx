@@ -13,7 +13,7 @@ import {
   formatDate,
 } from '../utils/invoiceCalculations';
 import * as Print from 'expo-print';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SuccessModal } from '@/components/native/SuccessModal';

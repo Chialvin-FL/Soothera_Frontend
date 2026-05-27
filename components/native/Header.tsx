@@ -17,9 +17,10 @@ interface HeaderProps {
   onProfilePress?: () => void;
   hasNotifications?: boolean;
   profilePic?: string | null;
+  onExportPress?: () => void;
 }
 
-export const Header = ({ userName, onNotificationPress, onProfilePress, hasNotifications = true, profilePic }: HeaderProps) => {
+export const Header = ({ userName, onNotificationPress, onProfilePress, hasNotifications = true, profilePic, onExportPress }: HeaderProps) => {
   const [currentUserName, setCurrentUserName] = React.useState(userName || '');
   const [currentProfilePic, setCurrentProfilePic] = React.useState<string | null>(profilePic || null);
   const colorScheme = useColorScheme();
@@ -133,15 +134,29 @@ export const Header = ({ userName, onNotificationPress, onProfilePress, hasNotif
         </Text>
       </TouchableOpacity>
 
-      {/* Notification Icon */}
-      <TouchableOpacity className="relative" onPress={onNotificationPress}>
-        <Animated.View style={hasNotifications ? animatedStyle : undefined}>
-          <Ionicons name="notifications-outline" size={24} color={colors.text} />
-        </Animated.View>
-        {hasNotifications && (
-          <View className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style={{ backgroundColor: primaryColor }} />
+      {/* Right-side actions */}
+      <View className="flex-row items-center" style={{ gap: 10 }}>
+        {onExportPress && (
+          <TouchableOpacity
+            className="w-9 h-9 items-center justify-center rounded-full"
+            style={{ backgroundColor: primaryColor + '18' }}
+            onPress={onExportPress}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="download-outline" size={20} color={primaryColor} />
+          </TouchableOpacity>
         )}
-      </TouchableOpacity>
+
+        {/* Notification Icon */}
+        <TouchableOpacity className="relative" onPress={onNotificationPress}>
+          <Animated.View style={hasNotifications ? animatedStyle : undefined}>
+            <Ionicons name="notifications-outline" size={24} color={colors.text} />
+          </Animated.View>
+          {hasNotifications && (
+            <View className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style={{ backgroundColor: primaryColor }} />
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
