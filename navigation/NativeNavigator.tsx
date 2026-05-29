@@ -8,6 +8,7 @@ import { DocumentVerification } from '../components/native/DocumentVerification'
 import { useIdVerificationSlice } from '../slices/idVerificationSlice';
 import { SelfieVerificationModal } from '../components/native/SelfieVerificationModal';
 import { SuccessModal } from '../components/native/SuccessModal';
+import { AdsPopUp } from '../components/native/AdsPopUp';
 
 // Screens — tab bases
 import HomeScreen from '../screens/native/Home/HomeScreen.native';
@@ -265,6 +266,7 @@ export default function NativeNavigator() {
             onSuccessAcknowledge={idVerificationSlice.acknowledgeSuccess}
             existingVerification={idVerificationSlice.existingVerification}
           />
+          <AdsPopUp />
         </View>
       )}
     </SafeAreaView>
