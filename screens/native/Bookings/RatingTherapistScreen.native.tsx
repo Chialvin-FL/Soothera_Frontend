@@ -9,6 +9,7 @@ import { TransparentHeader } from '@/components/native/TransparentHeader';
 import { SuccessModal } from '@/components/native/SuccessModal';
 import { BookingDetails } from './types/BookingDetails';
 import { getStaffRatings, createRating } from '@/api/endpoints/apiRating';
+import { getBookingById } from '@/api/endpoints/apiBooking';
 import { loadStoredSession } from '@/screens/native/Login/loginService';
 
 interface RatingTherapistScreenProps {
@@ -161,20 +162,34 @@ export default function RatingTherapistScreen({
     console.log('[RatingTherapistScreen] handleSubmit called');
     console.log('[RatingTherapistScreen] bookingDetails.bookingId =', bookingDetails.bookingId);
     console.log('[RatingTherapistScreen] bookingDetails.staffId =', bookingDetails.staffId);
-    console.log('[RatingTherapistScreen] rating =', rating, '| review =', review);
 
-    if (!bookingDetails.staffId) {
-      console.error('[RatingTherapistScreen] Cannot submit: staffId is undefined/null');
+    // Resolve staffId — if missing from bookingDetails, fetch it directly from the booking API
+    let staffId = bookingDetails.staffId;
+    if (!staffId) {
+      try {
+        console.log('[RatingTherapistScreen] staffId missing, fetching from booking API...');
+        const bookingResp = await getBookingById(bookingDetails.bookingId);
+        const respData = bookingResp.data as any;
+        const raw = Array.isArray(respData?.items) ? respData.items[0] : respData;
+        console.log('[RatingTherapistScreen] RAW booking keys:', raw ? Object.keys(raw) : 'null');
+        staffId = raw?.staffId ?? raw?.StaffId ?? raw?.staff_id ?? raw?.therapistId ?? raw?.TherapistId;
+        console.log('[RatingTherapistScreen] Resolved staffId from API:', staffId);
+      } catch (fetchErr) {
+        console.error('[RatingTherapistScreen] Failed to fetch booking for staffId:', fetchErr);
+      }
+    }
+
+    if (!staffId) {
       Alert.alert('Error', 'Unable to submit rating: therapist information is missing.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      console.log('[RatingTherapistScreen] Calling createRating POST...');
+      console.log('[RatingTherapistScreen] Calling createRating POST with staffId:', staffId);
       await createRating({
         bookingId: bookingDetails.bookingId,
-        targetId: bookingDetails.staffId,
+        targetId: staffId,
         reviewerRole: 'Customer',
         targetRole: 'Therapist',
         score: rating,

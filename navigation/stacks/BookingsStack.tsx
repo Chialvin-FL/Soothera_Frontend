@@ -16,6 +16,7 @@ import { getBookingById, updateBooking } from '../../api/endpoints/apiBooking';
 import { getUsers } from '../../api/endpoints/apiUser';
 import { getSalonById, viewSalons } from '../../api/endpoints/apiSalonEstablishment';
 import { getSalonServices } from '../../api/endpoints/apiService';
+import { getStaffAvailability } from '../../api/endpoints/apiStaff';
 import { API_CONFIG } from '../../api/config';
 import { mapApiBookingToDetails } from '../../screens/native/Bookings/utils/apiBookingMappers';
 import { topRatedSalons, getSalonDetails } from '../../screens/native/Home/configs/mockData';
@@ -158,6 +159,21 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
                 const apiBooking = Array.isArray(responseData?.items)
                     ? responseData.items[0]
                     : responseData;
+                // ── DEBUG: log ALL keys from the raw booking response ──────────────────
+                console.log('[BookingsStack] RAW apiBooking keys:', apiBooking ? Object.keys(apiBooking) : 'null');
+                console.log('[BookingsStack] RAW apiBooking staffId fields:', {
+                    staffId: apiBooking?.staffId,
+                    StaffId: (apiBooking as any)?.StaffId,
+                    staff_id: (apiBooking as any)?.staff_id,
+                    staffUID: (apiBooking as any)?.staffUID,
+                    StaffUID: (apiBooking as any)?.StaffUID,
+                    therapistId: (apiBooking as any)?.therapistId,
+                    TherapistId: (apiBooking as any)?.TherapistId,
+                    assignedStaffId: (apiBooking as any)?.assignedStaffId,
+                    staffName: apiBooking?.staffName,
+                    StaffName: (apiBooking as any)?.StaffName,
+                });
+                // ──────────────────────────────────────────────────────────────────────
                 const salonServiceId = apiBooking?.salonServiceId ?? apiBooking?.SalonServiceId;
                 let salonService = null;
                 if (salonServiceId) {
@@ -210,18 +226,45 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
                     console.warn('[BookingsStack] Failed to load establishment details:', establishmentError);
                     resolvedEstablishmentId = establishmentId;
                 }
-                // Extract staffId with PascalCase fallback
-                const staffId = apiBooking?.staffId ?? (apiBooking as any)?.StaffId;
+                // Extract staffId: first try direct fields, then look up via Staff API by staffName
+                let resolvedStaffId: string | undefined =
+                    apiBooking?.staffId ?? (apiBooking as any)?.StaffId ?? undefined;
+
+                if (!resolvedStaffId && resolvedEstablishmentId) {
+                    const staffName: string | undefined =
+                        apiBooking?.staffName ?? (apiBooking as any)?.StaffName;
+                    if (staffName) {
+                        try {
+                            const staffResp = await getStaffAvailability({
+                                establishmentId: resolvedEstablishmentId,
+                                pageSize: 200,
+                            });
+                            const staffItems = (staffResp?.data as any)?.items ?? [];
+                            const match = staffItems.find(
+                                (s: any) =>
+                                    String(s.staffName ?? '').toLowerCase() ===
+                                    staffName.toLowerCase()
+                            );
+                            if (match?.staffId) {
+                                resolvedStaffId = match.staffId;
+                                console.log('[BookingsStack] Resolved staffId via name lookup:', resolvedStaffId);
+                            } else {
+                                console.warn('[BookingsStack] No staff match for staffName:', staffName);
+                            }
+                        } catch (staffLookupError) {
+                            console.warn('[BookingsStack] Failed to look up staffId by name:', staffLookupError);
+                        }
+                    }
+                }
 
                 if (mounted) {
                     const mapped = apiBooking
                         ? {
                             ...mapApiBookingToDetails(apiBooking, salonService),
-                            // Explicitly inject IDs: use resolvedEstablishmentId (from the fetched
-                            // establishment object) as it's authoritative even when the booking API
-                            // response omits establishmentId.
+                            // Explicitly inject IDs: use resolved versions (authoritative even when
+                            // the booking API response omits them).
                             ...(resolvedEstablishmentId ? { establishmentId: resolvedEstablishmentId } : {}),
-                            ...(staffId ? { staffId } : {}),
+                            ...(resolvedStaffId ? { staffId: resolvedStaffId } : {}),
                             ...(customerId ? { customerId } : {}),
                             customerName,
                             customerImage,
@@ -234,11 +277,9 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
                         establishmentId: mapped?.establishmentId,
                         staffId: mapped?.staffId,
                         customerId: mapped?.customerId,
-                        rawApiBookingEstablishmentId: apiBooking?.establishmentId,
-                        rawApiBookingEstablishmentIdPascal: (apiBooking as any)?.EstablishmentId,
-                        rawApiBookingStaffId: apiBooking?.staffId,
-                        rawApiBookingStaffIdPascal: (apiBooking as any)?.StaffId,
                         resolvedEstablishmentId,
+                        resolvedStaffId,
+                        rawStaffName: apiBooking?.staffName ?? (apiBooking as any)?.StaffName,
                     });
                     setApiBookingDetails(mapped);
                     setBookingDetailsError(mapped ? null : 'Booking details not found.');
@@ -399,7 +440,9 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
             })()}
 
             {bookingRatingSpaId && (() => {
-                const details = resolveBookingDetails(bookingRatingSpaId);
+                // Prefer apiBookingDetails (already hydrated with establishmentId etc.)
+                // Fall back to resolveBookingDetails only for mock/non-API flows.
+                const details = apiBookingDetails ?? resolveBookingDetails(bookingRatingSpaId);
                 if (!details) return null;
                 return (
                     <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 13 }, bookingsRatingSpaStyle]}>
@@ -413,7 +456,7 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
             })()}
 
             {bookingRatingCustomerId && (() => {
-                const details = resolveBookingDetails(bookingRatingCustomerId);
+                const details = apiBookingDetails ?? resolveBookingDetails(bookingRatingCustomerId);
                 if (!details) return null;
                 return (
                     <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 17 }, bookingsRatingCustomerStyle]}>
@@ -427,7 +470,7 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
             })()}
 
             {bookingRatingTherapistId && (() => {
-                const details = resolveBookingDetails(bookingRatingTherapistId);
+                const details = apiBookingDetails ?? resolveBookingDetails(bookingRatingTherapistId);
                 if (!details) return null;
                 return (
                     <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 14 }, bookingsRatingTherapistStyle]}>
