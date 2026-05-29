@@ -1,7 +1,8 @@
 import { login as apiLogin, forgotPassword as apiForgotPassword } from '@/api/endpoints/apiAuth';
 import { clearStoredToken } from '@/api/axiosClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { LoginResponse, ApiError } from '@/api/types';
+import type { LoginResponse, ApiError, SalonEstablishment } from '@/api/types';
+import { viewSalons } from '@/api/endpoints/apiSalonEstablishment';
 
 // ─────────────────────────────────────────────────────────────
 // Storage keys
@@ -68,6 +69,29 @@ export interface LoginError {
             createdAt: user.createdAt?.toString() ?? '',
             establishmentId: user.establishmentId ?? null,
         };
+
+        // Fail-proof check for Salon Owner (role === 1, i.e., Admin)
+        if (userData.role === 1 && !userData.establishmentId) {
+            console.log('[LoginService] performLogin: Salon Owner logged in but establishmentId not detected. Fetching...');
+            try {
+                const establishmentResponse = await viewSalons(undefined, userData.uid);
+                if (establishmentResponse.success && establishmentResponse.data) {
+                    const all = Array.isArray(establishmentResponse.data)
+                        ? (establishmentResponse.data as SalonEstablishment[])
+                        : [establishmentResponse.data as SalonEstablishment];
+                    const paginatedData = establishmentResponse.data as any;
+                    const items: SalonEstablishment[] = paginatedData?.items ?? all;
+
+                    const mine = items.find((s) => s.uid === userData.uid) ?? null;
+                    if (mine) {
+                        console.log('[LoginService] performLogin: Found owned establishment:', mine.id);
+                        userData.establishmentId = mine.id;
+                    }
+                }
+            } catch (err) {
+                console.warn('[LoginService] performLogin: Failed to fetch establishment for owner:', err);
+            }
+        }
 
         // Persist user data
         await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
@@ -142,7 +166,34 @@ export async function loadStoredSession(): Promise<StoredUserData | null> {
             }
         }
 
-        return JSON.parse(userJson) as StoredUserData;
+        const storedUser = JSON.parse(userJson) as StoredUserData;
+
+        // Fail-proof check for Salon Owner (role === 1, i.e., Admin)
+        if (storedUser.role === 1 && !storedUser.establishmentId) {
+            console.log('[LoginService] loadStoredSession: Salon Owner logged in but establishmentId not detected. Fetching...');
+            try {
+                const establishmentResponse = await viewSalons(undefined, storedUser.uid);
+                if (establishmentResponse.success && establishmentResponse.data) {
+                    const all = Array.isArray(establishmentResponse.data)
+                        ? (establishmentResponse.data as SalonEstablishment[])
+                        : [establishmentResponse.data as SalonEstablishment];
+                    const paginatedData = establishmentResponse.data as any;
+                    const items: SalonEstablishment[] = paginatedData?.items ?? all;
+
+                    const mine = items.find((s) => s.uid === storedUser.uid) ?? null;
+                    if (mine) {
+                        console.log('[LoginService] loadStoredSession: Found owned establishment:', mine.id);
+                        storedUser.establishmentId = mine.id;
+                        // Persist updated user data in background
+                        await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(storedUser));
+                    }
+                }
+            } catch (err) {
+                console.warn('[LoginService] loadStoredSession: Failed to fetch establishment for owner:', err);
+            }
+        }
+
+        return storedUser;
     } catch {
         return null;
     }

@@ -80,7 +80,7 @@ const axiosClient = axios.create({
 axiosClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const token = await getStoredToken();
-    const isAuthRoute = config.url?.includes('/login') || config.url?.includes('/register') || config.url?.includes('/forgot-password');
+    const isAuthRoute = config.url?.includes('/login') || config.url?.includes('/forgot-password');
     
     if (token && config.headers && !isAuthRoute) {
       config.headers.Authorization = `Bearer ${token}`;

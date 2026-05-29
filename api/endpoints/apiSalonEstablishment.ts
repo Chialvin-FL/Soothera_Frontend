@@ -95,12 +95,16 @@ export async function addSalon(
  */
 export async function viewSalons(
   id?: string,
+  uid?: string,
 ): Promise<ApiResponse<SalonEstablishment | SalonEstablishment[]>> {
-  console.log('[apiEstablishment] viewSalons: sending GET, id =', id ?? '(all)');
+  console.log('[apiEstablishment] viewSalons: sending GET, id =', id ?? '(all)', 'uid =', uid ?? '(all)');
   const { data } = await axiosClient.get<
     ApiResponse<SalonEstablishment | SalonEstablishment[]>
   >(`${BASE}/view`, {
-    params: id ? { id } : undefined,
+    params: {
+      ...(id ? { id } : {}),
+      ...(uid ? { uid } : {}),
+    },
   });
   console.log('[apiEstablishment] viewSalons: response =', JSON.stringify(data));
   return data;

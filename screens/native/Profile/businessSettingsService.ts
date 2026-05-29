@@ -4,7 +4,7 @@ import {
     updateSalon,
     deleteSalon,
 } from '@/api/endpoints/apiSalonEstablishment';
-import { loadStoredSession } from '@/screens/native/Login/loginService';
+import { loadStoredSession, updateStoredUserData } from '@/screens/native/Login/loginService';
 import type { SalonEstablishment, ApiError } from '@/api/types';
 
 // ─────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ export async function fetchMyEstablishment(): Promise<FetchEstablishmentResponse
         }
         console.log('[BusinessSettingsService] fetchMyEstablishment: session uid =', session.uid);
 
-        const response = await viewSalons();
+        const response = await viewSalons(undefined, session.uid);
         console.log('[BusinessSettingsService] fetchMyEstablishment: API response =', JSON.stringify(response));
 
         if (!response.success || !response.data) {
@@ -67,6 +67,10 @@ export async function fetchMyEstablishment(): Promise<FetchEstablishmentResponse
 
         const mine = items.find((s) => s.uid === session.uid) ?? null;
         console.log('[BusinessSettingsService] fetchMyEstablishment: mine =', mine ? `found (id: ${mine.id})` : 'not found');
+
+        if (mine) {
+            await updateStoredUserData({ establishmentId: mine.id });
+        }
 
         return {
             success: true,
@@ -152,6 +156,10 @@ export async function saveEstablishment(
             });
             console.log('[BusinessSettingsService] saveEstablishment: addSalon response =', JSON.stringify(response));
 
+            if (response.success && response.data?.id) {
+                await updateStoredUserData({ establishmentId: response.data.id });
+            }
+
             return {
                 success: response.success,
                 message: response.message,
@@ -178,6 +186,9 @@ export async function removeEstablishment(
     try {
         const response = await deleteSalon(id);
         console.log('[BusinessSettingsService] removeEstablishment: deleteSalon response =', JSON.stringify(response));
+        if (response.success) {
+            await updateStoredUserData({ establishmentId: null });
+        }
         return { success: response.success, message: response.message };
     } catch (err: any) {
         console.error('[BusinessSettingsService] removeEstablishment: ERROR:', err);
