@@ -4,7 +4,7 @@ import { Text } from '@/components/Text';
 import { primaryColor } from '@/constants/theme';
 import { SearchBarWithBack } from './components/SearchBarWithBack';
 import { MassageSpaCardsList } from './components/SalonCardsList';
-import { viewSalons } from '@/api/endpoints/apiSalonEstablishment';
+import { getAll } from '@/api/endpoints/apiSalonEstablishment';
 import { toTopRatedSalon } from './utils/salonMappers';
 import type { TopRatedSalon } from './types/Home';
 import type { SalonEstablishment, PaginatedResponse } from '@/api/types';
@@ -52,45 +52,59 @@ export default function TopRatedMassageSpasScreen({
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
+
   const fetchSalons = useCallback(async (pageNum: number, isRefresh = false) => {
-    if (pageNum === 1) {
-      if (!isRefresh) setLoading(true);
-    } else {
-      setLoadingMore(true);
-    }
+    if (!isRefresh) setLoading(true);
     setError(null);
 
     try {
-      const res = await viewSalons(undefined, undefined, pageNum, 10);
-      if (res.success && res.data) {
-        const data = res.data;
-        const list: SalonEstablishment[] = Array.isArray(data)
-          ? data
-          : data && 'items' in data
-          ? data.items
-          : [data as SalonEstablishment];
+      const allMappedSalons: TopRatedSalon[] = [];
+      let currentPage = 1;
+      let hasMorePages = true;
+      const maxPages = 30;
 
-        const mapped = list.map(toTopRatedSalon);
+      while (hasMorePages && currentPage <= maxPages) {
+        const res = await getAll(currentPage, 30);
+        if (res.success && res.data) {
+          const data = res.data;
+          const list: SalonEstablishment[] = Array.isArray(data)
+            ? data
+            : data && 'items' in data
+              ? data.items
+              : [data as SalonEstablishment];
 
-        if (pageNum === 1) {
-          setSalons(mapped);
+          const mapped = list.map(toTopRatedSalon);
+          allMappedSalons.push(...mapped);
+
+          if (data && 'totalPages' in data) {
+            hasMorePages = currentPage < (data.totalPages ?? 1);
+          } else {
+            hasMorePages = list.length === 30;
+          }
+          currentPage++;
         } else {
-          setSalons((prev) => [...prev, ...mapped]);
+          if (currentPage === 1) {
+            setError(res.message ?? 'Failed to load salons.');
+          }
+          break;
         }
-
-        // Determine if there are more items to fetch
-        if (data && 'items' in data) {
-          const paginated = data as PaginatedResponse<SalonEstablishment>;
-          const totalPages = paginated.totalPages ?? 1;
-          const currentPage = paginated.page ?? 1;
-          setHasMore(currentPage < totalPages);
-        } else {
-          // Fallback if backend returns simple array or single item
-          setHasMore(list.length === 10);
-        }
-      } else {
-        setError(res.message ?? 'Failed to load salons.');
       }
+
+      setSalons(allMappedSalons);
+      setHasMore(false);
+      setPage(1);
     } catch (e: any) {
       setError(e?.message ?? 'Failed to load salons.');
     } finally {
@@ -155,11 +169,22 @@ export default function TopRatedMassageSpasScreen({
     setUserLocation(null);
   }, []);
 
-  // Compute processed salons: sort and filter by proximity if userLocation is active
+  // Compute processed salons: sort and filter by proximity if userLocation is active, and filter by search query
   const processedSalons = useMemo(() => {
-    if (!userLocation) return salons;
+    let result = salons;
 
-    return salons
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase();
+      result = result.filter(
+        (salon) =>
+          salon.name.toLowerCase().includes(query) ||
+          (salon.location && salon.location.toLowerCase().includes(query))
+      );
+    }
+
+    if (!userLocation) return result;
+
+    return result
       .map((salon) => {
         const lat = salon.latitude ?? 0;
         const lng = salon.longitude ?? 0;
@@ -174,7 +199,7 @@ export default function TopRatedMassageSpasScreen({
       })
       .filter((salon) => salon.distance <= PROXIMITY_THRESHOLD_KM)
       .sort((a, b) => (a.distance as number) - (b.distance as number));
-  }, [salons, userLocation]);
+  }, [salons, userLocation, debouncedSearchQuery]);
 
   return (
     <View className="flex-1 bg-white">
@@ -183,6 +208,8 @@ export default function TopRatedMassageSpasScreen({
         onBack={onBack}
         autoFocus={autoFocusSearch}
         autoOpenFilter={autoOpenFilter}
+        value={searchQuery}
+        onChangeText={setSearchQuery}
       />
 
       {/* Search Nearby Action Button or Active Filter Chip */}
@@ -213,7 +240,7 @@ export default function TopRatedMassageSpasScreen({
             >
               <Ionicons name="location-outline" size={16} color={primaryColor} className="mr-1.5" />
               <Text className="text-sm font-semibold" style={{ color: '#4B5563' }}>
-                Search Nearby
+                Search near me
               </Text>
             </TouchableOpacity>
           )}

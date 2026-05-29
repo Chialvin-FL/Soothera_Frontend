@@ -116,6 +116,28 @@ export async function viewSalons(
 }
 
 /**
+ * GET /api/Establishment/view
+ * Returns salons with page and limit (pageSize).
+ */
+export async function getAll(
+  page: number = 1,
+  limit: number = 30,
+): Promise<ApiResponse<PaginatedResponse<SalonEstablishment>>> {
+  console.log('[apiEstablishment] getAll: sending GET, page =', page, 'limit =', limit);
+  const { data } = await axiosClient.get<ApiResponse<PaginatedResponse<SalonEstablishment>>>(
+    `${BASE}/view`,
+    {
+      params: {
+        page,
+        pageSize: limit,
+      },
+    },
+  );
+  console.log('[apiEstablishment] getAll: response =', JSON.stringify(data));
+  return data;
+}
+
+/**
  * GET /api/Establishment/view?id=...
  * Convenience wrapper that returns a single salon.
  */
