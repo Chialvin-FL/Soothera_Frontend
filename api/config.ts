@@ -11,7 +11,7 @@ const IS_LOCAL = false; // <--- TOGGLE THIS
 const USE_WEB_PROXY = false; // <--- TOGGLE THIS for Web Proxy (Vite/Vercel)
 
 const LOCAL_URL = 'https://localhost:7043';
-const DEPLOYED_URL = 'http://fl-soothera-api.somee.com';
+const DEPLOYED_URL = 'https://fl-soothera-api.somee.com';
 
 export const API_CONFIG = {
   IS_LOCAL,
