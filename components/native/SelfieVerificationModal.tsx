@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConfirmationModal } from './ConfirmationModal';
 import { SuccessModal } from './SuccessModal';
+import { IdentityVerification } from '../../api/types';
+import { API_CONFIG } from '../../api/config';
 
 interface SelfieVerificationModalProps {
     visible: boolean;
@@ -23,6 +25,7 @@ interface SelfieVerificationModalProps {
     successMessage: string | null;
     onUpload: (idPhoto: any, selfiePhoto: any) => void;
     onSuccessAcknowledge?: () => void;
+    existingVerification?: IdentityVerification | null;
 }
 
 export const SelfieVerificationModal: React.FC<SelfieVerificationModalProps> = ({
@@ -33,6 +36,7 @@ export const SelfieVerificationModal: React.FC<SelfieVerificationModalProps> = (
     successMessage,
     onUpload,
     onSuccessAcknowledge,
+    existingVerification,
 }) => {
     const [idPhoto, setIdPhoto] = useState<any>(null);
     const [selfiePhoto, setSelfiePhoto] = useState<any>(null);
@@ -41,6 +45,30 @@ export const SelfieVerificationModal: React.FC<SelfieVerificationModalProps> = (
     const [errorModalVisible, setErrorModalVisible] = useState(false);
     const [errorModalMessage, setErrorModalMessage] = useState('');
     const insets = useSafeAreaInsets();
+
+    React.useEffect(() => {
+        if (visible && existingVerification) {
+            if (existingVerification.idUrl) {
+                setIdPhoto({
+                    uri: existingVerification.idUrl.startsWith('http')
+                        ? existingVerification.idUrl
+                        : `${API_CONFIG.BASE_URL}${existingVerification.idUrl}`,
+                    isExisting: true,
+                });
+            }
+            if (existingVerification.selfieUrl) {
+                setSelfiePhoto({
+                    uri: existingVerification.selfieUrl.startsWith('http')
+                        ? existingVerification.selfieUrl
+                        : `${API_CONFIG.BASE_URL}${existingVerification.selfieUrl}`,
+                    isExisting: true,
+                });
+            }
+        } else if (!visible) {
+            setIdPhoto(null);
+            setSelfiePhoto(null);
+        }
+    }, [existingVerification, visible]);
 
     const pickImage = async (setImage: (image: any) => void, useCamera: boolean = false) => {
         try {
@@ -83,6 +111,7 @@ export const SelfieVerificationModal: React.FC<SelfieVerificationModalProps> = (
                     uri: localUri,
                     name: filename,
                     type: type,
+                    isExisting: false,
                 });
             }
         } catch (err) {
@@ -91,7 +120,7 @@ export const SelfieVerificationModal: React.FC<SelfieVerificationModalProps> = (
     };
 
     const handleUpload = () => {
-        if (!idPhoto || !selfiePhoto) return;
+        if (!idPhoto || !selfiePhoto || idPhoto.isExisting || selfiePhoto.isExisting) return;
         onUpload(idPhoto, selfiePhoto);
     };
 
@@ -101,6 +130,10 @@ export const SelfieVerificationModal: React.FC<SelfieVerificationModalProps> = (
     };
 
     const isProcessing = isUploading || isVerifying;
+    const isFailed = existingVerification && (Number(existingVerification.verifyStatus) === 0 || existingVerification.statusName === 'Failed');
+    const isPending = existingVerification && !isFailed && (Number(existingVerification.verifyStatus) !== 1 && existingVerification.statusName !== 'Passed');
+
+    const canSubmit = idPhoto && selfiePhoto && !idPhoto.isExisting && !selfiePhoto.isExisting && !isProcessing;
 
     return (
         <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={() => {}}>
@@ -113,6 +146,44 @@ export const SelfieVerificationModal: React.FC<SelfieVerificationModalProps> = (
                 </View>
 
                 <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+                    {existingVerification && (
+                        <View style={[
+                            styles.statusBanner,
+                            isFailed ? styles.statusBannerFailed : styles.statusBannerPending
+                        ]}>
+                            <View style={styles.statusHeader}>
+                                <Ionicons 
+                                    name={isFailed ? "close-circle-outline" : "hourglass-outline"} 
+                                    size={24} 
+                                    color={isFailed ? "#EF4444" : "#D97706"} 
+                                />
+                                <Text style={[
+                                    styles.statusTitle,
+                                    { color: isFailed ? "#991B1B" : "#92400E" }
+                                ]}>
+                                    Verification {existingVerification.statusName || (isFailed ? "Failed" : "Pending")}
+                                </Text>
+                            </View>
+                            <Text style={[
+                                styles.statusText,
+                                { color: isFailed ? "#7F1D1D" : "#78350F" }
+                            ]}>
+                                {isFailed 
+                                    ? `Face match failed with a confidence level of ${Math.round(existingVerification.confidenceLevel)}%. Please upload a clearer ID and selfie where your face is fully visible and matches the ID.`
+                                    : 'Your identity documents are uploaded. Please wait for automatic verification to complete.'
+                                }
+                            </Text>
+                            {existingVerification.uploadedAt && (
+                                <Text style={[
+                                    styles.statusTime,
+                                    { color: isFailed ? "#B91C1C" : "#B45309" }
+                                ]}>
+                                    Submitted on: {new Date(existingVerification.uploadedAt.replace(/-/g, '/')).toLocaleDateString()}
+                                </Text>
+                            )}
+                        </View>
+                    )}
+
                     {/* ID Upload Section */}
                     {idPhoto ? (
                         <View style={styles.imageContainer}>
@@ -158,12 +229,18 @@ export const SelfieVerificationModal: React.FC<SelfieVerificationModalProps> = (
                 </ScrollView>
 
                 <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+                    {isFailed && (idPhoto?.isExisting || selfiePhoto?.isExisting) && (
+                        <Text style={styles.retryHelperText}>
+                            Please tap the "X" button on the photos and select new, clear images to retry verification.
+                        </Text>
+                    )}
+
                     <TouchableOpacity
                         style={[
                             styles.submitBtn,
-                            (!idPhoto || !selfiePhoto || isProcessing) && styles.submitBtnDisabled
+                            !canSubmit && styles.submitBtnDisabled
                         ]}
-                        disabled={!idPhoto || !selfiePhoto || isProcessing}
+                        disabled={!canSubmit}
                         onPress={handleUpload}
                     >
                         {isProcessing ? (
@@ -253,6 +330,40 @@ const styles = StyleSheet.create({
         paddingBottom: 24,
         paddingTop: 10,
     },
+    statusBanner: {
+        borderWidth: 1,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 24,
+        marginTop: 10,
+    },
+    statusBannerFailed: {
+        backgroundColor: '#FEF2F2',
+        borderColor: '#FCA5A5',
+    },
+    statusBannerPending: {
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
+    },
+    statusHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    statusTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginLeft: 8,
+    },
+    statusText: {
+        fontSize: 14,
+        lineHeight: 20,
+    },
+    statusTime: {
+        fontSize: 12,
+        marginTop: 8,
+        fontWeight: '500',
+    },
     uploadSection: {
         marginBottom: 24,
     },
@@ -301,6 +412,7 @@ const styles = StyleSheet.create({
         right: 8,
         backgroundColor: '#FFFFFF',
         borderRadius: 15,
+        padding: 2,
     },
     errorText: {
         color: '#EF4444',
@@ -314,6 +426,14 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginVertical: 10,
         fontSize: 16,
+    },
+    retryHelperText: {
+        color: '#DC2626',
+        fontSize: 13,
+        textAlign: 'center',
+        marginBottom: 12,
+        fontWeight: '600',
+        lineHeight: 18,
     },
     footer: {
         paddingHorizontal: 24,
@@ -343,3 +463,4 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
 });
+

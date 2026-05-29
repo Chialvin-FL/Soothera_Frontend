@@ -4,11 +4,12 @@ import {
     submitIdAndSelfie,
     triggerFaceMatch,
 } from '../service/idVerificationService';
-import { VerificationStatus } from '../api/types';
+import { VerificationStatus, IdentityVerification } from '../api/types';
 
 export function useIdVerificationSlice() {
     const [isChecking, setIsChecking] = useState(false);
     const [requiresVerification, setRequiresVerification] = useState(false);
+    const [existingVerification, setExistingVerification] = useState<IdentityVerification | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -20,17 +21,21 @@ export function useIdVerificationSlice() {
         try {
             const res = await fetchIdVerificationStatus();
             if (res.success && res.data) {
-                if (res.data.verifyStatus !== VerificationStatus.Passed) {
+                setExistingVerification(res.data);
+                const isPassed = Number(res.data.verifyStatus) === VerificationStatus.Passed || res.data.statusName === 'Passed';
+                if (!isPassed) {
                     setRequiresVerification(true);
                 } else {
                     setRequiresVerification(false);
                 }
             } else {
                 // If it fails (e.g., 404 not found or not uploaded yet), require verification
+                setExistingVerification(null);
                 setRequiresVerification(true);
             }
         } catch (e: any) {
             console.error('Check verification error', e);
+            setExistingVerification(null);
             setRequiresVerification(true);
         } finally {
             setIsChecking(false);
@@ -61,8 +66,9 @@ export function useIdVerificationSlice() {
             return false;
         }
 
-        if (verifyRes.data?.verifyStatus === VerificationStatus.Passed) {
-            const confidenceVal = verifyRes.data.confidence;
+        const isPassed = Number(verifyRes.data?.verifyStatus) === VerificationStatus.Passed || verifyRes.data?.statusName === 'Passed';
+        if (isPassed) {
+            const confidenceVal = verifyRes.data?.confidence;
             const confidenceStr = confidenceVal !== undefined && confidenceVal !== null
                 ? `\n\nSelfie Matches ID by ${Math.round(confidenceVal)}%`
                 : '';
@@ -79,14 +85,17 @@ export function useIdVerificationSlice() {
 
     const clearError = () => setError(null);
 
-    const acknowledgeSuccess = () => {
+    const acknowledgeSuccess = async () => {
         setRequiresVerification(false);
         setSuccessMessage(null);
+        // Refresh verification status from API to update state
+        await checkVerification();
     };
 
     return {
         isChecking,
         requiresVerification,
+        existingVerification,
         isUploading,
         isVerifying,
         error,
@@ -97,3 +106,4 @@ export function useIdVerificationSlice() {
         uploadAndVerify,
     };
 }
+

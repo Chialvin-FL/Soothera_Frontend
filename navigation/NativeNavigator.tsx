@@ -238,6 +238,7 @@ export default function NativeNavigator() {
             isUploading={docUploadSlice.isUploading}
             error={docUploadSlice.error}
             onUpload={docUploadSlice.uploadDocs}
+            existingDocs={docUploadSlice.existingDocs}
           />
           <SuccessModal
             visible={docUploadSlice.showFeedback}
@@ -261,6 +262,7 @@ export default function NativeNavigator() {
             successMessage={idVerificationSlice.successMessage}
             onUpload={idVerificationSlice.uploadAndVerify}
             onSuccessAcknowledge={idVerificationSlice.acknowledgeSuccess}
+            existingVerification={idVerificationSlice.existingVerification}
           />
         </View>
       )}

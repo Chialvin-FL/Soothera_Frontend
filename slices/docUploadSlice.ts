@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { fetchMyDocumentStatus, submitDocumentBatch } from '../service/docUploadService';
+import { CheckMyDocsData, DocumentStatus } from '../api/types';
 
 export function useDocUploadSlice() {
     const [isChecking, setIsChecking] = useState(false);
     const [requiresUpload, setRequiresUpload] = useState(false);
+    const [existingDocs, setExistingDocs] = useState<CheckMyDocsData | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showFeedback, setShowFeedback] = useState(false);
@@ -17,7 +19,12 @@ export function useDocUploadSlice() {
         try {
             const res = await fetchMyDocumentStatus();
             if (res.success && res.data) {
-                if (res.data.documentCount === 0) {
+                setExistingDocs(res.data);
+                const documentCount = res.data.documentCount ?? 0;
+                const status = Number(res.data.status);
+                
+                // Require upload if no documents exist or if previous documents were Rejected (status === 2)
+                if (documentCount === 0 || status === DocumentStatus.Rejected) {
                     setRequiresUpload(true);
                 } else {
                     setRequiresUpload(false);
@@ -25,12 +32,15 @@ export function useDocUploadSlice() {
             } else if (res.statusCode === 404) {
                 // Backend returns 404 if no documents exist for the user
                 console.log('[docUploadSlice] No documents found (404), requiring upload.');
+                setExistingDocs(null);
                 setRequiresUpload(true);
             } else {
                 console.warn('Check documents failed', res.message);
+                setExistingDocs(null);
             }
         } catch (e: any) {
             console.error('Check documents error', e);
+            setExistingDocs(null);
         } finally {
             setIsChecking(false);
         }
@@ -46,6 +56,8 @@ export function useDocUploadSlice() {
             setFeedbackMessage('Your documents have been uploaded and are now pending review.');
             setFeedbackVariant('success');
             setShowFeedback(true);
+            // Refresh document status from API
+            await checkDocuments();
         } else {
             setError(res.message);
             setFeedbackTitle('Upload Failed');
@@ -63,6 +75,7 @@ export function useDocUploadSlice() {
     return {
         isChecking,
         requiresUpload,
+        existingDocs,
         isUploading,
         error,
         showFeedback,
@@ -75,3 +88,4 @@ export function useDocUploadSlice() {
         uploadDocs,
     };
 }
+

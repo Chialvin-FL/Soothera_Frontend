@@ -11,12 +11,14 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CheckMyDocsData } from '../../api/types';
 
 interface DocumentVerificationProps {
     visible: boolean;
     isUploading: boolean;
     error: string | null;
     onUpload: (files: any[]) => void;
+    existingDocs?: CheckMyDocsData | null;
 }
 
 export const DocumentVerification: React.FC<DocumentVerificationProps> = ({
@@ -24,6 +26,7 @@ export const DocumentVerification: React.FC<DocumentVerificationProps> = ({
     isUploading,
     error,
     onUpload,
+    existingDocs,
 }) => {
     const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
     const insets = useSafeAreaInsets();
@@ -71,6 +74,8 @@ export const DocumentVerification: React.FC<DocumentVerificationProps> = ({
         onUpload(selectedFiles);
     };
 
+    const hasRejectedDocs = existingDocs && Number(existingDocs.status) === 2; // 2 = Rejected
+
     return (
         <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={() => {}}>
             <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -82,6 +87,23 @@ export const DocumentVerification: React.FC<DocumentVerificationProps> = ({
                 </View>
 
                 <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+                    {hasRejectedDocs && (
+                        <View style={styles.rejectedBanner}>
+                            <View style={styles.rejectedHeader}>
+                                <Ionicons name="warning-outline" size={24} color="#EF4444" />
+                                <Text style={styles.rejectedTitle}>Previous Upload Rejected</Text>
+                            </View>
+                            <Text style={styles.rejectedText}>
+                                Your previously submitted legal documents were rejected. Please review the required list below and upload valid, clear files to proceed.
+                            </Text>
+                            {existingDocs?.uploadedAt && (
+                                <Text style={styles.rejectedTime}>
+                                    Submitted on: {new Date(existingDocs.uploadedAt.replace(/-/g, '/')).toLocaleDateString()}
+                                </Text>
+                            )}
+                        </View>
+                    )}
+
                     <View style={styles.requirementsBox}>
                         <Text style={styles.requirementsTitle}>Required Documents:</Text>
                         {requiredDocuments.map((req, index) => (
@@ -183,6 +205,37 @@ const styles = StyleSheet.create({
     scrollContainer: {
         paddingHorizontal: 24,
         paddingBottom: 24,
+    },
+    rejectedBanner: {
+        backgroundColor: '#FEF2F2',
+        borderWidth: 1,
+        borderColor: '#FCA5A5',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 20,
+        marginTop: 10,
+    },
+    rejectedHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    rejectedTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#991B1B',
+        marginLeft: 8,
+    },
+    rejectedText: {
+        fontSize: 14,
+        color: '#7F1D1D',
+        lineHeight: 20,
+    },
+    rejectedTime: {
+        fontSize: 12,
+        color: '#B91C1C',
+        marginTop: 8,
+        fontWeight: '500',
     },
     requirementsBox: {
         backgroundColor: '#F9FAFB',
@@ -319,3 +372,4 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
 });
+
