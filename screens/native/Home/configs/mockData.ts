@@ -15,7 +15,7 @@ function firstSalonEstablishment(data: SalonDetailsApiData | null | undefined): 
   if (!data) return null;
   if (Array.isArray(data)) return data[0] ?? null;
   if ('items' in data) return data.items?.[0] ?? null;
-  return data;
+  return data as SalonEstablishment;
 }
 
 // Mock data for special deals

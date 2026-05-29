@@ -5,6 +5,7 @@ import type {
   CreateSalonRequest,
   UpdateSalonRequest,
   OwnerAnalytics,
+  PaginatedResponse,
 } from '../types';
 
 // ─────────────────────────────────────────────────────────────
@@ -96,14 +97,18 @@ export async function addSalon(
 export async function viewSalons(
   id?: string,
   uid?: string,
-): Promise<ApiResponse<SalonEstablishment | SalonEstablishment[]>> {
-  console.log('[apiEstablishment] viewSalons: sending GET, id =', id ?? '(all)', 'uid =', uid ?? '(all)');
+  page?: number,
+  pageSize?: number,
+): Promise<ApiResponse<SalonEstablishment | SalonEstablishment[] | PaginatedResponse<SalonEstablishment>>> {
+  console.log('[apiEstablishment] viewSalons: sending GET, id =', id ?? '(all)', 'uid =', uid ?? '(all)', 'page =', page, 'pageSize =', pageSize);
   const { data } = await axiosClient.get<
-    ApiResponse<SalonEstablishment | SalonEstablishment[]>
+    ApiResponse<SalonEstablishment | SalonEstablishment[] | PaginatedResponse<SalonEstablishment>>
   >(`${BASE}/view`, {
     params: {
       ...(id ? { id } : {}),
       ...(uid ? { uid } : {}),
+      ...(page ? { page } : {}),
+      ...(pageSize ? { pageSize } : {}),
     },
   });
   console.log('[apiEstablishment] viewSalons: response =', JSON.stringify(data));

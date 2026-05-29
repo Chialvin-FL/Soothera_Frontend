@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { View, FlatList, Image, TouchableOpacity } from 'react-native';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { TopRatedSalon } from '../types/Home';
@@ -11,9 +11,23 @@ interface MassageSpaCardsListProps {
   salons: TopRatedSalon[];
   contentContainerStyle?: object;
   onSalonPress?: (salonId: string) => void;
+  onEndReached?: () => void;
+  onEndReachedThreshold?: number;
+  ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
-export function MassageSpaCardsList({ salons, contentContainerStyle, onSalonPress }: MassageSpaCardsListProps) {
+export function MassageSpaCardsList({
+  salons,
+  contentContainerStyle,
+  onSalonPress,
+  onEndReached,
+  onEndReachedThreshold = 0.3,
+  ListFooterComponent,
+  onRefresh,
+  refreshing = false,
+}: MassageSpaCardsListProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -170,12 +184,18 @@ export function MassageSpaCardsList({ salons, contentContainerStyle, onSalonPres
   };
 
   return (
-    <ScrollView 
-      className="flex-1" 
+    <FlatList
+      data={salons}
+      keyExtractor={(item, index) => `${item.id ?? 'salon'}-${index}`}
+      renderItem={({ item, index }) => renderMassageSpaCard(item, index)}
+      className="flex-1"
       showsVerticalScrollIndicator={false}
       contentContainerStyle={contentContainerStyle}
-    >
-      {salons.map((salon, index) => renderMassageSpaCard(salon, index))}
-    </ScrollView>
+      onEndReached={onEndReached}
+      onEndReachedThreshold={onEndReachedThreshold}
+      ListFooterComponent={ListFooterComponent}
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+    />
   );
 }

@@ -1,10 +1,13 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { Text } from '@/components/Text';
 import { primaryColor } from '@/constants/theme';
 import { SearchBarWithBack } from './components/SearchBarWithBack';
 import { MassageSpaCardsList } from './components/SalonCardsList';
-import { useEstablishments } from './hooks/useEstablishments';
+import { viewSalons } from '@/api/endpoints/apiSalonEstablishment';
+import { toTopRatedSalon } from './utils/salonMappers';
+import type { TopRatedSalon } from './types/Home';
+import type { SalonEstablishment, PaginatedResponse } from '@/api/types';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -38,9 +41,91 @@ export default function TopRatedMassageSpasScreen({
   autoOpenFilter = false,
   autoFocusSearch = false,
 }: TopRatedMassageSpasScreenProps = {}) {
-  const { salons, loading, error } = useEstablishments();
+  const [salons, setSalons] = useState<TopRatedSalon[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
+
+  const fetchSalons = useCallback(async (pageNum: number, isRefresh = false) => {
+    if (pageNum === 1) {
+      if (!isRefresh) setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+    setError(null);
+
+    try {
+      const res = await viewSalons(undefined, undefined, pageNum, 10);
+      if (res.success && res.data) {
+        const data = res.data;
+        const list: SalonEstablishment[] = Array.isArray(data)
+          ? data
+          : data && 'items' in data
+          ? data.items
+          : [data as SalonEstablishment];
+
+        const mapped = list.map(toTopRatedSalon);
+
+        if (pageNum === 1) {
+          setSalons(mapped);
+        } else {
+          setSalons((prev) => [...prev, ...mapped]);
+        }
+
+        // Determine if there are more items to fetch
+        if (data && 'items' in data) {
+          const paginated = data as PaginatedResponse<SalonEstablishment>;
+          const totalPages = paginated.totalPages ?? 1;
+          const currentPage = paginated.page ?? 1;
+          setHasMore(currentPage < totalPages);
+        } else {
+          // Fallback if backend returns simple array or single item
+          setHasMore(list.length === 10);
+        }
+      } else {
+        setError(res.message ?? 'Failed to load salons.');
+      }
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed to load salons.');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSalons(1);
+  }, [fetchSalons]);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
+    fetchSalons(1, true);
+  }, [fetchSalons]);
+
+  const handleLoadMore = useCallback(() => {
+    if (loading || loadingMore || !hasMore) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchSalons(nextPage);
+  }, [loading, loadingMore, hasMore, page, fetchSalons]);
+
+  const renderFooter = useCallback(() => {
+    if (!loadingMore) return null;
+    return (
+      <View className="py-4 items-center justify-center">
+        <ActivityIndicator size="small" color={primaryColor} />
+      </View>
+    );
+  }, [loadingMore]);
 
   const handleSearchNearby = useCallback(async () => {
     setLocationLoading(true);
@@ -135,14 +220,14 @@ export default function TopRatedMassageSpasScreen({
         </View>
       )}
 
-      {loading ? (
+      {loading && page === 1 ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={primaryColor} />
           <Text className="text-sm mt-3" style={{ color: '#9CA3AF' }}>
             Loading salons...
           </Text>
         </View>
-      ) : error ? (
+      ) : error && page === 1 ? (
         <View className="flex-1 items-center justify-center px-8">
           <Text className="text-sm text-center" style={{ color: '#9CA3AF' }}>
             {error}
@@ -153,6 +238,11 @@ export default function TopRatedMassageSpasScreen({
           salons={processedSalons}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
           onSalonPress={onSalonPress}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={renderFooter}
+          onRefresh={handleRefresh}
+          refreshing={refreshing}
         />
       )}
     </View>
