@@ -12,8 +12,8 @@ interface SubscriptionScreenProps {
 }
 
 const plans = [
-    { label: 'Basic Plan', price: '$29/mo', features: ['Up to 5 Staff Members', 'Basic Booking System', 'Email Support'], active: false },
-    { label: 'Pro Plan', price: '$79/mo', features: ['Unlimited Staff Members', 'Advanced Analytics', 'Priority 24/7 Support', 'Custom Integration'], active: true },
+    { label: 'Basic Plan', price: 'P1,800/mo', features: ['Up to 5 Staff Members', 'Basic Booking System', 'Email Support'], active: false },
+    { label: 'Pro Plan', price: 'P5,900/mo', features: ['Unlimited Staff Members', 'Advanced Analytics', 'Priority 24/7 Support', 'Custom Integration'], active: true },
 ];
 
 export default function SubscriptionScreen({ onBack }: SubscriptionScreenProps) {
