@@ -111,7 +111,7 @@ axiosClient.interceptors.response.use(
     const status = error.response?.status ?? 0;
     const backendBody = error.response?.data;
 
-    const apiError: ApiError = {
+    const apiError: ApiError & { rawError?: any } = {
       success: false,
       message:
         backendBody?.message ??
@@ -119,6 +119,13 @@ axiosClient.interceptors.response.use(
         'An unexpected error occurred.',
       statusCode: status,
       data: null,
+      rawError: {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+      }
     };
 
     // ── Handle 401 Unauthorized globally ──

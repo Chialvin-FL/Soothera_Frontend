@@ -78,10 +78,20 @@ export interface LoginError {
 
         return { success: true, user: userData };
     } catch (err) {
-        const apiErr = err as ApiError;
+        const apiErr = err as any;
+        const raw = apiErr?.rawError || apiErr || {};
+        const errMsg = apiErr?.message || raw.message || 'An unexpected error occurred.';
+        const details = [
+            `Msg: ${errMsg}`,
+            `Code: ${raw.code || 'N/A'}`,
+            `Status: ${raw.status || 'N/A'}`,
+            `URL: ${raw.url || 'N/A'}`,
+            `BaseURL: ${raw.baseURL || 'N/A'}`
+        ].join('\n');
+        
         return {
             success: false,
-            message: apiErr?.message ?? 'An unexpected error occurred.',
+            message: `Login Failed Debug Info:\n${details}`,
         };
     }
 }
