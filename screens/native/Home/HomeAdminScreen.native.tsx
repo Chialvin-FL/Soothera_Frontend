@@ -38,12 +38,14 @@ interface HomeScreenAdminProps {
     onNavigateNotifications?: () => void;
     useNavigatorOverlays?: boolean;
     userProfilePic?: string | null;
+    establishmentId?: string | null;
 }
 
 export default function HomeScreenAdmin({
     onNavigateToProfile,
     onNavigateNotifications,
     userProfilePic,
+    establishmentId,
 }: HomeScreenAdminProps) {
     const insets = useSafeAreaInsets();
     const colorScheme = useColorScheme();
@@ -104,8 +106,8 @@ export default function HomeScreenAdmin({
             setHasNoSalon(false);
             try {
                 const [revRes, spendRes] = await Promise.all([
-                    getOwnerAnalytics(undefined, revenueFilter),
-                    getOwnerAnalytics(undefined, topSpendersFilter),
+                    getOwnerAnalytics(establishmentId ?? undefined, revenueFilter),
+                    getOwnerAnalytics(establishmentId ?? undefined, topSpendersFilter),
                 ]);
                 if (revRes.success && revRes.data) setRevenueAnalytics(revRes.data);
                 if (spendRes.success && spendRes.data) setTopSpendersAnalytics(spendRes.data);
@@ -121,36 +123,35 @@ export default function HomeScreenAdmin({
             }
         };
         loadInitialData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [establishmentId]);
 
     // Independent update for revenue chart
     useEffect(() => {
         if (isLoading) return;
         const updateRevenue = async () => {
             try {
-                const response = await getOwnerAnalytics(undefined, revenueFilter);
+                const response = await getOwnerAnalytics(establishmentId ?? undefined, revenueFilter);
                 if (response.success && response.data) setRevenueAnalytics(response.data);
             } catch (err: any) {
                 console.error('[HomeScreenAdmin] Revenue filter update error:', err);
             }
         };
         updateRevenue();
-    }, [revenueFilter, isLoading]);
+    }, [revenueFilter, isLoading, establishmentId]);
 
     // Independent update for top spenders list
     useEffect(() => {
         if (isLoading) return;
         const updateTopSpenders = async () => {
             try {
-                const response = await getOwnerAnalytics(undefined, topSpendersFilter);
+                const response = await getOwnerAnalytics(establishmentId ?? undefined, topSpendersFilter);
                 if (response.success && response.data) setTopSpendersAnalytics(response.data);
             } catch (err: any) {
                 console.error('[HomeScreenAdmin] Top spenders filter update error:', err);
             }
         };
         updateTopSpenders();
-    }, [topSpendersFilter, isLoading]);
+    }, [topSpendersFilter, isLoading, establishmentId]);
 
     // Pull-to-refresh
     const handleRefresh = useCallback(async () => {
@@ -158,8 +159,8 @@ export default function HomeScreenAdmin({
         setErrorMessage(null);
         try {
             const [revRes, spendRes] = await Promise.all([
-                getOwnerAnalytics(undefined, revenueFilter),
-                getOwnerAnalytics(undefined, topSpendersFilter),
+                getOwnerAnalytics(establishmentId ?? undefined, revenueFilter),
+                getOwnerAnalytics(establishmentId ?? undefined, topSpendersFilter),
             ]);
             if (revRes.success && revRes.data) setRevenueAnalytics(revRes.data);
             if (spendRes.success && spendRes.data) setTopSpendersAnalytics(spendRes.data);
@@ -173,7 +174,7 @@ export default function HomeScreenAdmin({
         } finally {
             setIsRefreshing(false);
         }
-    }, [revenueFilter, topSpendersFilter]);
+    }, [revenueFilter, topSpendersFilter, establishmentId]);
 
     // ─── CSV Export ───────────────────────────────────────────────────────────
 

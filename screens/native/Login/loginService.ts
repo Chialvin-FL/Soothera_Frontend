@@ -149,12 +149,16 @@ export async function performForgotPassword(
  */
 export async function loadStoredSession(): Promise<StoredUserData | null> {
     try {
-        const [userJson, expiryStr] = await Promise.all([
+        const [userJson, expiryStr, token] = await Promise.all([
             AsyncStorage.getItem(USER_DATA_KEY),
             AsyncStorage.getItem(TOKEN_EXPIRY_KEY),
+            AsyncStorage.getItem('soothera_auth_token'),
         ]);
 
-        if (!userJson) return null;
+        if (!userJson || !token) {
+            console.log('[LoginService] loadStoredSession: missing user data or auth token.');
+            return null;
+        }
 
         // Check token expiry
         if (expiryStr) {

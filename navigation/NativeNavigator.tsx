@@ -42,7 +42,7 @@ import type { Booking } from '../screens/native/Bookings/types/Booking';
 
 export default function NativeNavigator() {
   const session = useSessionLoader();
-  const { isLoggedIn, isLoadingSession, userRole, userName, userEmail, userProfilePic, logout } =
+  const { isLoggedIn, isLoadingSession, userRole, userName, userEmail, userProfilePic, establishmentId, logout } =
     session;
 
   const [activeTab, setActiveTab] = useState<TabId>('home');
@@ -99,6 +99,7 @@ export default function NativeNavigator() {
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateNotifications={home.openHomeNotifications}
                     userProfilePic={userProfilePic}
+                    establishmentId={establishmentId}
                   />
                 ) : userRole === 'therapist' ? (
                   <HomeTherapistScreen

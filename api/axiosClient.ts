@@ -98,6 +98,16 @@ axiosClient.interceptors.request.use(
 );
 
 // ─────────────────────────────────────────────────────────────
+// Reactive callback for unauthorized requests (401)
+// ─────────────────────────────────────────────────────────────
+
+let onUnauthorizedCallback: (() => void) | null = null;
+
+export function registerUnauthorizedCallback(callback: () => void) {
+  onUnauthorizedCallback = callback;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Response interceptor – normalise errors
 // ─────────────────────────────────────────────────────────────
 
@@ -130,11 +140,20 @@ axiosClient.interceptors.response.use(
 
     // ── Handle 401 Unauthorized globally ──
     if (status === 401) {
-      // Token expired or invalid — clear stored credentials
-      await clearStoredToken();
-      // NOTE: navigation to login should be handled by the app's
-      // auth state listener (useSessionLoader) reacting to
-      // the cleared token, not here.
+      // Token expired or invalid — clear all stored credentials and user data
+      try {
+        await Promise.all([
+          AsyncStorage.removeItem(TOKEN_KEY),
+          AsyncStorage.removeItem('soothera_user_data'),
+          AsyncStorage.removeItem('soothera_token_expiry'),
+        ]);
+      } catch (e) {
+        console.error('[axiosClient] Failed to clear stored credentials:', e);
+      }
+      if (onUnauthorizedCallback) {
+        console.log('[axiosClient] Triggering reactive unauthorized callback');
+        onUnauthorizedCallback();
+      }
     }
 
     return Promise.reject(apiError);

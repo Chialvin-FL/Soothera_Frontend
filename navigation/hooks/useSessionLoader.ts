@@ -3,9 +3,13 @@ import {
     loadStoredSession,
     getTokenRemainingMs,
     performLogout,
+    updateStoredUserData,
     type StoredUserData,
 } from '@/screens/native/Login/loginService';
 import { getRoleLabel } from '@/utils/roleHelpers';
+import { viewSalons } from '@/api/endpoints/apiSalonEstablishment';
+import type { SalonEstablishment } from '@/api/types';
+import { registerUnauthorizedCallback } from '@/api/axiosClient';
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -22,6 +26,7 @@ export interface SessionState {
     userEmail: string;
     uid: string;
     userProfilePic: string | null;
+    establishmentId: string | null;
     authScreen: 'login' | 'register' | 'role-selection';
     pendingUserData: { email: string; password: string } | null;
     setAuthScreen: (screen: 'login' | 'register' | 'role-selection') => void;
@@ -42,6 +47,7 @@ export function useSessionLoader(): SessionState {
     const [userEmail, setUserEmail] = useState<string>('');
     const [uid, setUid] = useState<string>('');
     const [userProfilePic, setUserProfilePic] = useState<string | null>(null);
+    const [establishmentId, setEstablishmentId] = useState<string | null>(null);
     const [isLoadingSession, setIsLoadingSession] = useState(true);
     const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'role-selection'>('login');
     const [pendingUserData, setPendingUserData] = useState<{ email: string; password: string } | null>(null);
@@ -63,6 +69,7 @@ export function useSessionLoader(): SessionState {
         setUserEmail('');
         setUid('');
         setUserProfilePic(null);
+        setEstablishmentId(null);
         setAuthScreen('login');
     }, []);
 
@@ -123,14 +130,69 @@ export function useSessionLoader(): SessionState {
         setUid(user.uid);
         setUserProfilePic(user.profilePicture);
         setUserRole(getRoleLabel(user.role) as UIRole);
+        setEstablishmentId(user.establishmentId || null);
     };
+
+    // ── Fail-proof check for Salon Owner's establishment ID ──
+    useEffect(() => {
+        const checkOwnerEstablishment = async () => {
+            if (isLoggedIn && userRole === 'admin' && uid && !establishmentId) {
+                console.log('[SessionLoader] Salon Owner is logged in but establishmentId is missing in state. Checking remote...');
+                try {
+                    const response = await viewSalons(undefined, uid);
+                    if (response.success && response.data) {
+                        const all = Array.isArray(response.data)
+                            ? (response.data as SalonEstablishment[])
+                            : [response.data as SalonEstablishment];
+                        const paginatedData = response.data as any;
+                        const items: SalonEstablishment[] = paginatedData?.items ?? all;
+
+                        const mine = items.find((s) => s.uid === uid) ?? null;
+                        if (mine) {
+                            console.log('[SessionLoader] Found owned establishment remote:', mine.id);
+                            setEstablishmentId(mine.id);
+                            // Persist to storage too so it is remembered next time
+                            await updateStoredUserData({ establishmentId: mine.id });
+                            console.log('[SessionLoader] Persisted establishmentId in storage.');
+                        }
+                    }
+                } catch (error) {
+                    console.error('[SessionLoader] Failed to fetch establishment remote:', error);
+                }
+            }
+        };
+        checkOwnerEstablishment();
+    }, [isLoggedIn, userRole, uid, establishmentId]);
+
+    // ── Listen to 401 Unauthorized globally ──
+    useEffect(() => {
+        registerUnauthorizedCallback(() => {
+            console.log('[SessionLoader] 401 Unauthorized received — forcing global reactive logout.');
+            setIsLoggedIn(false);
+            setUserRole(null);
+            setUserName('');
+            setUserEmail('');
+            setUid('');
+            setUserProfilePic(null);
+            setEstablishmentId(null);
+            setAuthScreen('login');
+        });
+
+        return () => {
+            registerUnauthorizedCallback(() => {});
+        };
+    }, []);
 
     // ── Login handler (called after API login succeeds) ──
     const login = async (role: number, name: string, email: string, profilePic?: string | null) => {
-        setUserRole(getRoleLabel(role) as UIRole);
-        setUserName(name);
-        setUserEmail(email);
-        // UID will be re-synced on next load since it's already in storage
+        const storedUser = await loadStoredSession();
+        if (storedUser) {
+            applyUserData(storedUser);
+        } else {
+            setUserRole(getRoleLabel(role) as UIRole);
+            setUserName(name);
+            setUserEmail(email);
+        }
         setIsLoggedIn(true);
         await scheduleAutoLogout();
     };
@@ -154,6 +216,7 @@ export function useSessionLoader(): SessionState {
         userEmail,
         uid,
         userProfilePic,
+        establishmentId,
         authScreen,
         pendingUserData,
         setAuthScreen,
