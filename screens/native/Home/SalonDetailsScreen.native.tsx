@@ -8,6 +8,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { TransparentHeader } from '@/components/native/TransparentHeader';
 import { SalonDetails } from './types/SalonDetails';
 import { getSalonServices } from '@/api/endpoints/apiService';
+import { getStaffAvailability } from '@/api/endpoints/apiStaff';
+import { getUsers } from '@/api/endpoints/apiUser';
 import type { SalonServiceResponse } from '@/api/types';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
@@ -229,6 +231,9 @@ export default function MassageSpaDetailsScreen({
   const [services, setServices] = useState<SalonServiceResponse[]>([]);
   const [servicesLoading, setServicesLoading] = useState(false);
   const [servicesError, setServicesError] = useState<string | null>(null);
+  const [therapists, setTherapists] = useState<{staffId: string; staffName: string; profilePic?: string | null}[]>([]);
+  const [therapistsLoading, setTherapistsLoading] = useState(false);
+  const [therapistsError, setTherapistsError] = useState<string | null>(null);
   const tabScrollViewRef = useRef<ScrollView>(null);
   const contentScrollViewRef = useRef<ScrollView>(null);
   const mainScrollViewRef = useRef<ScrollView>(null);
@@ -275,7 +280,62 @@ export default function MassageSpaDetailsScreen({
       }
     };
 
+    const loadTherapists = async () => {
+      setTherapistsLoading(true);
+      setTherapistsError(null);
+      try {
+        const response = await getStaffAvailability({
+          establishmentId: salonDetails.id,
+          pageSize: 200,
+        });
+
+        if (!mounted) return;
+
+        if (response.success && response.data) {
+          const seen = new Set<string>();
+          const unique: {staffId: string; staffName: string; profilePic?: string | null}[] = [];
+          for (const item of response.data.items) {
+            if (!seen.has(item.staffId)) {
+              seen.add(item.staffId);
+              unique.push({ staffId: item.staffId, staffName: item.staffName });
+            }
+          }
+          
+          const withPics = await Promise.all(
+            unique.map(async (therapist) => {
+              try {
+                const userResp = await getUsers({ uid: therapist.staffId });
+                if (userResp.success && userResp.data?.items?.length) {
+                  return {
+                    ...therapist,
+                    profilePic: userResp.data.items[0].profilePicture,
+                  };
+                }
+              } catch (e) {
+                console.error(`[SalonDetails] Failed to fetch user profile for ${therapist.staffId}`, e);
+              }
+              return therapist;
+            })
+          );
+          
+          if (mounted) {
+            setTherapists(withPics);
+          }
+        } else {
+          setTherapists([]);
+          setTherapistsError(response.message ?? 'Failed to load therapists.');
+        }
+      } catch (error: any) {
+        if (!mounted) return;
+        setTherapists([]);
+        setTherapistsError(error?.message ?? 'Failed to load therapists.');
+      } finally {
+        if (mounted) setTherapistsLoading(false);
+      }
+    };
+
     loadServices();
+    loadTherapists();
 
     return () => {
       mounted = false;
@@ -497,44 +557,77 @@ export default function MassageSpaDetailsScreen({
           </View>
         );
 
-
       case 'therapists':
         return (
           <View className="px-5 py-4">
             <Text className="text-lg font-semibold mb-3" style={{ color: colors.text }}>
-              Therapists ({salonDetails.therapists.length})
+              Therapists ({therapists.length})
             </Text>
-            <View className="flex-row flex-wrap" style={{ gap: 12 }}>
-              {salonDetails.therapists.map((therapist) => (
-                <View key={therapist.id} className="w-[48%]">
-                  <View className="relative mb-2">
-                    <Image
-                      source={therapist.image}
-                      className="w-full h-40 rounded-xl"
-                      resizeMode="cover"
-                    />
-                    <View
-                      className="absolute bottom-2 right-2 flex-row items-center px-2 py-1 rounded-full"
-                      style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
-                    >
-                      <Ionicons name="star" size={12} color="#FFD700" />
-                      <Text className="text-white text-xs font-semibold ml-1">
-                        {therapist.rating}
-                      </Text>
+
+            {therapistsLoading ? (
+              <View className="items-center justify-center py-12">
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text className="text-sm mt-3" style={{ color: colors.icon }}>
+                  Loading therapists...
+                </Text>
+              </View>
+            ) : therapistsError ? (
+              <View className="items-center justify-center py-12">
+                <Ionicons name="alert-circle-outline" size={44} color={colors.icon} />
+                <Text className="text-sm text-center mt-3" style={{ color: colors.icon }}>
+                  {therapistsError}
+                </Text>
+              </View>
+            ) : therapists.length === 0 ? (
+              <View className="items-center justify-center py-12">
+                <Ionicons name="people-outline" size={48} color={colors.icon} />
+                <Text className="text-base font-semibold mt-3 mb-1" style={{ color: colors.text }}>
+                  N/A
+                </Text>
+                <Text className="text-sm text-center" style={{ color: colors.icon }}>
+                  No therapists are available for this salon yet.
+                </Text>
+              </View>
+            ) : (
+              <View className="flex-row flex-wrap" style={{ gap: 12 }}>
+                {therapists.map((therapist) => (
+                  <View key={therapist.staffId} className="w-[48%]">
+                    <View className="relative mb-2">
+                      {therapist.profilePic ? (
+                        <Image
+                          source={{ uri: therapist.profilePic }}
+                          className="w-full h-40 rounded-xl"
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View
+                          className="w-full h-40 rounded-xl items-center justify-center bg-gray-200"
+                        >
+                          <Ionicons name="person" size={48} color="#9CA3AF" />
+                        </View>
+                      )}
+                      <View
+                        className="absolute bottom-2 right-2 flex-row items-center px-2 py-1 rounded-full"
+                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+                      >
+                        <Ionicons name="star" size={12} color="#FFD700" />
+                        <Text className="text-white text-xs font-semibold ml-1">
+                          N/A
+                        </Text>
+                      </View>
                     </View>
+                    <Text className="text-base font-semibold mb-1" style={{ color: colors.text }}>
+                      {therapist.staffName}
+                    </Text>
+                    <Text className="text-sm" style={{ color: colors.icon }}>
+                      Therapist
+                    </Text>
                   </View>
-                  <Text className="text-base font-semibold mb-1" style={{ color: colors.text }}>
-                    {therapist.name}
-                  </Text>
-                  <Text className="text-sm" style={{ color: colors.icon }}>
-                    {therapist.title}
-                  </Text>
-                </View>
-              ))}
-            </View>
+                ))}
+              </View>
+            )}
           </View>
         );
-
       case 'location':
         return (
           <View className="px-5 py-4">

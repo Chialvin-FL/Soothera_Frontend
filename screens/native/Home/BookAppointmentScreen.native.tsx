@@ -631,7 +631,7 @@ export default function BookAppointmentScreen({
         duration: selectedDurationLabel,
         addOns: selectedAddOnsData,
         therapist: selectedTherapistObj
-          ? { id: selectedTherapistObj.staffId, name: selectedTherapistObj.staffName, title: 'Therapist', image: { uri: '' }, rating: 0 }
+          ? { id: selectedTherapistObj.staffId, name: selectedTherapistObj.staffName, title: 'Therapist', image: selectedTherapistObj.profilePic ? { uri: selectedTherapistObj.profilePic } : { uri: '' }, rating: 0 }
           : null,
         date: selectedDate,
         time: selectedTime,
@@ -1115,21 +1115,29 @@ export default function BookAppointmentScreen({
                       borderColor: primaryColor,
                     }}
                   >
-                    {/* Initials Avatar */}
-                    <View
-                      className="w-full h-28 items-center justify-center"
-                      style={{ backgroundColor: primaryColor + (isSelected ? 'ff' : '22') }}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 36,
-                          fontWeight: 'bold',
-                          color: isSelected ? 'white' : primaryColor,
-                        }}
+                    {/* Image or Initials Avatar */}
+                    {therapist.profilePic ? (
+                      <Image
+                        source={{ uri: therapist.profilePic }}
+                        className="w-full h-28"
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View
+                        className="w-full h-28 items-center justify-center"
+                        style={{ backgroundColor: primaryColor + (isSelected ? 'ff' : '22') }}
                       >
-                        {initials}
-                      </Text>
-                    </View>
+                        <Text
+                          style={{
+                            fontSize: 36,
+                            fontWeight: 'bold',
+                            color: isSelected ? 'white' : primaryColor,
+                          }}
+                        >
+                          {initials}
+                        </Text>
+                      </View>
+                    )}
                     <View className="p-3">
                       <Text className="text-base font-semibold" style={{ color: colors.text }} numberOfLines={1}>
                         {therapist.staffName}
@@ -1444,11 +1452,19 @@ export default function BookAppointmentScreen({
                 backgroundColor: isDark ? '#1f1f1f' : '#fff',
               }}
             >
-              <View className="w-16 h-full items-center justify-center" style={{ backgroundColor: primaryColor + '22' }}>
-                <Text style={{ fontSize: 22, fontWeight: 'bold', color: primaryColor }}>
-                  {selectedTherapistObj.staffName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
-                </Text>
-              </View>
+              {selectedTherapistObj.profilePic ? (
+                <Image
+                  source={{ uri: selectedTherapistObj.profilePic }}
+                  className="w-16 h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View className="w-16 h-full items-center justify-center" style={{ backgroundColor: primaryColor + '22' }}>
+                  <Text style={{ fontSize: 22, fontWeight: 'bold', color: primaryColor }}>
+                    {selectedTherapistObj.staffName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+                  </Text>
+                </View>
+              )}
               <View className="flex-1 p-3" style={{ minWidth: 0 }}>
                 <Text className="text-base font-bold mb-1" style={{ color: colors.text }} numberOfLines={1}>
                   {selectedTherapistObj.staffName}

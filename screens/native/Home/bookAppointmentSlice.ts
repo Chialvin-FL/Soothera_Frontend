@@ -23,6 +23,7 @@ import {
 } from '@/api/endpoints/apiBooking';
 import { getSalonServices } from '@/api/endpoints/apiService';
 import { getStaffAvailability } from '@/api/endpoints/apiStaff';
+import { getUsers } from '@/api/endpoints/apiUser';
 import type {
   BookingResponse,
   CreateBookingResponse,
@@ -38,6 +39,7 @@ import { buildCreateBookingRequest } from './bookAppointmentService';
 export interface StaffMember {
   staffId: string;
   staffName: string;
+  profilePic?: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -299,7 +301,25 @@ export function useBookAppointmentSlice() {
               unique.push({ staffId: item.staffId, staffName: item.staffName });
             }
           }
-          setTherapists(unique);
+          
+          const withPics = await Promise.all(
+            unique.map(async (therapist) => {
+              try {
+                const userResp = await getUsers({ uid: therapist.staffId });
+                if (userResp.success && userResp.data?.items?.length) {
+                  return {
+                    ...therapist,
+                    profilePic: userResp.data.items[0].profilePicture,
+                  };
+                }
+              } catch (e) {
+                console.error(`[bookAppointmentSlice] Failed to fetch user profile for ${therapist.staffId}`, e);
+              }
+              return therapist;
+            })
+          );
+
+          setTherapists(withPics);
           return true;
         } else {
           setTherapistsError(response.message);
