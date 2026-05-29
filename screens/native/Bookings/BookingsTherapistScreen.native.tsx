@@ -16,6 +16,7 @@ import { Booking, BOOKING_STATUS } from './types/Booking';
 import { mapApiBookingToCard } from './utils/apiBookingMappers';
 import TherapistBookingCard from './components/TherapistBookingCard';
 import TabNavigation, { TabType } from './components/TabNavigation';
+import { PopUpNotification, type PopUpNotificationRef } from '@/components/native/PopUpNotification';
 
 const BOOKINGS_REFRESH_INTERVAL_MS = 3000;
 
@@ -47,6 +48,53 @@ export default function BookingsTherapistScreen({
     const [bookingsError, setBookingsError] = useState<string | null>(null);
     const [updatingBookingId, setUpdatingBookingId] = useState<string | null>(null);
     const isFetchingBookingsRef = useRef(false);
+    const notificationRef = useRef<PopUpNotificationRef>(null);
+    const prevBookingsStatusesRef = useRef<Record<string, number>>({});
+
+    useEffect(() => {
+        if (Object.keys(prevBookingsStatusesRef.current).length === 0) {
+            if (bookings.length > 0) {
+                const initial: Record<string, number> = {};
+                bookings.forEach((b) => {
+                    initial[b.id] = b.status;
+                });
+                prevBookingsStatusesRef.current = initial;
+            }
+            return;
+        }
+
+        bookings.forEach((b) => {
+            const prevStatus = prevBookingsStatusesRef.current[b.id];
+            if (prevStatus !== undefined && prevStatus !== b.status) {
+                if (b.status === BOOKING_STATUS.CONFIRMED) {
+                    notificationRef.current?.show({
+                        title: 'New Booking Assigned!',
+                        message: `You have a new confirmed booking with ${b.customerName || 'Customer'} on ${b.date} at ${b.time}.`,
+                        type: 'confirmed',
+                    });
+                } else if (b.status === BOOKING_STATUS.ONGOING) {
+                    notificationRef.current?.show({
+                        title: 'Session Started!',
+                        message: `Notification sent to Customer & Admin. Enjoy your session with ${b.customerName || 'Customer'}!`,
+                        type: 'ongoing',
+                    });
+                } else if (b.status === BOOKING_STATUS.COMPLETED) {
+                    notificationRef.current?.show({
+                        title: 'Session Completed!',
+                        message: `Notification sent to Customer & Admin. Booking with ${b.customerName || 'Customer'} completed.`,
+                        type: 'completed',
+                    });
+                } else if (b.status === BOOKING_STATUS.CANCELLED) {
+                    notificationRef.current?.show({
+                        title: 'Session Cancelled!',
+                        message: `Notification sent to Customer & Admin. Booking with ${b.customerName || 'Customer'} cancelled.`,
+                        type: 'cancelled',
+                    });
+                }
+            }
+            prevBookingsStatusesRef.current[b.id] = b.status;
+        });
+    }, [bookings]);
 
     const screenWidth = Dimensions.get('window').width;
     const pageScrollViewRef = useRef<ScrollView>(null);
@@ -468,6 +516,7 @@ export default function BookingsTherapistScreen({
                     );
                 })}
             </ScrollView>
+            <PopUpNotification ref={notificationRef} />
         </View>
     );
 }

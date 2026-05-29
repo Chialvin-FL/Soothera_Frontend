@@ -39,6 +39,7 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
+import { PopUpNotification, type PopUpNotificationRef } from '@/components/native/PopUpNotification';
 
 type AdminBookingApiStatus = 'Confirmed' | 'Cancelled';
 
@@ -88,6 +89,64 @@ export default function BookingsAdminScreen({
   const [bookingsError, setBookingsError] = useState<string | null>(null);
   const [updatingBookingId, setUpdatingBookingId] = useState<string | null>(null);
   const isFetchingBookingsRef = useRef(false);
+  const notificationRef = useRef<PopUpNotificationRef>(null);
+  const prevBookingsStatusesRef = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    if (Object.keys(prevBookingsStatusesRef.current).length === 0) {
+      if (bookings.length > 0) {
+        const initial: Record<string, number> = {};
+        bookings.forEach((b) => {
+          initial[b.id] = b.status;
+        });
+        prevBookingsStatusesRef.current = initial;
+      }
+      return;
+    }
+
+    bookings.forEach((b) => {
+      const prevStatus = prevBookingsStatusesRef.current[b.id];
+      
+      // Case 1: Brand new booking with status PENDING (0)
+      if (prevStatus === undefined && b.status === BOOKING_STATUS.PENDING) {
+        notificationRef.current?.show({
+          title: 'New Pending Booking',
+          message: `New booking request from ${b.customerName || 'Customer'} for ${b.serviceName}`,
+          type: 'pending',
+        });
+      }
+      
+      // Case 2: Status changed
+      if (prevStatus !== undefined && prevStatus !== b.status) {
+        if (b.status === BOOKING_STATUS.PENDING) {
+          notificationRef.current?.show({
+            title: 'Booking Pending',
+            message: `Booking with ${b.customerName || 'Customer'} is now pending.`,
+            type: 'pending',
+          });
+        } else if (b.status === BOOKING_STATUS.ONGOING) {
+          notificationRef.current?.show({
+            title: 'Booking Ongoing',
+            message: `Booking with ${b.customerName || 'Customer'} is now ongoing.`,
+            type: 'ongoing',
+          });
+        } else if (b.status === BOOKING_STATUS.COMPLETED) {
+          notificationRef.current?.show({
+            title: 'Booking Completed',
+            message: `Booking with ${b.customerName || 'Customer'} has been completed.`,
+            type: 'completed',
+          });
+        } else if (b.status === BOOKING_STATUS.CANCELLED) {
+          notificationRef.current?.show({
+            title: 'Booking Cancelled',
+            message: `Booking with ${b.customerName || 'Customer'} has been cancelled.`,
+            type: 'cancelled',
+          });
+        }
+      }
+      prevBookingsStatusesRef.current[b.id] = b.status;
+    });
+  }, [bookings]);
   const latestBookingStatusUpdateSequence = latestBookingStatusUpdate?.sequence;
   const latestBookingStatusUpdateId = latestBookingStatusUpdate?.bookingId;
   const latestBookingStatusUpdateStatus = latestBookingStatusUpdate?.status;
@@ -575,6 +634,7 @@ export default function BookingsAdminScreen({
           )}
         </Animated.View>
       )}
+      <PopUpNotification ref={notificationRef} />
     </View>
   );
 }

@@ -43,6 +43,7 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
+import { PopUpNotification, type PopUpNotificationRef } from '@/components/native/PopUpNotification';
 
 interface AddOn {
   id: string;
@@ -123,6 +124,53 @@ export default function BookingsScreen({
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
   const [bookingsError, setBookingsError] = useState<string | null>(null);
   const isFetchingBookingsRef = useRef(false);
+  const notificationRef = useRef<PopUpNotificationRef>(null);
+  const prevBookingsStatusesRef = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    if (Object.keys(prevBookingsStatusesRef.current).length === 0) {
+      if (bookings.length > 0) {
+        const initial: Record<string, number> = {};
+        bookings.forEach((b) => {
+          initial[b.id] = b.status;
+        });
+        prevBookingsStatusesRef.current = initial;
+      }
+      return;
+    }
+
+    bookings.forEach((b) => {
+      const prevStatus = prevBookingsStatusesRef.current[b.id];
+      if (prevStatus !== undefined && prevStatus !== b.status) {
+        if (b.status === BOOKING_STATUS.CONFIRMED) {
+          notificationRef.current?.show({
+            title: 'Booking Confirmed!',
+            message: `Your booking with ${b.spaName} has been confirmed.`,
+            type: 'confirmed',
+          });
+        } else if (b.status === BOOKING_STATUS.ONGOING) {
+          notificationRef.current?.show({
+            title: 'Session Started',
+            message: `Your session at ${b.spaName} has started.`,
+            type: 'ongoing',
+          });
+        } else if (b.status === BOOKING_STATUS.COMPLETED) {
+          notificationRef.current?.show({
+            title: 'Booking Completed',
+            message: `Your session at ${b.spaName} is completed. Please rate your experience!`,
+            type: 'completed',
+          });
+        } else if (b.status === BOOKING_STATUS.CANCELLED) {
+          notificationRef.current?.show({
+            title: 'Booking Cancelled',
+            message: `Your booking with ${b.spaName} has been cancelled.`,
+            type: 'cancelled',
+          });
+        }
+      }
+      prevBookingsStatusesRef.current[b.id] = b.status;
+    });
+  }, [bookings]);
 
   const screenWidth = Dimensions.get('window').width;
 
@@ -958,6 +1006,7 @@ export default function BookingsScreen({
           })()}
         </Animated.View>
       )}
+      <PopUpNotification ref={notificationRef} />
     </View>
   );
 }
