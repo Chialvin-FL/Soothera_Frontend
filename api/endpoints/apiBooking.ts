@@ -9,6 +9,7 @@ import type {
   GetAvailableSlotsParams,
   BookingResponse,
   AvailableSlotsData,
+  TherapistAnalyticsData,
 } from '../types';
 
 // ─────────────────────────────────────────────────────────────
@@ -208,5 +209,26 @@ export async function getAvailableSlots(
     success: data.success,
     dateKeys: data.data ? Object.keys(data.data) : [],
   }));
+  return data;
+}
+
+/**
+ * GET /api/Booking/therapist-analytics
+ * Retrieves performance analytics for the authenticated therapist.
+ *
+ * Filter: 'weekly' or 'monthly'
+ */
+export async function getTherapistAnalytics(
+  filter: string = 'monthly',
+): Promise<ApiResponse<TherapistAnalyticsData>> {
+  console.log('[apiBooking] getTherapistAnalytics: filter =', filter);
+  console.log('[apiBooking] getTherapistAnalytics: sending GET to', `${BASE}/therapist-analytics`);
+
+  const { data } = await axiosClient.get<ApiResponse<TherapistAnalyticsData>>(
+    `${BASE}/therapist-analytics`,
+    { params: { filter } },
+  );
+
+  console.log('[apiBooking] getTherapistAnalytics: response success =', data.success);
   return data;
 }

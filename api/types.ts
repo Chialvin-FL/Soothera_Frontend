@@ -805,3 +805,64 @@ export interface SendMessageResponseDTO {
     statusCode: number;
     message: string;
 }
+
+// ─── Rating ──────────────────────────────────────────────────
+
+export interface CreateRatingRequest {
+    bookingId: string;
+    targetId: string;
+    /** "Salon", "Therapist", "Customer" */
+    targetRole: string;
+    /** "Customer", "Therapist", "Salon" */
+    reviewerRole: string;
+    /** 1 to 5 */
+    score: number;
+    comment: string;
+}
+
+export interface RatingResponse {
+    ratingId: string;
+    bookingId: string;
+    reviewerId: string;
+    targetId: string;
+    reviewerRole: string;
+    targetRole: string;
+    score: number;
+    comment: string;
+    /** Unix epoch ms */
+    createdAt: number;
+}
+
+export interface TargetRatingsResponse {
+    success: boolean;
+    statusCode: number;
+    message: string;
+    averageScore: number;
+    totalRatings: number;
+    ratings: RatingResponse[];
+}
+
+export interface SessionChartItem {
+    label: string;
+    sessions: number;
+}
+
+export interface RecentReview {
+    customerId: string;
+    customerName: string;
+    customerProfilePicture: string | null;
+    rating: number;
+    date: string;
+    serviceName: string;
+}
+
+export interface TherapistAnalyticsData {
+    therapistName: string;
+    therapistProfilePicture: string | null;
+    totalSessions: number;
+    completionRate: number;
+    averageRating: number;
+    totalEarnings: number;
+    sessionChart: SessionChartItem[];
+    recentReviews: RecentReview[];
+}
