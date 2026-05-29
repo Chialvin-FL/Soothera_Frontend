@@ -17,21 +17,30 @@ interface InboxTabNavigationProps {
   userRole?: UIRole | null;
 }
 
-const TABS: InboxTabType[] = ['all', 'salon', 'chatbot'];
-
-const TAB_LABELS: Record<InboxTabType, string> = {
-  all: 'All',
-  salon: 'Massage Spa',
-  chatbot: 'Chatbot',
-};
 
 export default function InboxTabNavigation({
   activeTab,
   onTabPress,
+  userRole,
 }: InboxTabNavigationProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Determine tabs list based on userRole
+  const tabs: InboxTabType[] = userRole === 'admin' ? ['all', 'chatbot'] : ['all', 'salon', 'chatbot'];
+
+  // Determine tab labels based on userRole
+  const getTabLabel = (tab: InboxTabType): string => {
+    if (tab === 'all') return 'All';
+    if (tab === 'chatbot') return 'Chatbot';
+    if (tab === 'salon') {
+      if (userRole === 'therapist') return 'Customer';
+      if (userRole === 'customer') return 'Therapist';
+      return 'Massage Spa';
+    }
+    return '';
+  };
 
   // Auto-scroll when tab changes
   useEffect(() => {
@@ -50,10 +59,10 @@ export default function InboxTabNavigation({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 4 }}
       >
-        {TABS.map((tab, index) => (
+        {tabs.map((tab, index) => (
           <TouchableOpacity
             key={tab}
-            className={`px-4 py-3 rounded-full ${index < TABS.length - 1 ? 'mr-2' : ''}`}
+            className={`px-4 py-3 rounded-full ${index < tabs.length - 1 ? 'mr-2' : ''}`}
             style={{ backgroundColor: activeTab === tab ? colors.primary : 'transparent' }}
             onPress={() => onTabPress(tab)}
           >
@@ -61,7 +70,7 @@ export default function InboxTabNavigation({
               className={`text-center font-semibold ${activeTab === tab ? '' : 'opacity-60'}`}
               style={{ color: activeTab === tab ? 'white' : colors.icon }}
             >
-              {TAB_LABELS[tab]}
+              {getTabLabel(tab)}
             </Text>
           </TouchableOpacity>
         ))}
