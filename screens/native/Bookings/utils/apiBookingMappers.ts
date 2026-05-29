@@ -99,15 +99,20 @@ export const formatApiTime = (
 };
 
 export const mapApiBookingToCard = (apiBooking: BookingResponse): Booking => {
-  const price = apiBooking.totalPrice ?? apiBooking.selectedPrice ?? null;
+  const rawBooking = apiBooking as any;
+  const price = apiBooking.totalPrice ?? rawBooking.TotalPrice ?? apiBooking.selectedPrice ?? rawBooking.SelectedPrice ?? null;
 
   return {
-    id: nullableText(apiBooking.bookingId),
-    serviceName: nullableText(apiBooking.salonServiceName),
-    spaName: nullableText(apiBooking.establishmentName),
-    status: mapApiStatus(apiBooking.status),
-    date: formatApiDate(apiBooking.bookingDate),
-    time: formatApiTime(apiBooking.startTime, apiBooking.endTime, apiBooking.selectedDurationMinutes),
+    id: nullableText(apiBooking.bookingId ?? rawBooking.BookingId),
+    serviceName: nullableText(apiBooking.salonServiceName ?? rawBooking.SalonServiceName),
+    spaName: nullableText(apiBooking.establishmentName ?? rawBooking.EstablishmentName),
+    status: mapApiStatus(apiBooking.status ?? rawBooking.Status),
+    date: formatApiDate(apiBooking.bookingDate ?? rawBooking.BookingDate),
+    time: formatApiTime(
+      apiBooking.startTime ?? rawBooking.StartTime,
+      apiBooking.endTime ?? rawBooking.EndTime,
+      apiBooking.selectedDurationMinutes ?? rawBooking.SelectedDurationMinutes
+    ),
     price: price ?? 0,
     priceDisplay: price == null ? 'N/A' : undefined,
   };
@@ -117,10 +122,13 @@ const getServiceSelectedPrice = (
   apiBooking: BookingResponse,
   salonService?: SalonServiceResponse | null,
 ): number | null => {
-  if (apiBooking.selectedPrice != null) return apiBooking.selectedPrice;
+  const rawBooking = apiBooking as any;
+  const selPrice = apiBooking.selectedPrice ?? rawBooking.SelectedPrice;
+  if (selPrice != null) return selPrice;
   if (!salonService) return null;
+  const durationMinutes = apiBooking.selectedDurationMinutes ?? rawBooking.SelectedDurationMinutes;
   const durationIndex = salonService.durationMinutes.findIndex(
-    (duration) => duration === apiBooking.selectedDurationMinutes,
+    (duration) => duration === durationMinutes,
   );
   return durationIndex >= 0 ? salonService.price[durationIndex] ?? null : salonService.price[0] ?? null;
 };
@@ -129,13 +137,14 @@ export const mapApiBookingToDetails = (
   apiBooking: BookingResponse,
   salonService?: SalonServiceResponse | null,
 ): BookingDetails => {
+  const rawBooking = apiBooking as any;
   const cardBooking = mapApiBookingToCard(apiBooking);
-  const paymentStatus = apiBooking.paymentStatus ?? '';
+  const paymentStatus = apiBooking.paymentStatus ?? rawBooking.PaymentStatus ?? '';
   const isFullPayment = paymentStatus.toLowerCase().includes('full');
   const selectedPrice = getServiceSelectedPrice(apiBooking, salonService);
-  const selectedAddOns = apiBooking.selectedAddOns ?? [];
-  const selectedAddOnPrices = apiBooking.selectedAddOnPrices ?? [];
-  const totalPrice = apiBooking.totalPrice
+  const selectedAddOns = apiBooking.selectedAddOns ?? rawBooking.SelectedAddOns ?? [];
+  const selectedAddOnPrices = apiBooking.selectedAddOnPrices ?? rawBooking.SelectedAddOnPrices ?? [];
+  const totalPrice = apiBooking.totalPrice ?? rawBooking.TotalPrice
     ?? (selectedPrice == null
       ? null
       : selectedPrice + selectedAddOnPrices.reduce((sum, price) => sum + price, 0));
@@ -147,24 +156,27 @@ export const mapApiBookingToDetails = (
 
   return {
     ...cardBooking,
-    serviceName: nullableText(salonService?.serviceName ?? apiBooking.salonServiceName),
+    serviceName: nullableText(salonService?.serviceName ?? apiBooking.salonServiceName ?? rawBooking.SalonServiceName),
     price: selectedPrice ?? cardBooking.price,
     spaImage: fallbackSalonImage,
     spaRating: 0,
     spaDetails: 'N/A',
-    address: nullableText(apiBooking.readableAddress ?? apiBooking.establishmentAddress),
-    latitude: apiBooking.latitude ?? Number.NaN,
-    longitude: apiBooking.longitude ?? Number.NaN,
-    therapistName: nullableText(apiBooking.staffName),
+    address: nullableText(apiBooking.readableAddress ?? apiBooking.establishmentAddress ?? rawBooking.ReadableAddress ?? rawBooking.EstablishmentAddress),
+    latitude: apiBooking.latitude ?? rawBooking.Latitude ?? Number.NaN,
+    longitude: apiBooking.longitude ?? rawBooking.Longitude ?? Number.NaN,
+    therapistName: nullableText(apiBooking.staffName ?? rawBooking.StaffName),
     therapistTitle: 'Certified Massage Therapist',
-    bookingId: nullableText(apiBooking.bookingId),
+    bookingId: nullableText(apiBooking.bookingId ?? rawBooking.BookingId),
+    establishmentId: apiBooking.establishmentId ?? rawBooking.EstablishmentId ?? salonService?.uid,
+    staffId: apiBooking.staffId ?? rawBooking.StaffId,
+    customerId: apiBooking.customerId ?? rawBooking.CustomerId,
     paidAmount: paidAmount ?? 0,
     paidAmountDisplay: paidAmount == null ? 'N/A' : undefined,
     paymentStatus,
-    salonServiceId: apiBooking.salonServiceId,
+    salonServiceId: apiBooking.salonServiceId ?? rawBooking.SalonServiceId,
     selectedPrice: selectedPrice ?? undefined,
     selectedAddOns,
     selectedAddOnPrices,
-    createdDate: apiBooking.createdDate,
+    createdDate: apiBooking.createdDate ?? rawBooking.CreatedDate,
   };
 };

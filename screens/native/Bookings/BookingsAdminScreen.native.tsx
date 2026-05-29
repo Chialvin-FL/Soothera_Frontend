@@ -30,6 +30,7 @@ import {
 import AdminBookingCard from './components/AdminBookingCard';
 import TabNavigation from './components/TabNavigation';
 import BookingDetailsAdminScreen from './BookingDetailsAdminScreen.native';
+import RatingCustomerScreen from './RatingCustomerScreen.native';
 import { mapApiBookingToCard, mapApiBookingToDetails } from './utils/apiBookingMappers';
 import { BOOKING_STATUS } from './types/Booking';
 
@@ -58,6 +59,7 @@ interface BookingsAdminScreenProps {
   onNavigateBookingDetails?: (bookingId: string) => void;
   onNavigateNotifications?: () => void;
   onNavigateWalkInBooking?: () => void;
+  onRateCustomer?: (bookingId: string) => void;
   userProfilePic?: string | null;
   latestBookingStatusUpdate?: {
     bookingId: string;
@@ -74,6 +76,7 @@ export default function BookingsAdminScreen({
   onNavigateBookingDetails,
   onNavigateNotifications,
   onNavigateWalkInBooking,
+  onRateCustomer,
   userProfilePic,
   latestBookingStatusUpdate,
 }: BookingsAdminScreenProps = {}) {
@@ -84,6 +87,7 @@ export default function BookingsAdminScreen({
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed' | 'cancelled' | 'all'>('all');
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [ratingCustomerBookingId, setRatingCustomerBookingId] = useState<string | null>(null);
   const [apiBookingsById, setApiBookingsById] = useState<Record<string, BookingResponse>>({});
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
   const [bookingsError, setBookingsError] = useState<string | null>(null);
@@ -630,9 +634,32 @@ export default function BookingsAdminScreen({
               onAccept={() => handleBookingStatusUpdate(selectedBookingId, 'Confirmed')}
               onDecline={() => handleBookingStatusUpdate(selectedBookingId, 'Cancelled')}
               onRefund={() => console.log('Refund via details')}
+              onRateCustomer={() => {
+                if (useNavigatorOverlays) {
+                  onRateCustomer?.(selectedBookingId);
+                } else {
+                  setRatingCustomerBookingId(selectedBookingId);
+                }
+              }}
             />
           )}
         </Animated.View>
+      )}
+      {ratingCustomerBookingId && apiBookingsById[ratingCustomerBookingId] && (
+        <View
+          className="absolute bottom-0 left-0 right-0 top-0 bg-white"
+          style={{
+            zIndex: 6,
+          }}>
+          <RatingCustomerScreen
+            bookingDetails={{
+              ...mapApiBookingToDetails(apiBookingsById[ratingCustomerBookingId]),
+              customerName: bookings.find((booking) => booking.id === ratingCustomerBookingId)?.customerName,
+              customerImage: bookings.find((booking) => booking.id === ratingCustomerBookingId)?.customerImage,
+            }}
+            onBack={() => setRatingCustomerBookingId(null)}
+          />
+        </View>
       )}
       <PopUpNotification ref={notificationRef} />
     </View>

@@ -20,7 +20,10 @@ export const bookingDetailsMap: Record<string, BookingDetails> = {
     longitude: 123.8850,
     therapistName: 'Maria Santos',
     therapistTitle: 'Certified Massage Therapist',
-    bookingId: 'BK-2024-001',
+    bookingId: '00000000-0000-0000-0000-000000000001',
+    establishmentId: 'e1111111-1111-1111-1111-111111111111',
+    staffId: 's1111111-1111-1111-1111-111111111111',
+    customerId: 'c1111111-1111-1111-1111-111111111111',
     paidAmount: 75.00, // 50% of 150.00
   },
   '2': {
@@ -39,7 +42,10 @@ export const bookingDetailsMap: Record<string, BookingDetails> = {
     longitude: 123.9333,
     therapistName: 'John Dela Cruz',
     therapistTitle: 'Certified Massage Therapist',
-    bookingId: 'BK-2024-002',
+    bookingId: '00000000-0000-0000-0000-000000000002',
+    establishmentId: 'e2222222-2222-2222-2222-222222222222',
+    staffId: 's2222222-2222-2222-2222-222222222222',
+    customerId: 'c2222222-2222-2222-2222-222222222222',
     paidAmount: 90.00, // 50% of 180.00
   },
   '3': {
@@ -58,7 +64,10 @@ export const bookingDetailsMap: Record<string, BookingDetails> = {
     longitude: 123.9100,
     therapistName: 'Anna Garcia',
     therapistTitle: 'Certified Massage Therapist',
-    bookingId: 'BK-2024-003',
+    bookingId: '00000000-0000-0000-0000-000000000003',
+    establishmentId: 'e3333333-3333-3333-3333-333333333333',
+    staffId: 's3333333-3333-3333-3333-333333333333',
+    customerId: 'c3333333-3333-3333-3333-333333333333',
     paidAmount: 60.00, // 50% of 120.00
   },
   '4': {
@@ -77,7 +86,10 @@ export const bookingDetailsMap: Record<string, BookingDetails> = {
     longitude: 123.9167,
     therapistName: 'Robert Tan',
     therapistTitle: 'Certified Massage Therapist',
-    bookingId: 'BK-2024-004',
+    bookingId: '00000000-0000-0000-0000-000000000004',
+    establishmentId: 'e4444444-4444-4444-4444-444444444444',
+    staffId: 's4444444-4444-4444-4444-444444444444',
+    customerId: 'c4444444-4444-4444-4444-444444444444',
     paidAmount: 47.50, // 50% of 95.00
   },
 };

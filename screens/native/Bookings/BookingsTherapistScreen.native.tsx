@@ -26,6 +26,7 @@ interface BookingsTherapistScreenProps {
     onNavigateBookingDetails?: (bookingId: string) => void;
     isActive?: boolean;
     userProfilePic?: string | null;
+    onRateCustomer?: (bookingId: string) => void;
 }
 
 export default function BookingsTherapistScreen({
@@ -33,7 +34,8 @@ export default function BookingsTherapistScreen({
     onNavigateNotifications,
     onNavigateBookingDetails,
     isActive = true,
-    userProfilePic
+    userProfilePic,
+    onRateCustomer,
 }: BookingsTherapistScreenProps) {
     const insets = useSafeAreaInsets();
     const colorScheme = useColorScheme();
@@ -501,6 +503,7 @@ export default function BookingsTherapistScreen({
                                             onComplete={(id) => handleBookingStatusUpdate(id, BOOKING_STATUS.COMPLETED)}
                                             animateContent={activeTab === tab}
                                             animationDelay={350 + (index * 100)}
+                                            onRateCustomer={onRateCustomer}
                                         />
                                     ))
                                 ) : (

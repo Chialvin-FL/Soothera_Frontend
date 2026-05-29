@@ -130,6 +130,7 @@ export default function NativeNavigator() {
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateBookingDetails={bookings.openBookingDetails}
                     onNavigateWalkInBooking={bookings.openWalkInBooking}
+                    onRateCustomer={bookings.openBookingRatingCustomer}
                     onNavigateNotifications={home.openHomeNotifications}
                     userProfilePic={userProfilePic}
                     latestBookingStatusUpdate={latestAdminBookingStatusUpdate}
@@ -139,6 +140,7 @@ export default function NativeNavigator() {
                     isActive={activeTab === 'bookings'}
                     onNavigateToProfile={() => setActiveTab('profile')}
                     onNavigateBookingDetails={bookings.openBookingDetails}
+                    onRateCustomer={bookings.openBookingRatingCustomer}
                     onNavigateNotifications={home.openHomeNotifications}
                     userProfilePic={userProfilePic}
                   />

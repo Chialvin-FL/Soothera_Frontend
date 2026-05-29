@@ -7,6 +7,7 @@ import BookingDetailsScreen from '../../screens/native/Bookings/BookingDetailsSc
 import BookingDetailsAdminScreen from '../../screens/native/Bookings/BookingDetailsAdminScreen.native';
 import RatingSpaScreen from '../../screens/native/Bookings/RatingSpaScreen.native';
 import RatingTherapistScreen from '../../screens/native/Bookings/RatingTherapistScreen.native';
+import RatingCustomerScreen from '../../screens/native/Bookings/RatingCustomerScreen.native';
 import InvoiceScreen from '../../screens/native/Bookings/components/InvoiceScreen.native';
 import GetDirectionsScreen from '../../screens/native/Bookings/GetDirectionsScreen.native';
 import BookAppointmentScreen from '../../screens/native/Home/BookAppointmentScreen.native';
@@ -71,18 +72,21 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
     const {
         bookingSelectedId,
         bookingRatingSpaId,
+        bookingRatingCustomerId,
         bookingRatingTherapistId,
         invoiceOverlay,
         getDirectionsDestination,
         walkInBookingVisible,
         bookingsDetailsStyle,
         bookingsRatingSpaStyle,
+        bookingsRatingCustomerStyle,
         bookingsRatingTherapistStyle,
         bookingsInvoiceStyle,
         getDirectionsStyle,
         walkInBookingStyle,
         closeBookingDetails,
         closeBookingRatingSpa,
+        closeBookingRatingCustomer,
         closeBookingRatingTherapist,
         closeBookingInvoice,
         closeGetDirections,
@@ -90,6 +94,7 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
         openBookingInvoice,
         openGetDirections,
         openBookingRatingSpa,
+        openBookingRatingCustomer,
         openBookingRatingTherapist,
     } = bookings;
 
@@ -180,7 +185,8 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
                     }
                 }
                 let spaImage: { uri: string } | undefined;
-                const establishmentId = apiBooking?.establishmentId ?? apiBooking?.EstablishmentId;
+                let resolvedEstablishmentId: string | undefined;
+                const establishmentId = apiBooking?.establishmentId ?? (apiBooking as any)?.EstablishmentId;
                 try {
                     const establishmentResponse = establishmentId
                         ? await getSalonById(establishmentId)
@@ -198,19 +204,44 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
                         : establishments.find((item: any) =>
                             String(item.name ?? '').toLowerCase() === String(apiBooking?.establishmentName ?? '').toLowerCase());
                     spaImage = establishment?.salonPicture ? { uri: establishment.salonPicture } : undefined;
+                    // Use the fetched establishment's own .id as the authoritative source for rating
+                    resolvedEstablishmentId = establishment?.id ?? establishment?.uid ?? establishmentId;
                 } catch (establishmentError) {
                     console.warn('[BookingsStack] Failed to load establishment details:', establishmentError);
+                    resolvedEstablishmentId = establishmentId;
                 }
+                // Extract staffId with PascalCase fallback
+                const staffId = apiBooking?.staffId ?? (apiBooking as any)?.StaffId;
+
                 if (mounted) {
-                    setApiBookingDetails(apiBooking
+                    const mapped = apiBooking
                         ? {
                             ...mapApiBookingToDetails(apiBooking, salonService),
+                            // Explicitly inject IDs: use resolvedEstablishmentId (from the fetched
+                            // establishment object) as it's authoritative even when the booking API
+                            // response omits establishmentId.
+                            ...(resolvedEstablishmentId ? { establishmentId: resolvedEstablishmentId } : {}),
+                            ...(staffId ? { staffId } : {}),
+                            ...(customerId ? { customerId } : {}),
                             customerName,
                             customerImage,
                             ...(spaImage ? { spaImage } : {}),
                         }
-                        : null);
-                    setBookingDetailsError(apiBooking ? null : 'Booking details not found.');
+                        : null;
+                    console.log('[BookingsStack] fetchSelectedBookingDetails → mapped details:', {
+                        bookingId: mapped?.bookingId,
+                        id: mapped?.id,
+                        establishmentId: mapped?.establishmentId,
+                        staffId: mapped?.staffId,
+                        customerId: mapped?.customerId,
+                        rawApiBookingEstablishmentId: apiBooking?.establishmentId,
+                        rawApiBookingEstablishmentIdPascal: (apiBooking as any)?.EstablishmentId,
+                        rawApiBookingStaffId: apiBooking?.staffId,
+                        rawApiBookingStaffIdPascal: (apiBooking as any)?.StaffId,
+                        resolvedEstablishmentId,
+                    });
+                    setApiBookingDetails(mapped);
+                    setBookingDetailsError(mapped ? null : 'Booking details not found.');
                 }
             } catch (error: any) {
                 console.warn('[BookingsStack] Failed to load booking details:', error);
@@ -269,6 +300,17 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
 
     const resolveBookingDetails = React.useCallback((bookingId: string): BookingDetails | null => {
         const canUseApiDetails = userRole === 'customer' || userRole === 'admin';
+        console.log('[BookingsStack] resolveBookingDetails:', {
+            bookingId,
+            bookingSelectedId,
+            canUseApiDetails,
+            hasApiBookingDetails: !!apiBookingDetails,
+            apiDetailsId: apiBookingDetails?.id,
+            apiDetailsBookingId: apiBookingDetails?.bookingId,
+            apiDetailsEstablishmentId: apiBookingDetails?.establishmentId,
+            apiDetailsStaffId: apiBookingDetails?.staffId,
+            apiDetailsCustomerId: apiBookingDetails?.customerId,
+        });
         if (
             canUseApiDetails &&
             apiBookingDetails &&
@@ -276,10 +318,13 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
                 bookingId === apiBookingDetails.id ||
                 bookingId === apiBookingDetails.bookingId)
         ) {
+            console.log('[BookingsStack] resolveBookingDetails → using API details (establishmentId:', apiBookingDetails.establishmentId, ')');
             return apiBookingDetails;
         }
 
-        return getBookingDetails(bookingId) ?? null;
+        const mockDetails = getBookingDetails(bookingId) ?? null;
+        console.log('[BookingsStack] resolveBookingDetails → using mock/fallback (establishmentId:', mockDetails?.establishmentId, ')');
+        return mockDetails;
     }, [apiBookingDetails, bookingSelectedId, userRole]);
 
     return (
@@ -318,6 +363,7 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
                                 onAccept={() => handleAdminBookingStatusUpdate(bookingSelectedId, 'Confirmed')}
                                 onDecline={() => handleAdminBookingStatusUpdate(bookingSelectedId, 'Cancelled')}
                                 onRefund={() => console.log('Refund booking:', bookingSelectedId)}
+                                onRateCustomer={() => openBookingRatingCustomer(bookingSelectedId)}
                             />
                         ) : (
                             <BookingDetailsScreen
@@ -360,6 +406,20 @@ export function BookingsStack({ bookings, userRole, onRebook, onAdminBookingStat
                         <RatingSpaScreen
                             bookingDetails={details}
                             onBack={closeBookingRatingSpa}
+                            onSubmit={async () => { }}
+                        />
+                    </Animated.View>
+                );
+            })()}
+
+            {bookingRatingCustomerId && (() => {
+                const details = resolveBookingDetails(bookingRatingCustomerId);
+                if (!details) return null;
+                return (
+                    <Animated.View style={[{ ...OVERLAY_BASE, zIndex: 17 }, bookingsRatingCustomerStyle]}>
+                        <RatingCustomerScreen
+                            bookingDetails={details}
+                            onBack={closeBookingRatingCustomer}
                             onSubmit={async () => { }}
                         />
                     </Animated.View>

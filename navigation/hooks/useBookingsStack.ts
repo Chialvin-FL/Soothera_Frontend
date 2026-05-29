@@ -7,6 +7,7 @@ export interface BookingsStackState {
     bookingSelectedId: string | null;
     bookingRatingSpaId: string | null;
     bookingRatingTherapistId: string | null;
+    bookingRatingCustomerId: string | null;
     bookingRatingFromReview: boolean;
     invoiceOverlay: {
         data: InvoiceData;
@@ -20,6 +21,7 @@ export interface BookingsStackState {
     bookingsDetailsStyle: ReturnType<typeof useAnimatedStyle>;
     bookingsRatingSpaStyle: ReturnType<typeof useAnimatedStyle>;
     bookingsRatingTherapistStyle: ReturnType<typeof useAnimatedStyle>;
+    bookingsRatingCustomerStyle: ReturnType<typeof useAnimatedStyle>;
     bookingsInvoiceStyle: ReturnType<typeof useAnimatedStyle>;
     getDirectionsStyle: ReturnType<typeof useAnimatedStyle>;
     walkInBookingStyle: ReturnType<typeof useAnimatedStyle>;
@@ -27,6 +29,7 @@ export interface BookingsStackState {
     openBookingDetails: (id: string) => void;
     openBookingRatingSpa: (id: string, fromReview?: boolean) => void;
     openBookingRatingTherapist: (id: string, fromReview?: boolean) => void;
+    openBookingRatingCustomer: (id: string) => void;
     openBookingInvoice: (
         data: InvoiceData,
         options?: { isVAT?: boolean; vatRate?: number; discounts?: number }
@@ -40,6 +43,7 @@ export interface BookingsStackState {
     closeBookingDetails: () => void;
     closeBookingRatingSpa: () => void;
     closeBookingRatingTherapist: () => void;
+    closeBookingRatingCustomer: () => void;
     closeBookingInvoice: () => void;
     closeGetDirections: () => void;
     closeWalkInBooking: () => void;
@@ -49,6 +53,7 @@ export function useBookingsStack(): BookingsStackState {
     const [bookingSelectedId, setBookingSelectedId] = useState<string | null>(null);
     const [bookingRatingSpaId, setBookingRatingSpaId] = useState<string | null>(null);
     const [bookingRatingTherapistId, setBookingRatingTherapistId] = useState<string | null>(null);
+    const [bookingRatingCustomerId, setBookingRatingCustomerId] = useState<string | null>(null);
     const [bookingRatingFromReview, setBookingRatingFromReview] = useState(false);
     const [invoiceOverlay, setInvoiceOverlay] = useState<{
         data: InvoiceData;
@@ -66,6 +71,7 @@ export function useBookingsStack(): BookingsStackState {
     const bookingsDetailsTx = useSharedValue(SCREEN_WIDTH);
     const bookingsRatingSpaTx = useSharedValue(SCREEN_WIDTH);
     const bookingsRatingTherapistTx = useSharedValue(SCREEN_WIDTH);
+    const bookingsRatingCustomerTx = useSharedValue(SCREEN_WIDTH);
     const bookingsInvoiceTx = useSharedValue(SCREEN_WIDTH);
     const getDirectionsTx = useSharedValue(SCREEN_WIDTH);
     const walkInBookingTx = useSharedValue(SCREEN_WIDTH);
@@ -89,6 +95,13 @@ export function useBookingsStack(): BookingsStackState {
         );
     }, [bookingRatingTherapistId, bookingsRatingTherapistTx]);
 
+
+    useEffect(() => {
+        bookingsRatingCustomerTx.value = withTiming(
+            bookingRatingCustomerId ? 0 : SCREEN_WIDTH,
+            { duration: TRANSITION_DURATION }
+        );
+    }, [bookingRatingCustomerId, bookingsRatingCustomerTx]);
     useEffect(() => {
         bookingsInvoiceTx.value = withTiming(invoiceOverlay ? 0 : SCREEN_WIDTH, {
             duration: TRANSITION_DURATION,
@@ -116,6 +129,9 @@ export function useBookingsStack(): BookingsStackState {
     const bookingsRatingTherapistStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: bookingsRatingTherapistTx.value }],
     }));
+    const bookingsRatingCustomerStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: bookingsRatingCustomerTx.value }],
+    }));
     const bookingsInvoiceStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: bookingsInvoiceTx.value }],
     }));
@@ -135,6 +151,7 @@ export function useBookingsStack(): BookingsStackState {
         setBookingRatingTherapistId(id);
         setBookingRatingFromReview(fromReview);
     };
+    const openBookingRatingCustomer = (id: string) => setBookingRatingCustomerId(id);
     const openBookingInvoice = (
         data: InvoiceData,
         options?: { isVAT?: boolean; vatRate?: number; discounts?: number }
@@ -175,6 +192,11 @@ export function useBookingsStack(): BookingsStackState {
             }
         );
     };
+    const closeBookingRatingCustomer = () => {
+        bookingsRatingCustomerTx.value = withTiming(SCREEN_WIDTH, { duration: TRANSITION_DURATION }, () =>
+            runOnJS(setBookingRatingCustomerId)(null)
+        );
+    };
     const closeBookingInvoice = () => {
         bookingsInvoiceTx.value = withTiming(SCREEN_WIDTH, { duration: EXIT_TRANSITION_DURATION }, () =>
             runOnJS(setInvoiceOverlay)(null)
@@ -195,6 +217,10 @@ export function useBookingsStack(): BookingsStackState {
         bookingSelectedId,
         bookingRatingSpaId,
         bookingRatingTherapistId,
+        bookingRatingCustomerId,
+        bookingsRatingCustomerStyle,
+        openBookingRatingCustomer,
+        closeBookingRatingCustomer,
         bookingRatingFromReview,
         invoiceOverlay,
         getDirectionsDestination,

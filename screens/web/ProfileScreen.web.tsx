@@ -61,7 +61,11 @@ export default function ProfileScreenWeb() {
         const success = await handleUpdateProfile(uid, {
             fname: fname,
             lname: lname,
-            profilePic: selectedImage || undefined
+            profilePic: selectedImage ? {
+                uri: selectedImage.uri,
+                name: selectedImage.fileName || 'profile.jpg',
+                type: selectedImage.mimeType || 'image/jpeg'
+            } : undefined
         }, async () => {
             // onSuccess callback
             // 1. Sync global context

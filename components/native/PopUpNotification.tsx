@@ -15,7 +15,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export type NotificationType = 'pending' | 'confirmed' | 'ongoing' | 'completed' | 'cancelled' | 'info';
 
-export type PopUpNotificationProps = Record<string, never>;
+export interface PopUpNotificationProps {}
 
 export interface PopUpNotificationRef {
   show: (options: {

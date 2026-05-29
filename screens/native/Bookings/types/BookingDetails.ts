@@ -24,4 +24,9 @@ export interface BookingDetails extends Booking {
   selectedAddOns?: string[];
   selectedAddOnPrices?: number[];
   createdDate?: string;
+  
+  // IDs for fetching analytics and ratings
+  establishmentId?: string;
+  staffId?: string;
+  customerId?: string;
 }

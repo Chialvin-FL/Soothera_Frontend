@@ -597,6 +597,8 @@ export interface GetAvailableSlotsParams {
 export interface BookingResponse {
     bookingId: string;
     salonServiceId?: string;
+    establishmentId?: string;
+    staffId?: string;
     establishmentName: string;
     establishmentAddress: string;
     salonServiceName: string;
@@ -854,6 +856,7 @@ export interface RecentReview {
     rating: number;
     date: string;
     serviceName: string;
+    comment?: string;
 }
 
 export interface TherapistAnalyticsData {

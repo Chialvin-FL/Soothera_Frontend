@@ -39,6 +39,7 @@ interface BookingDetailsAdminScreenProps {
     onAccept?: () => void;
     onDecline?: () => void;
     onRefund?: () => void;
+    onRateCustomer?: () => void;
 }
 
 // Map component for mobile (display-only with pin marker using Leaflet in WebView)
@@ -197,6 +198,7 @@ export default function BookingDetailsAdminScreen({
     onAccept,
     onDecline,
     onRefund,
+    onRateCustomer
 }: BookingDetailsAdminScreenProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
@@ -458,7 +460,7 @@ export default function BookingDetailsAdminScreen({
             </ScrollView>
 
             {/* Footer Buttons: Decline/Accept (Pending), Refund (Cancelled) */}
-            {(isPending || isCancelled) && (
+            {(isPending || isCancelled || isCompleted) && (
                 <View className="px-5 py-4 border-t" style={{ borderTopColor: '#E5E7EB' }}>
                     {isPending && (
                         <View className="flex-row">
@@ -485,15 +487,27 @@ export default function BookingDetailsAdminScreen({
                         </View>
                     )}
 
-                    {isCancelled && (
-                        <TouchableOpacity
-                            className="w-full flex-row items-center justify-center px-4 py-4 rounded-xl"
-                            style={{ backgroundColor: primaryColor }}
-                            onPress={onRefund}
-                        >
-                            <Ionicons name="cash-outline" size={20} color="white" />
-                            <Text className="text-base text-white font-semibold ml-2">Refund Customer</Text>
-                        </TouchableOpacity>
+                    {(isCancelled || isCompleted) && (
+                        <View className="flex-row">
+                            {isCancelled && (
+                                <TouchableOpacity
+                                    className="flex-1 flex-row items-center justify-center px-4 py-4 rounded-xl mr-2"
+                                    style={{ backgroundColor: '#EF4444' }}
+                                    onPress={onRefund}
+                                >
+                                    <Ionicons name="cash-outline" size={18} color="white" />
+                                    <Text className="text-base text-white font-semibold ml-2">Refund</Text>
+                                </TouchableOpacity>
+                            )}
+                            <TouchableOpacity
+                                className="flex-1 flex-row items-center justify-center px-4 py-4 rounded-xl"
+                                style={{ backgroundColor: primaryColor }}
+                                onPress={onRateCustomer}
+                            >
+                                <Ionicons name="star-outline" size={20} color="white" />
+                                <Text className="text-base text-white font-semibold ml-2">Rate Customer</Text>
+                            </TouchableOpacity>
+                        </View>
                     )}
                 </View>
             )}
@@ -529,3 +543,6 @@ export default function BookingDetailsAdminScreen({
         </View>
     );
 }
+
+
+

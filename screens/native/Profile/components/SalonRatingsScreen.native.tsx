@@ -1,28 +1,74 @@
-import React from 'react';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { RisingItem } from '@/components/native/RisingItem';
-
-// Mock ratings
-const mockRatings = [
-    { id: '1', user: 'Alice L.', rating: 5, comment: 'Amazing service! My therapist was so professional. Highly recommend this place.', date: '2 days ago' },
-    { id: '2', user: 'Bob S.', rating: 4, comment: 'Great experience overall, but had to wait 10 mins past my appointment time.', date: '1 week ago' },
-    { id: '3', user: 'Charlie M.', rating: 5, comment: 'The ambiance is perfect. Will definitely come back.', date: '2 weeks ago' },
-];
+import { getEstablishmentRatings } from '@/api/endpoints/apiRating';
+import type { TargetRatingsResponse, RatingResponse } from '@/api/types';
+import { getUsers } from '@/api/endpoints/apiUser';
+import { fetchMyEstablishment } from '../businessSettingsService';
 
 interface MassageSpaRatingsScreenProps {
+    establishmentId?: string | null;
     onBack: () => void;
 }
 
-export default function MassageSpaRatingsScreen({ onBack }: MassageSpaRatingsScreenProps) {
+export default function MassageSpaRatingsScreen({ establishmentId, onBack }: MassageSpaRatingsScreenProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
     const insets = useSafeAreaInsets();
     const isDark = colorScheme === 'dark';
+
+    const [loading, setLoading] = useState(true);
+    const [ratingData, setRatingData] = useState<TargetRatingsResponse | null>(null);
+    const [reviewers, setReviewers] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        const fetchRatings = async () => {
+            try {
+                let activeId = establishmentId;
+                if (!activeId) {
+                    const result = await fetchMyEstablishment();
+                    if (result.success && result.data) {
+                        activeId = result.data.id;
+                    }
+                }
+                if (!activeId) {
+                    setLoading(false);
+                    return;
+                }
+                const response = await getEstablishmentRatings(activeId);
+                setRatingData(response);
+
+                // Fetch reviewer names
+                if (response?.ratings?.length > 0) {
+                    const reviewerIds = Array.from(new Set(response.ratings.map(r => r.reviewerId)));
+                    const reviewersMap: Record<string, string> = {};
+                    
+                    await Promise.all(reviewerIds.map(async (uid) => {
+                        try {
+                            const userRes = await getUsers({ uid, page: 1, pageSize: 1 });
+                            const user = Array.isArray(userRes.data?.items) ? userRes.data.items[0] : null;
+                            if (user) reviewersMap[uid] = user.fullName;
+                        } catch (e) {
+                            console.warn('Failed to fetch user', uid);
+                        }
+                    }));
+                    
+                    setReviewers(reviewersMap);
+                }
+            } catch (error) {
+                console.error('Failed to fetch ratings:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchRatings();
+    }, [establishmentId]);
 
     return (
         <View className="flex-1 bg-white dark:bg-[#151718]">
@@ -57,34 +103,66 @@ export default function MassageSpaRatingsScreen({ onBack }: MassageSpaRatingsScr
                     paddingHorizontal: 20,
                 }}
             >
-                <View className="items-center mb-6">
-                    <Text className="text-[40px] font-black" style={{ color: colors.text }}>4.8</Text>
-                    <View className="flex-row items-center mb-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                            <Ionicons key={star} name="star" size={24} color="#F59E0B" />
-                        ))}
+                {loading ? (
+                    <View className="flex-1 justify-center items-center mt-20">
+                        <ActivityIndicator size="large" color={colors.primary} />
                     </View>
-                    <Text className="text-sm" style={{ color: colors.icon }}>Based on 128 reviews</Text>
-                </View>
-
-                {mockRatings.map((rating, index) => (
-                    <RisingItem key={rating.id} delay={index * 100}>
-                        <View className="p-4 mb-4 rounded-2xl bg-white dark:bg-[#1F1F1F] shadow-sm" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}>
-                            <View className="flex-row justify-between items-center mb-2">
-                                <Text className="font-bold text-base" style={{ color: colors.text }}>{rating.user}</Text>
-                                <Text className="text-xs" style={{ color: colors.icon }}>{rating.date}</Text>
+                ) : (
+                    <>
+                        <View className="items-center mb-6">
+                            <Text className="text-[40px] font-black" style={{ color: colors.text }}>
+                                {ratingData?.averageScore ? ratingData.averageScore.toFixed(1) : '0.0'}
+                            </Text>
+                            <View className="flex-row items-center mb-2">
+                                {[1, 2, 3, 4, 5].map((star) => {
+                                    const avg = ratingData?.averageScore || 0;
+                                    const isHalf = avg >= star - 0.5 && avg < star;
+                                    const isFull = avg >= star;
+                                    return (
+                                        <Ionicons 
+                                            key={star} 
+                                            name={isFull ? "star" : (isHalf ? "star-half" : "star-outline")} 
+                                            size={24} 
+                                            color="#F59E0B" 
+                                        />
+                                    );
+                                })}
                             </View>
-                            <View className="flex-row mb-2">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                    <Ionicons key={star} name={star <= rating.rating ? "star" : "star-outline"} size={14} color="#F59E0B" />
-                                ))}
-                            </View>
-                            <Text className="text-sm leading-5" style={{ color: colors.text }}>
-                                {rating.comment}
+                            <Text className="text-sm" style={{ color: colors.icon }}>
+                                Based on {ratingData?.totalRatings || 0} reviews
                             </Text>
                         </View>
-                    </RisingItem>
-                ))}
+
+                        {ratingData?.ratings && ratingData.ratings.length > 0 ? (
+                            ratingData.ratings.map((rating: RatingResponse, index: number) => {
+                                const reviewerName = reviewers[rating.reviewerId] || 'User';
+                                const dateStr = new Date(rating.createdAt).toLocaleDateString();
+                                return (
+                                    <RisingItem key={rating.ratingId} delay={index * 100}>
+                                        <View className="p-4 mb-4 rounded-2xl bg-white dark:bg-[#1F1F1F] shadow-sm" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}>
+                                            <View className="flex-row justify-between items-center mb-2">
+                                                <Text className="font-bold text-base" style={{ color: colors.text }}>{reviewerName}</Text>
+                                                <Text className="text-xs" style={{ color: colors.icon }}>{dateStr}</Text>
+                                            </View>
+                                            <View className="flex-row mb-2">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <Ionicons key={star} name={star <= rating.score ? "star" : "star-outline"} size={14} color="#F59E0B" />
+                                                ))}
+                                            </View>
+                                            <Text className="text-sm leading-5" style={{ color: colors.text }}>
+                                                {rating.comment}
+                                            </Text>
+                                        </View>
+                                    </RisingItem>
+                                );
+                            })
+                        ) : (
+                            <View className="items-center mt-10">
+                                <Text className="text-base" style={{ color: colors.icon }}>No ratings yet.</Text>
+                            </View>
+                        )}
+                    </>
+                )}
             </ScrollView>
         </View>
     );

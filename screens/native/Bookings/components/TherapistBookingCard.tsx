@@ -14,6 +14,7 @@ interface TherapistBookingCardProps {
     onCancel?: (bookingId: string) => void;
     onComplete?: (bookingId: string) => void;
     onStartSession?: (bookingId: string) => void;
+    onRateCustomer?: (bookingId: string) => void;
     animateContent?: boolean;
     animationDelay?: number;
     contentVisible?: boolean;
@@ -40,6 +41,7 @@ export default function TherapistBookingCard({
     onCancel,
     onComplete,
     onStartSession,
+    onRateCustomer,
     animateContent = false,
     animationDelay = 0,
     contentVisible = true
@@ -149,6 +151,18 @@ export default function TherapistBookingCard({
                             <Text className="text-sm font-semibold ml-2" style={{ color: 'white' }}>Complete</Text>
                         </TouchableOpacity>
                     </>
+                ) : (booking.status === BOOKING_STATUS.COMPLETED || booking.status === BOOKING_STATUS.CANCELLED) ? (
+                    <TouchableOpacity
+                        className="flex-1 flex-row items-center justify-center px-4 py-2 rounded-xl"
+                        style={{ backgroundColor: primaryColor }}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            onRateCustomer?.(booking.id);
+                        }}
+                    >
+                        <Ionicons name="star-outline" size={16} color="white" />
+                        <Text className="text-sm font-semibold ml-2" style={{ color: 'white' }}>Rate Customer</Text>
+                    </TouchableOpacity>
                 ) : (
                     <TouchableOpacity
                         className="flex-1 flex-row items-center justify-center px-4 py-2 rounded-xl"
@@ -166,10 +180,12 @@ export default function TherapistBookingCard({
         </>
     );
 
+    const isClickable = booking.status !== BOOKING_STATUS.COMPLETED && booking.status !== BOOKING_STATUS.CANCELLED;
+
     return (
         <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={onPress}
+            activeOpacity={isClickable ? 0.7 : 1}
+            onPress={isClickable ? onPress : undefined}
             className="bg-white rounded-2xl p-4 mb-4"
             style={{
                 shadowColor: '#000',
